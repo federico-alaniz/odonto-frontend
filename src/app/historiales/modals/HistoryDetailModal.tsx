@@ -153,8 +153,8 @@ export default function HistoryDetailModal({ history, isOpen, onClose, onEdit }:
               </div>
             </div>
 
-            {/* Signos Vitales */}
-            {history.vitalSigns && (
+            {/* Signos Vitales - No mostrar para especialidad odontología */}
+            {history.vitalSigns && history.specialty !== 'odontologia' && (
               <div>
                 <h3 className="font-semibold text-lg text-gray-900 mb-3">Signos Vitales</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

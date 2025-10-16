@@ -464,7 +464,8 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
               </div>
             </div>
 
-            {/* Signos Vitales */}
+            {/* Signos Vitales - Solo mostrar si NO es odontología */}
+            {formData.specialty !== 'odontologia' && (
             <div>
               <h3 className="font-semibold text-lg text-gray-900 mb-4">Signos Vitales</h3>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -532,6 +533,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                 </div>
               </div>
             </div>
+            )}
 
             {/* Tratamiento y Medicamentos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
