@@ -120,7 +120,7 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
         observaciones: ''
       });
       
-    } catch (error) {
+    } catch {
       alert('❌ Error al programar la cita. Intente nuevamente.');
     } finally {
       setIsSubmitting(false);

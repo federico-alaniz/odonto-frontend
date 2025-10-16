@@ -426,12 +426,13 @@ export default function HistorialesPage() {
     setShowHistoryDetail(true);
   };
 
-  const handleCreateNewHistory = (newHistory: any) => {
-    const historyWithId = {
+  const handleCreateNewHistory = (newHistory: Omit<MedicalHistory, 'id' | 'consultationDate' | 'consultationTime' | 'createdAt'>) => {
+    const historyWithId: MedicalHistory = {
       ...newHistory,
       id: `hist_${Date.now()}`,
       consultationDate: new Date().toISOString().split('T')[0],
-      consultationTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+      consultationTime: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      createdAt: new Date().toISOString()
     };
     setHistories(prev => [historyWithId, ...prev]);
     setShowNewHistoryModal(false);
