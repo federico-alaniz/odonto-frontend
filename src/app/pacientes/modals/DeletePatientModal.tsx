@@ -46,7 +46,7 @@ export default function DeletePatientModal({
       onClose();
       setConfirmText('');
       
-    } catch (error) {
+    } catch {
       alert('❌ Error al eliminar el paciente. Intente nuevamente.');
     } finally {
       setIsDeleting(false);
@@ -140,7 +140,7 @@ export default function DeletePatientModal({
             <div>
               <p className="text-sm font-medium text-yellow-800">¿Consideraste estas alternativas?</p>
               <ul className="text-sm text-yellow-700 mt-1 space-y-1">
-                <li>• Marcar el paciente como "Inactivo" en lugar de eliminarlo</li>
+                <li>• Marcar el paciente como &quot;Inactivo&quot; en lugar de eliminarlo</li>
                 <li>• Archivar el expediente para consulta futura</li>
                 <li>• Exportar los datos antes de la eliminación</li>
               </ul>
@@ -151,13 +151,13 @@ export default function DeletePatientModal({
         {/* Confirmación */}
         <div className="space-y-3">
           <label className="block text-sm font-medium text-slate-700">
-            Para confirmar, escriba <strong>"eliminar"</strong> en el campo de abajo:
+            Para confirmar, escriba <strong>&quot;eliminar&quot;</strong> en el campo de abajo:
           </label>
           <input
             type="text"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            placeholder="Escriba: eliminar"
+            placeholder="Escriba: &quot;eliminar&quot;"
             disabled={isDeleting}
             className="w-full px-4 py-3 rounded-lg border medical-border focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:opacity-50"
           />

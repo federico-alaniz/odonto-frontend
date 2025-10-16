@@ -122,7 +122,7 @@ export default function EditAppointmentModal({
     }
   };
 
-  const handleInputChange = (field: keyof Appointment, value: any) => {
+  const handleInputChange = (field: keyof Appointment, value: string | number | undefined) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

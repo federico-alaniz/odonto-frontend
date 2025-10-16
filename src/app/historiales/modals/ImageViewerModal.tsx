@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 
 interface DiagnosticImage {
@@ -105,9 +106,11 @@ export default function ImageViewerModal({ images, initialIndex, isOpen, onClose
             )}
 
             {/* Image */}
-            <img
+            <Image
               src={currentImage.url}
               alt={currentImage.description || currentImage.name}
+              width={800}
+              height={600}
               className="max-w-full max-h-full object-contain"
             />
           </div>

@@ -223,11 +223,6 @@ export default function DailyAgenda() {
     }
   };
 
-  // Obtener el número de slots que ocupa una cita
-  const getAppointmentSlots = (appointment: Appointment) => {
-    return Math.ceil(appointment.duration / 15);
-  };
-
   // Navegar entre días
   const navigateDay = (direction: 'prev' | 'next') => {
     setSelectedDate(prev => {
@@ -260,8 +255,8 @@ export default function DailyAgenda() {
     setShowNewAppointmentModal(true);
   };
 
-  const handleSaveAppointment = (newAppointment: any) => {
-    const appointmentWithId = {
+  const handleSaveAppointment = (newAppointment: Omit<Appointment, 'id'>) => {
+    const appointmentWithId: Appointment = {
       ...newAppointment,
       id: `new_${Date.now()}`
     };

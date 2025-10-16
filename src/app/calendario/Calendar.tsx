@@ -98,11 +98,6 @@ export default function Calendar() {
     return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   }, [currentDate]);
 
-  // Obtener el último día del mes actual
-  const lastDayOfMonth = useMemo(() => {
-    return new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  }, [currentDate]);
-
   // Obtener los días que se muestran en el calendario (incluyendo días del mes anterior y siguiente)
   const calendarDays = useMemo(() => {
     const days = [];

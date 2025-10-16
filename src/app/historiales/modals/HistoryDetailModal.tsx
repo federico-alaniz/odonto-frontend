@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../page';
 import ImageViewerModal from './ImageViewerModal';
@@ -199,7 +200,7 @@ export default function HistoryDetailModal({ history, isOpen, onClose, onEdit }:
               <div>
                 <h3 className="font-semibold text-lg text-gray-900 mb-3">Medicamentos</h3>
                 <div className="space-y-3">
-                  {history.medications.map((medication: any, index: number) => (
+                  {history.medications.map((medication: NonNullable<MedicalHistory['medications']>[number], index: number) => (
                     <div key={index} className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
                       <div className="flex justify-between items-start">
                         <div>
@@ -243,12 +244,14 @@ export default function HistoryDetailModal({ history, isOpen, onClose, onEdit }:
               <div>
                 <h3 className="font-semibold text-lg text-gray-900 mb-3">Imágenes Diagnósticas</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {history.diagnosticImages.map((image: any, index: number) => (
+                  {history.diagnosticImages.map((image: NonNullable<MedicalHistory['diagnosticImages']>[number], index: number) => (
                     <div key={index} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                       <div className="aspect-square bg-gray-50 flex items-center justify-center">
-                        <img 
+                        <Image 
                           src={image.url} 
                           alt={image.description || image.name}
+                          width={300}
+                          height={300}
                           className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => openImageViewer(index)}
                         />
@@ -292,7 +295,7 @@ export default function HistoryDetailModal({ history, isOpen, onClose, onEdit }:
               <div>
                 <h3 className="font-semibold text-lg text-gray-900 mb-3">Archivos Adjuntos</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {history.attachments.map((attachment: any, index: number) => (
+                  {history.attachments.map((attachment: NonNullable<MedicalHistory['attachments']>[number], index: number) => (
                     <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">

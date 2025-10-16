@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../page';
 import Odontogram from '../components/Odontogram';
@@ -109,13 +110,13 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
 
   if (!isOpen || !history) return null;
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...(prev[parent as keyof typeof prev] as any),
+          ...(prev[parent as keyof typeof prev] as Record<string, string>),
           [child]: value
         }
       }));
@@ -186,8 +187,8 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
       consultationDate: formData.date,
       consultationTime: formData.time,
       doctor: formData.doctor,
-      specialty: formData.specialty as any,
-      type: formData.type as any,
+      specialty: formData.specialty as MedicalHistory['specialty'],
+      type: formData.type as MedicalHistory['type'],
       diagnosis: formData.diagnosis,
       symptoms: formData.symptoms,
       treatment: formData.treatment,
@@ -212,7 +213,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
         }))
       ],
       odontogram: formData.specialty === 'odontologia' ? odontogramData : history.odontogram,
-      status: formData.status as any
+      status: formData.status as MedicalHistory['status']
     };
 
     onSave(updatedHistory);
@@ -528,9 +529,11 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
                         </button>
                       </div>
                       
-                      <img 
+                      <Image 
                         src={image.preview} 
                         alt="Preview" 
+                        width={300}
+                        height={128}
                         className="w-full h-32 object-cover rounded mb-3"
                       />
                       
@@ -541,7 +544,7 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
                           </label>
                           <select
                             value={image.type}
-                            onChange={(e) => updateImageType(index, e.target.value as any)}
+                            onChange={(e) => updateImageType(index, e.target.value as 'radiografia' | 'ecografia' | 'tomografia' | 'resonancia' | 'endoscopia' | 'laboratorio' | 'otro')}
                             className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                           >
                             <option value="radiografia">Radiografía</option>

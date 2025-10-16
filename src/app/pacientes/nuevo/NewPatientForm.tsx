@@ -220,7 +220,7 @@ export default function NewPatientForm() {
         numeroPoliza: ''
       });
       
-    } catch (error) {
+    } catch {
       alert('❌ Error al registrar el paciente. Intente nuevamente.');
     } finally {
       setIsSubmitting(false);

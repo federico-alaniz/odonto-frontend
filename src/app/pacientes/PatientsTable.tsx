@@ -247,8 +247,8 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
 
     // Ordenar
     filtered.sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
+      let aValue: string | number = a[sortField] as string | number;
+      let bValue: string | number = b[sortField] as string | number;
 
       // Manejar fechas
       if (sortField === 'fechaNacimiento' || sortField === 'ultimaConsulta') {
@@ -262,7 +262,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     });
 
     return filtered;
-  }, [filters, sortField, sortDirection]);
+  }, [patients, filters, sortField, sortDirection]);
 
   // Paginación
   const totalPages = Math.ceil(filteredAndSortedPatients.length / itemsPerPage);
