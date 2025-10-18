@@ -4,14 +4,13 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Info, Plus, Download } from 'lucide-react';
 import { MedicalRecord } from '../historiales/types';
-import { MedicalHistory, convertEntryToHistory } from '../historiales/adapter';
-import { sampleMedicalRecords } from '../historiales/sampleData';
+import { MedicalHistory, getAllMedicalHistories } from '../historiales/adapter';
 
 export default function RegistrosMedicosPage() {
   const router = useRouter();
   
-  // Estado para las historias clínicas
-  const [medicalRecords] = useState<MedicalRecord[]>(sampleMedicalRecords);
+  // Estado para las historias clínicas usando datos fake
+  const [medicalHistories] = useState<MedicalHistory[]>(getAllMedicalHistories());
   
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,15 +22,10 @@ export default function RegistrosMedicosPage() {
   const [sortField, setSortField] = useState<string>('consultationDate');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Convertir todos los registros médicos a la estructura antigua para compatibilidad
+  // Usar directamente las historias médicas
   const allEntries = useMemo(() => {
-    return medicalRecords.flatMap(record => 
-      record.entries.map(entry => ({
-        ...convertEntryToHistory(entry, record.patient),
-        recordId: record.id
-      }))
-    );
-  }, [medicalRecords]);
+    return medicalHistories;
+  }, [medicalHistories]);
 
   // Aplicar filtros y ordenamiento
   const filteredEntries = useMemo(() => {

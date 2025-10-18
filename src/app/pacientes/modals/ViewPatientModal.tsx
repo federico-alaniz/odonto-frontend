@@ -29,7 +29,7 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  ultimaConsulta: string;
+  ultimaConsulta?: string; // Opcional para compatibilidad
   estado: 'activo' | 'inactivo';
 }
 
@@ -256,7 +256,7 @@ export default function ViewPatientModal({
                   <Calendar className="w-4 h-4 text-gray-500" />
                   <span className="font-medium text-gray-600">Última Consulta:</span>
                 </div>
-                <span className="text-gray-900">{formatDate(patient.ultimaConsulta)}</span>
+                <span className="text-gray-900">{patient.ultimaConsulta ? formatDate(patient.ultimaConsulta) : 'Sin consultas previas'}</span>
               </div>
             </div>
           </div>

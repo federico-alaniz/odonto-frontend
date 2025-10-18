@@ -8,7 +8,7 @@ interface Patient {
   nombres: string;
   apellidos: string;
   numeroDocumento: string;
-  ultimaConsulta: string;
+  ultimaConsulta?: string;
 }
 
 interface DeletePatientModalProps {
@@ -100,7 +100,7 @@ export default function DeletePatientModal({
             </div>
             <div className="flex justify-between">
               <span className="font-medium text-slate-600">Última Consulta:</span>
-              <span className="text-slate-900">{formatDate(patient.ultimaConsulta)}</span>
+              <span className="text-slate-900">{patient.ultimaConsulta ? formatDate(patient.ultimaConsulta) : 'Sin consultas'}</span>
             </div>
           </div>
         </div>

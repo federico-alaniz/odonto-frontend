@@ -26,7 +26,9 @@ import NewAppointmentModal from './modals/NewAppointmentModal';
 import DeletePatientModal from './modals/DeletePatientModal';
 import EditPatientModal from './modals/EditPatientModal';
 import { PatientFilters } from './PatientsFilters';
+import { patients, type Patient as FakePatient } from '@/utils/fake-data';
 
+// Interface adaptada para el componente (compatible con modales existentes)
 interface Patient {
   id: string;
   nombres: string;
@@ -39,7 +41,7 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  ultimaConsulta: string;
+  ultimaConsulta?: string; // Opcional para compatibilidad
   estado: 'activo' | 'inactivo';
 }
 
@@ -47,114 +49,18 @@ interface PatientsTableProps {
   filters?: PatientFilters;
 }
 
-// Datos de muestra
-const samplePatients: Patient[] = [
-  {
-    id: 'pat_001',
-    nombres: 'María Elena',
-    apellidos: 'González',
-    tipoDocumento: 'dni',
-    numeroDocumento: '12345678',
-    fechaNacimiento: '1978-03-15',
-    genero: 'femenino',
-    telefono: '3001234567',
-    email: 'maria.gonzalez@email.com',
-    ciudad: 'Buenos Aires',
-    tipoSangre: 'O+',
-    ultimaConsulta: '2025-10-14',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_002',
-    nombres: 'Juan Carlos',
-    apellidos: 'Rodríguez',
-    tipoDocumento: 'dni',
-    numeroDocumento: '23456789',
-    fechaNacimiento: '1985-07-22',
-    genero: 'masculino',
-    telefono: '3009876543',
-    email: 'juan.rodriguez@email.com',
-    ciudad: 'Córdoba',
-    tipoSangre: 'A+',
-    ultimaConsulta: '2025-10-09',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_003',
-    nombres: 'Ana Sofía',
-    apellidos: 'Martínez',
-    tipoDocumento: 'dni',
-    numeroDocumento: '34567890',
-    fechaNacimiento: '1990-12-05',
-    genero: 'femenino',
-    telefono: '3005555555',
-    email: 'ana.martinez@email.com',
-    ciudad: 'Rosario',
-    tipoSangre: 'B+',
-    ultimaConsulta: '2025-10-11',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_004',
-    nombres: 'Carlos Eduardo',
-    apellidos: 'Vargas',
-    tipoDocumento: 'dni',
-    numeroDocumento: '45678901',
-    fechaNacimiento: '1975-09-12',
-    genero: 'masculino',
-    telefono: '3003333333',
-    email: 'carlos.vargas@email.com',
-    ciudad: 'Mendoza',
-    tipoSangre: 'AB+',
-    ultimaConsulta: '2025-10-13',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_005',
-    nombres: 'Isabella',
-    apellidos: 'Ramírez',
-    tipoDocumento: 'dni',
-    numeroDocumento: '56789012',
-    fechaNacimiento: '2015-04-18',
-    genero: 'femenino',
-    telefono: '3006666666',
-    email: 'isabella.ramirez@email.com',
-    ciudad: 'La Plata',
-    tipoSangre: 'O-',
-    ultimaConsulta: '2025-10-10',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_006',
-    nombres: 'Roberto',
-    apellidos: 'García',
-    tipoDocumento: 'dni',
-    numeroDocumento: '67890123',
-    fechaNacimiento: '1988-09-12',
-    genero: 'masculino',
-    telefono: '3007777777',
-    email: 'roberto.garcia@email.com',
-    ciudad: 'San Miguel de Tucumán',
-    tipoSangre: 'A-',
-    ultimaConsulta: '2025-10-12',
-    estado: 'activo'
-  },
-  {
-    id: 'pat_007',
-    nombres: 'Daniela',
-    apellidos: 'Torres',
-    tipoDocumento: 'dni',
-    numeroDocumento: '78901234',
-    fechaNacimiento: '1992-08-25',
-    genero: 'femenino',
-    telefono: '3001010101',
-    email: 'daniela.torres@email.com',
-    ciudad: 'Medellín',
-    tipoSangre: 'B-',
-    ultimaConsulta: '2025-10-15',
-    estado: 'activo'
-  }
-];
+// Función para adaptar datos fake al formato de la tabla
+const adaptPatientsForTable = (fakePatients: FakePatient[]): Patient[] => {
+  return fakePatients.map(patient => ({
+    ...patient,
+    ciudad: patient.direccion.ciudad
+  }));
+};
+
+// Función para obtener el paciente completo original por ID
+const getOriginalPatient = (patientId: string): FakePatient | undefined => {
+  return patients.find(p => p.id === patientId);
+};
 
 export default function PatientsTable({ filters }: PatientsTableProps) {
   const [sortField, setSortField] = useState<keyof Patient>('apellidos');
@@ -170,8 +76,8 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
 
-  // Lista de pacientes (actualizable)
-  const [patients, setPatients] = useState<Patient[]>(samplePatients);
+  // Lista de pacientes (usando datos fake adaptados)
+  const [patientsData, setPatientsData] = useState<Patient[]>(adaptPatientsForTable(patients));
 
   // Funciones para manejar acciones
   const handleViewPatient = (patient: Patient) => {
@@ -195,11 +101,11 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   };
 
   const handleConfirmDelete = (patientId: string) => {
-    setPatients(prev => prev.filter(p => p.id !== patientId));
+    setPatientsData(prev => prev.filter(p => p.id !== patientId));
   };
 
   const handleSaveEdit = (updatedPatient: Patient) => {
-    setPatients(prev => prev.map(p => 
+    setPatientsData(prev => prev.map(p => 
       p.id === updatedPatient.id ? updatedPatient : p
     ));
   };
@@ -243,7 +149,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
 
   // Filtrar y ordenar pacientes
   const filteredAndSortedPatients = useMemo(() => {
-    let filtered = [...patients];
+    let filtered = [...patientsData];
 
     // Aplicar filtros
     if (filters) {
@@ -304,7 +210,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     });
 
     return filtered;
-  }, [patients, filters, sortField, sortDirection]);
+  }, [patientsData, filters, sortField, sortDirection]);
 
   // Paginación
   const totalPages = Math.ceil(filteredAndSortedPatients.length / itemsPerPage);
@@ -493,7 +399,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                 </td>
                 <td className="px-4 py-4">
                   <div className="text-sm text-gray-900">
-                    <div className="font-medium">{formatDate(patient.ultimaConsulta)}</div>
+                    <div className="font-medium">{patient.ultimaConsulta ? formatDate(patient.ultimaConsulta) : 'Sin consultas'}</div>
                     <div className="flex items-center space-x-1 text-xs text-gray-700">
                       <Droplets className="w-3 h-3 text-red-500 flex-shrink-0" />
                       <span>{patient.tipoSangre}</span>

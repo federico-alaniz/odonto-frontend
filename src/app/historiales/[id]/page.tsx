@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { UserCircle, ArrowLeft, Edit3, Info, Filter, Plus } from 'lucide-react';
-import { MedicalHistory, convertEntryToHistory } from '../adapter';
+import { MedicalHistory, getMedicalHistoryById, getMedicalHistoriesByPatientId } from '../adapter';
 import { MedicalRecord } from '../types';
-import { sampleMedicalRecords } from '../sampleData';
 
 export default function HistoryDetailPage() {
   const params = useParams();
@@ -29,26 +28,21 @@ export default function HistoryDetailPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    // Buscar el paciente y sus registros médicos por ID del registro
-    const findPatientAndRecords = () => {
-      for (const record of sampleMedicalRecords) {
-        for (const entry of record.entries) {
-          const convertedHistory = convertEntryToHistory(entry, record.patient);
-          if (convertedHistory.id === historyId) {
-            // Retornar tanto la historia específica como todos los registros del paciente
-            const allPatientHistories = record.entries.map(e => convertEntryToHistory(e, record.patient));
-            return {
-              selectedHistory: convertedHistory,
-              patientRecord: record,
-              allHistories: allPatientHistories
-            };
-          }
-        }
+    // Buscar la historia médica por ID usando el adaptador
+    const findHistoryAndPatientRecords = () => {
+      const selectedHistory = getMedicalHistoryById(historyId);
+      if (selectedHistory) {
+        const allPatientHistories = getMedicalHistoriesByPatientId(selectedHistory.patientId);
+        return {
+          selectedHistory,
+          patientRecord: null, // No necesitamos esto con la nueva estructura
+          allHistories: allPatientHistories
+        };
       }
       return null;
     };
 
-    const result = findPatientAndRecords();
+    const result = findHistoryAndPatientRecords();
     if (result) {
       setHistory(result.selectedHistory);
       setPatientRecord(result.patientRecord);

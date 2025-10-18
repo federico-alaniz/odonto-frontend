@@ -6,14 +6,13 @@ import { ClipboardList, Info, Plus, FileText, Filter, Download, Users, Search } 
 import PatientHistoryList from './components/PatientHistoryList';
 import NewHistoryModal from './modals/NewHistoryModal';
 import { MedicalRecord } from './types';
-import { MedicalHistory, convertEntryToHistory, convertHistoryToEntry } from './adapter';
-import { sampleMedicalRecords } from './sampleData';
+import { MedicalHistory, getAllMedicalHistories } from './adapter';
 
 function HistorialesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Estado para las historias clínicas
-  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(sampleMedicalRecords);
+  // Estado para las historias clínicas usando datos fake
+  const [medicalHistories, setMedicalHistories] = useState<MedicalHistory[]>(getAllMedicalHistories());
   
   // Estados para los modales
   const [showNewHistoryModal, setShowNewHistoryModal] = useState(false);
@@ -30,28 +29,10 @@ function HistorialesContent() {
     diagnosis: ''
   });
 
-  // Convertir registros médicos a historias clínicas consolidadas por paciente
+  // Convertir las historias médicas a formato directo
   const patientHistories = useMemo(() => {
-    return medicalRecords.map(record => {
-      // Tomar la entrada más reciente como representativa
-      const latestEntry = record.entries.sort((a, b) => 
-        new Date(b.consultationDate).getTime() - new Date(a.consultationDate).getTime()
-      )[0];
-      
-      if (!latestEntry) return null;
-      
-      // Crear una historia clínica consolidada
-      const consolidatedHistory = convertEntryToHistory(latestEntry, record.patient);
-      
-      // Agregar información adicional sobre el total de registros
-      return {
-        ...consolidatedHistory,
-        totalEntries: record.entries.length,
-        lastUpdated: record.updatedAt,
-        allEntries: record.entries
-      };
-    }).filter((history): history is NonNullable<typeof history> => history !== null);
-  }, [medicalRecords]);
+    return medicalHistories;
+  }, [medicalHistories]);
 
   // Obtener parámetro de paciente de la URL
   const patientIdParam = searchParams?.get('patientId');
@@ -122,30 +103,15 @@ function HistorialesContent() {
 
   // Manejar creación de nueva historia
   const handleCreateNewHistory = (newHistory: Omit<MedicalHistory, 'id'>) => {
-    // Convertir a MedicalEntry
-    const newEntry = convertHistoryToEntry({
+    // Crear nueva historia con ID único
+    const history: MedicalHistory = {
       ...newHistory,
-      id: `entry_${Date.now()}`
-    });
+      id: `history_${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
 
-    // Buscar si ya existe una historia clínica para este paciente
-    const existingRecord = medicalRecords.find(r => r.patientId === newHistory.patientId);
-    
-    if (existingRecord) {
-      // Agregar el nuevo registro a la historia existente
-      setMedicalRecords(prev => prev.map(record => 
-        record.id === existingRecord.id 
-          ? { 
-              ...record, 
-              entries: [newEntry, ...record.entries],
-              updatedAt: new Date().toISOString()
-            }
-          : record
-      ));
-    } else {
-      console.log('Necesario crear nueva historia clínica para paciente:', newHistory.patientId);
-    }
-    
+    // Agregar la nueva historia al estado
+    setMedicalHistories(prev => [history, ...prev]);
     setShowNewHistoryModal(false);
   };
 
@@ -196,11 +162,11 @@ function HistorialesContent() {
                 <div className="flex items-center space-x-4 mt-2 text-sm text-gray-700">
                   <span className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
-                    {medicalRecords.length} pacientes con historia
+                    {medicalHistories.length} pacientes con historia
                   </span>
                   <span className="flex items-center gap-1">
                     <FileText className="w-4 h-4" />
-                    {medicalRecords.reduce((total, record) => total + record.entries.length, 0)} registros totales
+                    {medicalHistories.length} registros totales
                   </span>
                   <span className="flex items-center gap-1">
                     <Search className="w-4 h-4" />

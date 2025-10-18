@@ -19,7 +19,7 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  ultimaConsulta: string;
+  ultimaConsulta?: string;
   estado: 'activo' | 'inactivo';
   // Campos adicionales opcionales para edición
   direccion?: string;

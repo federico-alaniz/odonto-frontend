@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { MedicalHistory, convertEntryToHistory } from '../../../adapter';
-import { sampleMedicalRecords } from '../../../sampleData';
+import { MedicalHistory, getMedicalHistoryById } from '../../../adapter';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
 
@@ -23,22 +22,14 @@ export default function RegistroDetailPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
-    // Buscar el registro médico específico
-    const findRegistro = () => {
-      for (const record of sampleMedicalRecords) {
-        for (const entry of record.entries) {
-          const convertedHistory = convertEntryToHistory(entry, record.patient);
-          if (convertedHistory.id === registroId) {
-            setPatientName(`${record.patient.firstName} ${record.patient.lastName}`);
-            return convertedHistory;
-          }
-        }
-      }
-      return null;
-    };
-
-    const foundRegistro = findRegistro();
-    setRegistro(foundRegistro);
+    // Buscar el registro médico específico usando el adaptador
+    const foundRegistro = getMedicalHistoryById(registroId);
+    
+    if (foundRegistro) {
+      setPatientName(`${foundRegistro.patient.firstName} ${foundRegistro.patient.lastName}`);
+      setRegistro(foundRegistro);
+    }
+    
     setLoading(false);
   }, [registroId]);
 

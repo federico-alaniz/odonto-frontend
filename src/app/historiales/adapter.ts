@@ -1,3 +1,14 @@
+// Adaptador para convertir datos fake a formato de historiales médicos
+import { 
+  patients, 
+  medicalRecords, 
+  users, 
+  calculateAge,
+  type MedicalRecord as FakeMedicalRecord,
+  type Patient as FakePatient
+} from '@/utils/fake-data';
+import { MedicalEntry } from './types';
+
 // Adaptador temporal para mantener compatibilidad con componentes existentes
 // Esta interfaz mantiene la estructura antigua para los modales y componentes
 export interface MedicalHistory {
@@ -58,38 +69,55 @@ export interface MedicalHistory {
   createdAt: string;
 }
 
-// Función para convertir MedicalEntry a MedicalHistory (para compatibilidad)
-import { MedicalEntry, Patient } from './types';
-
-export function convertEntryToHistory(entry: MedicalEntry, patient: Patient): MedicalHistory {
+// Función para convertir FakeMedicalRecord a MedicalHistory (para compatibilidad)
+export function convertFakeToHistory(fakeRecord: FakeMedicalRecord, fakePatient: FakePatient): MedicalHistory {
+  // Buscar información del doctor
+  const doctor = users.find(u => u.id === fakeRecord.doctorId);
+  
   return {
-    id: entry.id,
-    patientId: patient.id,
+    id: fakeRecord.id,
+    patientId: fakeRecord.patientId,
     patient: {
-      firstName: patient.firstName,
-      lastName: patient.lastName,
-      email: patient.email,
-      phone: patient.phone,
-      age: patient.age,
-      dni: patient.dni
+      firstName: fakePatient.nombres,
+      lastName: fakePatient.apellidos,
+      email: fakePatient.email,
+      phone: fakePatient.telefono,
+      age: calculateAge(fakePatient.fechaNacimiento),
+      dni: fakePatient.numeroDocumento
     },
-    consultationDate: entry.consultationDate,
-    consultationTime: entry.consultationTime,
-    doctor: entry.doctor,
-    specialty: entry.specialty,
-    type: entry.type,
-    diagnosis: entry.diagnosis,
-    symptoms: entry.symptoms,
-    treatment: entry.treatment,
-    medications: entry.medications,
-    vitalSigns: entry.vitalSigns,
-    notes: entry.notes,
-    attachments: entry.attachments,
-    diagnosticImages: entry.diagnosticImages,
-    odontogram: entry.odontogram,
-    nextAppointment: entry.nextAppointment?.date,
-    status: entry.status === 'completed' ? 'closed' : entry.status === 'active' ? 'active' : 'follow_up',
-    createdAt: entry.createdAt
+    consultationDate: fakeRecord.fecha.split('T')[0],
+    consultationTime: fakeRecord.fecha.split('T')[1]?.substring(0, 5) || '10:00',
+    doctor: doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Dr. Desconocido',
+    specialty: fakeRecord.especialidad as 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia',
+    type: fakeRecord.tipo === 'consulta' ? 'consultation' as const : 
+          fakeRecord.tipo === 'control' ? 'followup' as const :
+          fakeRecord.tipo === 'cirugia' ? 'surgery' as const :
+          fakeRecord.tipo === 'emergencia' ? 'emergency' as const : 'consultation' as const,
+    diagnosis: fakeRecord.diagnostico,
+    symptoms: fakeRecord.sintomas,
+    treatment: fakeRecord.tratamiento,
+    medications: fakeRecord.medicamentos?.map(med => ({
+      name: med.nombre,
+      dosage: med.dosis,
+      frequency: med.frecuencia,
+      duration: med.duracion,
+      instructions: med.instrucciones || ''
+    })) || [],
+    vitalSigns: fakeRecord.signosVitales ? {
+      bloodPressure: fakeRecord.signosVitales.presionArterial,
+      heartRate: fakeRecord.signosVitales.frecuenciaCardiaca,
+      temperature: fakeRecord.signosVitales.temperatura,
+      weight: fakeRecord.signosVitales.peso,
+      height: fakeRecord.signosVitales.altura
+    } : undefined,
+    notes: fakeRecord.examenFisico,
+    attachments: [],
+    diagnosticImages: [],
+    odontogram: [],
+    nextAppointment: fakeRecord.proximaConsulta?.fecha,
+    status: fakeRecord.estado === 'finalizado' ? 'closed' : 
+            fakeRecord.estado === 'revisado' ? 'follow_up' : 'active',
+    createdAt: fakeRecord.fechaCreacion
   };
 }
 
@@ -102,7 +130,7 @@ export function convertHistoryToEntry(history: MedicalHistory): MedicalEntry {
     doctor: history.doctor,
     specialty: history.specialty,
     type: history.type,
-    chiefComplaint: '', // Campo nuevo, no disponible en la estructura antigua
+    chiefComplaint: '',
     symptoms: history.symptoms,
     diagnosis: history.diagnosis,
     treatment: history.treatment,
@@ -124,4 +152,34 @@ export function convertHistoryToEntry(history: MedicalHistory): MedicalEntry {
     createdAt: history.createdAt,
     updatedAt: new Date().toISOString()
   };
+}
+
+// Funciones helper para trabajar con datos fake
+export function getAllMedicalHistories(): MedicalHistory[] {
+  return medicalRecords.map(record => {
+    const patient = patients.find(p => p.id === record.patientId);
+    if (!patient) {
+      throw new Error(`Patient not found for medical record ${record.id}`);
+    }
+    return convertFakeToHistory(record, patient);
+  });
+}
+
+export function getMedicalHistoryById(historyId: string): MedicalHistory | null {
+  const record = medicalRecords.find(r => r.id === historyId);
+  if (!record) return null;
+  
+  const patient = patients.find(p => p.id === record.patientId);
+  if (!patient) return null;
+  
+  return convertFakeToHistory(record, patient);
+}
+
+export function getMedicalHistoriesByPatientId(patientId: string): MedicalHistory[] {
+  const patientRecords = medicalRecords.filter(r => r.patientId === patientId);
+  const patient = patients.find(p => p.id === patientId);
+  
+  if (!patient) return [];
+  
+  return patientRecords.map(record => convertFakeToHistory(record, patient));
 }
