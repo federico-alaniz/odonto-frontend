@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
+import { patients } from '@/utils/fake-patients';
 
 type MedicalSpecialty = 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia';
 
@@ -52,14 +53,14 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
     status: 'active' as const
   });
 
-  // Pacientes existentes simulados
-  const existingPatients = [
-    { id: '1', name: 'María González', age: 45, phone: '555-0101' },
-    { id: '2', name: 'Carlos López', age: 32, phone: '555-0102' },
-    { id: '3', name: 'Ana Martínez', age: 28, phone: '555-0103' },
-    { id: '4', name: 'Pedro Rodríguez', age: 67, phone: '555-0104' },
-    { id: '5', name: 'Laura Sánchez', age: 38, phone: '555-0105' }
-  ];
+  // Pacientes existentes usando datos reales
+  const existingPatients = patients.filter(p => p.estado === 'activo').map(patient => ({
+    id: patient.id,
+    name: `${patient.nombres} ${patient.apellidos}`,
+    age: new Date().getFullYear() - new Date(patient.fechaNacimiento).getFullYear(),
+    dni: patient.numeroDocumento,
+    phone: patient.telefono
+  }));
 
   // Doctores disponibles
   const availableDoctors = [
@@ -324,7 +325,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     <option value="">Seleccione un paciente...</option>
                     {existingPatients.map((patient) => (
                       <option key={patient.id} value={patient.id}>
-                        {patient.name} - {patient.age} años - {patient.phone}
+                        {patient.name} - {patient.age} años - {patient.dni}
                       </option>
                     ))}
                   </select>

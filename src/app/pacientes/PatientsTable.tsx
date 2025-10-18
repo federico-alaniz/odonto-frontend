@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Eye, 
@@ -77,7 +77,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   const router = useRouter();
 
   // Lista de pacientes (usando datos fake adaptados)
-  const [patientsData, setPatientsData] = useState<Patient[]>(adaptPatientsForTable(patients));
+  const [patientsData, setPatientsData] = useState<Patient[]>(() => adaptPatientsForTable(patients));
 
   // Funciones para manejar acciones
   const handleViewPatient = (patient: Patient) => {
@@ -259,14 +259,40 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
 
   const getDocumentTypeLabel = (type: string) => {
     const types: { [key: string]: string } = {
+      'dni': 'DNI',
+      'le': 'LE',
+      'lc': 'LC',
+      'ci': 'CI',
       'cc': 'CC',
       'ti': 'TI',
       'ce': 'CE',
       'pasaporte': 'PAS',
+      'extranjero': 'EXT',
       'rc': 'RC'
     };
-    return types[type] || type;
+    return types[type] || type.toUpperCase();
   };
+
+  // Escuchar actualizaciones globales de la lista de pacientes (disparadas por addNewPatient)
+  useEffect(() => {
+    const onPatientsUpdated = () => {
+      setPatientsData(adaptPatientsForTable(patients));
+    };
+
+    // Actualizar al montar
+    onPatientsUpdated();
+
+    // Suscribirse al evento del window
+    if (typeof window !== 'undefined') {
+      window.addEventListener('patients:updated', onPatientsUpdated as EventListener);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('patients:updated', onPatientsUpdated as EventListener);
+      }
+    };
+  }, []);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">

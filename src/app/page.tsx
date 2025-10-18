@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Users, 
@@ -17,20 +20,113 @@ import {
   BarChart3
 } from 'lucide-react';
 
-export default function Home() {
-  const stats = [
-    { label: 'Pacientes Registrados', value: '1,245', icon: Users, color: 'blue' },
-    { label: 'Citas Hoy', value: '32', icon: Calendar, color: 'green' },
-    { label: 'Consultas Pendientes', value: '8', icon: Clock, color: 'yellow' },
-    { label: 'Personal Activo', value: '18', icon: UserCog, color: 'purple' }
-  ];
+// Importar datos fake
+import { patients } from '../utils/fake-patients';
+import { appointments } from '../utils/fake-appointments';
+import { users } from '../utils/fake-users';
 
-  const recentActivity = [
-    { patient: 'María González', action: 'Consulta completada', time: '10:30 AM', type: 'success', icon: CheckCircle },
-    { patient: 'Juan Pérez', action: 'Cita programada', time: '11:00 AM', type: 'info', icon: Info },
-    { patient: 'Ana López', action: 'Examen pendiente', time: '11:30 AM', type: 'warning', icon: AlertCircle },
-    { patient: 'Carlos Ruiz', action: 'Seguimiento requerido', time: '12:00 PM', type: 'error', icon: XCircle }
-  ];
+export default function Home() {
+  const [stats, setStats] = useState([
+    { label: 'Pacientes Registrados', value: '0', icon: Users, color: 'blue' },
+    { label: 'Citas Hoy', value: '0', icon: Calendar, color: 'green' },
+    { label: 'Consultas Pendientes', value: '0', icon: Clock, color: 'yellow' },
+    { label: 'Personal Activo', value: '0', icon: UserCog, color: 'purple' }
+  ]);
+
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Calcular estadísticas reales
+    const calculateStats = () => {
+      // 1. Pacientes registrados - total de pacientes activos
+      const totalPatients = patients.filter(p => p.estado === 'activo').length;
+
+      // 2. Citas de hoy - citas para la fecha actual (18 de octubre de 2025)
+      const today = '2025-10-18';
+      const todayAppointments = appointments.filter(apt => apt.fecha === today).length;
+
+      // 3. Consultas pendientes - citas confirmadas o programadas (no completadas ni canceladas)
+      const pendingConsultations = appointments.filter(apt => 
+        apt.estado === 'confirmada' || apt.estado === 'programada'
+      ).length;
+
+      // 4. Personal activo - usuarios con roles de doctor, enfermero, etc. que están activos
+      const activeStaff = users.filter(user => 
+        user.estado === 'activo' && 
+        ['doctor', 'nurse', 'admin', 'secretary'].includes(user.role)
+      ).length;
+
+      setStats([
+        { label: 'Pacientes Registrados', value: totalPatients.toLocaleString(), icon: Users, color: 'blue' },
+        { label: 'Citas Hoy', value: todayAppointments.toString(), icon: Calendar, color: 'green' },
+        { label: 'Consultas Pendientes', value: pendingConsultations.toString(), icon: Clock, color: 'yellow' },
+        { label: 'Personal Activo', value: activeStaff.toString(), icon: UserCog, color: 'purple' }
+      ]);
+    };
+
+    // Calcular actividad reciente basada en citas de hoy
+    const calculateRecentActivity = () => {
+      const today = '2025-10-18';
+      const todayAppointments = appointments
+        .filter(apt => apt.fecha === today)
+        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+        .slice(0, 4) // Mostrar solo las primeras 4
+        .map(apt => {
+          const patient = patients.find(p => p.id === apt.patientId);
+          const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
+          
+          console.log('Processing appointment:', apt.id, 'Patient:', patientName, 'Estado:', apt.estado);
+          
+          // Determinar tipo y acción basado en estado
+          let type, action, icon;
+          switch (apt.estado) {
+            case 'completada':
+              type = 'success';
+              action = 'Consulta completada';
+              icon = CheckCircle;
+              break;
+            case 'en-curso':
+              type = 'info';
+              action = 'Consulta en curso';
+              icon = Activity;
+              break;
+            case 'confirmada':
+              type = 'info';
+              action = 'Cita confirmada';
+              icon = Info;
+              break;
+            case 'programada':
+              type = 'warning';
+              action = 'Cita programada';
+              icon = AlertCircle;
+              break;
+            case 'cancelada':
+              type = 'error';
+              action = 'Cita cancelada';
+              icon = XCircle;
+              break;
+            default:
+              type = 'info';
+              action = 'Estado desconocido';
+              icon = Info;
+          }
+
+          return {
+            patient: patientName,
+            action: action,
+            time: apt.horaInicio,
+            type: type,
+            icon: icon
+          };
+        });
+
+      console.log('Recent activity data:', todayAppointments);
+      setRecentActivity(todayAppointments);
+    };
+
+    calculateStats();
+    calculateRecentActivity();
+  }, []);
 
   const getColorClasses = (color: string) => {
     const colors = {
@@ -128,34 +224,42 @@ export default function Home() {
             </div>
           <div className="p-6">
             <div className="space-y-4">
-              {recentActivity.map((activity, index) => {
-                const IconComponent = activity.icon;
-                return (
-                  <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200">
-                    <div className="flex items-center space-x-3">
-                      <IconComponent className={`w-5 h-5 ${
-                        activity.type === 'success' ? 'text-green-600' :
-                        activity.type === 'info' ? 'text-blue-600' :
-                        activity.type === 'warning' ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`} />
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {activity.patient}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {activity.action}
-                        </p>
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, index) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200">
+                      <div className="flex items-center space-x-3">
+                        <IconComponent className={`w-5 h-5 ${
+                          activity.type === 'success' ? 'text-green-600' :
+                          activity.type === 'info' ? 'text-blue-600' :
+                          activity.type === 'warning' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`} />
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {activity.patient}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {activity.action}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${getTypeClasses(activity.type)}`}>
+                          {activity.time}
+                        </span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${getTypeClasses(activity.type)}`}>
-                        {activity.time}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 font-medium">No hay actividad reciente</p>
+                  <p className="text-sm text-gray-400">Las actividades aparecerán aquí cuando se registren citas o consultas</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

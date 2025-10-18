@@ -74,6 +74,16 @@ export function convertFakeToHistory(fakeRecord: FakeMedicalRecord, fakePatient:
   // Buscar información del doctor
   const doctor = users.find(u => u.id === fakeRecord.doctorId);
   
+  // Función helper para formatear el nombre del doctor
+  const formatDoctorName = (nombres: string, apellidos: string): string => {
+    // Si el nombre ya empieza con Dr. o Dra., no agregar prefijo
+    if (nombres.startsWith('Dr.') || nombres.startsWith('Dra.')) {
+      return `${nombres} ${apellidos}`;
+    }
+    // Si no tiene prefijo, agregar Dr. por defecto
+    return `Dr. ${nombres} ${apellidos}`;
+  };
+  
   return {
     id: fakeRecord.id,
     patientId: fakeRecord.patientId,
@@ -87,7 +97,7 @@ export function convertFakeToHistory(fakeRecord: FakeMedicalRecord, fakePatient:
     },
     consultationDate: fakeRecord.fecha.split('T')[0],
     consultationTime: fakeRecord.fecha.split('T')[1]?.substring(0, 5) || '10:00',
-    doctor: doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Dr. Desconocido',
+    doctor: doctor ? formatDoctorName(doctor.nombres, doctor.apellidos) : 'Dr. Desconocido',
     specialty: fakeRecord.especialidad as 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia',
     type: fakeRecord.tipo === 'consulta' ? 'consultation' as const : 
           fakeRecord.tipo === 'control' ? 'followup' as const :

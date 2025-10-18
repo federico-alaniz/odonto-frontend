@@ -14,6 +14,7 @@ import {
   MedicalFormNotice,
   MEDICAL_FORM_COLORS
 } from '@/components/forms';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface ConsultationFormData {
   patientId: string;
@@ -29,6 +30,7 @@ interface FormErrors {
 }
 
 export default function ExampleConsultationForm() {
+  const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState<ConsultationFormData>({
     patientId: '',
     consultationType: '',
@@ -84,7 +86,10 @@ export default function ExampleConsultationForm() {
     try {
       // Simular llamada a API
       await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('✅ Consulta registrada exitosamente');
+      showSuccess(
+        'Consulta registrada exitosamente',
+        'Los datos de la consulta han sido guardados'
+      );
       
       // Limpiar formulario
       setFormData({
@@ -97,7 +102,10 @@ export default function ExampleConsultationForm() {
       });
       
     } catch {
-      alert('❌ Error al registrar la consulta');
+      showError(
+        'Error al registrar la consulta',
+        'Ha ocurrido un problema. Intente nuevamente'
+      );
     } finally {
       setIsSubmitting(false);
     }

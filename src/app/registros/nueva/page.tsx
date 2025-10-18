@@ -23,11 +23,13 @@ import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
 import MedicalFormActions from '@/components/forms/MedicalFormActions';
 import MedicalFormNotice from '@/components/forms/MedicalFormNotice';
 import MedicalButton from '@/components/forms/MedicalButton';
+import { useToast } from '@/components/ui/ToastProvider';
 
 type MedicalSpecialty = 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia';
 
 export default function NuevaConsultaPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   
   const [isExistingPatient, setIsExistingPatient] = useState(true);
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -286,13 +288,19 @@ export default function NuevaConsultaPage() {
       console.log('Nueva consulta creada:', newHistory);
       
       // Mostrar mensaje de éxito
-      alert('✅ Consulta registrada exitosamente');
+      showSuccess(
+        'Consulta registrada exitosamente',
+        'Los datos de la consulta han sido guardados en el historial'
+      );
       
       // Redirigir a la página de registros
       router.push('/registros');
       
     } catch {
-      alert('❌ Error al registrar la consulta. Intente nuevamente.');
+      showError(
+        'Error al registrar la consulta',
+        'Ha ocurrido un problema. Intente nuevamente'
+      );
     } finally {
       setIsSubmitting(false);
     }

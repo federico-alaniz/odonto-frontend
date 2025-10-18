@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import MedicalModal from '@/components/ui/MedicalModal';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface Patient {
   id: string;
@@ -24,6 +25,7 @@ export default function DeletePatientModal({
   patient, 
   onConfirm 
 }: DeletePatientModalProps) {
+  const { showSuccess, showError, showWarning } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState('');
 
@@ -31,7 +33,10 @@ export default function DeletePatientModal({
     if (!patient) return;
     
     if (confirmText.toLowerCase() !== 'eliminar') {
-      alert('Por favor escriba "eliminar" para confirmar');
+      showWarning(
+        'Confirmación requerida',
+        'Por favor escriba "eliminar" para confirmar la acción'
+      );
       return;
     }
 
@@ -42,12 +47,18 @@ export default function DeletePatientModal({
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       onConfirm(patient.id);
-      alert('✅ Paciente eliminado exitosamente');
+      showSuccess(
+        'Paciente eliminado exitosamente',
+        'El paciente ha sido removido del sistema'
+      );
       onClose();
       setConfirmText('');
       
     } catch {
-      alert('❌ Error al eliminar el paciente. Intente nuevamente.');
+      showError(
+        'Error al eliminar el paciente',
+        'Ha ocurrido un problema. Intente nuevamente'
+      );
     } finally {
       setIsDeleting(false);
     }

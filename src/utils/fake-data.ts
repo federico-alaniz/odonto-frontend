@@ -289,6 +289,92 @@ export const generateRandomData = (type: 'patient' | 'appointment' | 'user', cou
   console.log(`Generate ${count} random ${type}(s)`);
 };
 
+// Funciones para agregar nuevos datos
+import type { Patient, MedicalRecord } from './fake-data-types';
+
+export const addNewPatient = (patientData: Omit<Patient, 'id' | 'fechaRegistro' | 'estado' | 'ultimaConsulta' | 'proximaCita'>): Patient => {
+  // Generar ID único
+  const newId = `pat_${Date.now()}`;
+  
+  // Crear nuevo paciente
+  const newPatient: Patient = {
+    ...patientData,
+    id: newId,
+    fechaRegistro: new Date().toISOString(),
+    estado: 'activo',
+    ultimaConsulta: undefined,
+    proximaCita: undefined
+  };
+  
+  // Agregar a la lista de pacientes
+  _patients.push(newPatient);
+  
+  // Crear historia clínica vacía para el nuevo paciente
+  createEmptyMedicalHistory(newId);
+
+  // Notificar a la UI en el navegador que la lista de pacientes cambió
+  try {
+    if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('patients:updated', { detail: { patientId: newId } }));
+    }
+  } catch (e) {
+    // no-op en entornos no browser
+  }
+  
+  return newPatient;
+};
+
+export const createEmptyMedicalHistory = (patientId: string): MedicalRecord => {
+  // Generar ID único para la historia clínica
+  const historyId = `med_${Date.now()}`;
+  
+  // Buscar un doctor por defecto (usar el primero disponible)
+  const defaultDoctor = _users.find(user => user.role === 'doctor');
+  const doctorId = defaultDoctor?.id || 'user_doc_001';
+  
+  // Crear historia clínica vacía
+  const emptyHistory: MedicalRecord = {
+    id: historyId,
+    patientId: patientId,
+    appointmentId: undefined,
+    doctorId: doctorId,
+    fecha: new Date().toISOString().split('T')[0],
+    especialidad: 'clinica-medica',
+    tipo: 'consulta',
+    motivoConsulta: 'Primera consulta - Historia clínica inicial',
+    sintomas: 'Sin síntomas reportados',
+    examenFisico: 'Pendiente de evaluación médica',
+    diagnostico: 'Sin diagnóstico establecido',
+    tratamiento: 'Pendiente de evaluación médica',
+    medicamentos: [],
+    signosVitales: undefined,
+    proximaConsulta: undefined,
+    estado: 'borrador',
+    fechaCreacion: new Date().toISOString()
+  };
+  
+  // Agregar a la lista de registros médicos
+  _medicalRecords.push(emptyHistory);
+  
+  return emptyHistory;
+};
+
+// Función para asegurar que todos los pacientes tengan al menos una historia clínica
+export const ensureAllPatientsHaveHistory = (): void => {
+  _patients.forEach(patient => {
+    // Verificar si el paciente tiene al menos una historia clínica
+    const hasHistory = _medicalRecords.some(record => record.patientId === patient.id);
+    
+    if (!hasHistory) {
+      console.log(`Creando historia clínica vacía para paciente: ${patient.nombres} ${patient.apellidos}`);
+      createEmptyMedicalHistory(patient.id);
+    }
+  });
+};
+
+// Ejecutar la verificación al cargar el módulo
+ensureAllPatientsHaveHistory();
+
 // Exportación por defecto con todos los datos principales
 const fakeDataExport = {
   users: _users,

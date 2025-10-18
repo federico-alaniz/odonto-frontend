@@ -87,13 +87,18 @@ export default function ViewPatientModal({
 
   const getDocumentTypeLabel = (type: string) => {
     const types: { [key: string]: string } = {
+      'dni': 'DNI (Documento Nacional de Identidad)',
+      'le': 'LE (Libreta de Enrolamiento)',
+      'lc': 'LC (Libreta Cívica)',
+      'ci': 'CI (Cédula de Identidad)',
       'cc': 'Cédula de Ciudadanía',
       'ti': 'Tarjeta de Identidad',
       'ce': 'Cédula de Extranjería',
       'pasaporte': 'Pasaporte',
+      'extranjero': 'Documento de Extranjero',
       'rc': 'Registro Civil'
     };
-    return types[type] || type;
+    return types[type] || type.toUpperCase();
   };
 
   const getGenderLabel = (gender: string) => {

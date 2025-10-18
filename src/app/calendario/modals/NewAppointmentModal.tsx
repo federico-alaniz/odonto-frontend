@@ -9,6 +9,7 @@ import MedicalSelectField from '@/components/forms/MedicalSelectField';
 import MedicalTextareaField from '@/components/forms/MedicalTextareaField';
 import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
 import MedicalButton from '@/components/forms/MedicalButton';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface NewAppointmentModalProps {
   isOpen: boolean;
@@ -75,6 +76,7 @@ export default function NewAppointmentModal({
   selectedDate,
   selectedTime 
 }: NewAppointmentModalProps) {
+  const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState<NewAppointment>({
     patientName: '',
     patientId: '',
@@ -222,11 +224,17 @@ export default function NewAppointmentModal({
       };
       
       onSave(appointmentData);
-      alert('✅ Cita programada exitosamente');
+      showSuccess(
+        'Cita programada exitosamente',
+        'La nueva cita ha sido agregada al calendario'
+      );
       onClose();
     } catch (error) {
       console.error('Error al programar cita:', error);
-      alert('❌ Error al programar la cita. Intente nuevamente.');
+      showError(
+        'Error al programar la cita',
+        'Ha ocurrido un problema. Intente nuevamente'
+      );
     } finally {
       setIsSaving(false);
     }

@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Settings,
   Menu,
-  X,
+  ChevronLeft,
   Building2,
   CircleUser,
   ChevronDown,
@@ -246,7 +246,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               className="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label="Colapsar sidebar"
             >
-              <X className="w-5 h-5 text-gray-600 hover:text-blue-700 transition-colors" />
+              <ChevronLeft className="w-5 h-5 text-gray-600 hover:text-blue-700 transition-colors" />
             </button>
           </div>
         )}

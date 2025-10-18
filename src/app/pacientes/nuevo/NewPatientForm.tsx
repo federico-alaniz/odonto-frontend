@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   User, 
   Phone, 
@@ -13,8 +14,10 @@ import {
 import { 
   getProvincias, 
   getDepartamentosPorProvincia, 
-  getCiudadesPorProvincia 
+  getCiudadesPorProvincia,
+  addNewPatient
 } from '../../../utils';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface PatientFormData {
   // Información Personal
@@ -55,6 +58,9 @@ interface FormErrors {
 }
 
 export default function NewPatientForm() {
+  const router = useRouter();
+  const { showSuccess, showError } = useToast();
+  
   const [formData, setFormData] = useState<PatientFormData>({
     nombres: '',
     apellidos: '',
@@ -212,45 +218,84 @@ export default function NewPatientForm() {
     setIsSubmitting(true);
     
     try {
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simular un pequeño delay para UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Aquí iría la llamada real a la API
-      console.log('Datos del paciente:', formData);
+      // Crear el objeto del paciente con el formato correcto
+      const newPatientData = {
+        nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        tipoDocumento: formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero',
+        numeroDocumento: formData.numeroDocumento,
+        fechaNacimiento: formData.fechaNacimiento,
+        genero: formData.genero as 'masculino' | 'femenino' | 'otro',
+        telefono: formData.telefono,
+        email: formData.email,
+        direccion: {
+          calle: formData.domicilio,
+          numero: '',
+          ciudad: formData.ciudad,
+          provincia: formData.provincia,
+          codigoPostal: ''
+        },
+        tipoSangre: formData.tipoSangre,
+        contactoEmergencia: {
+          nombre: formData.contactoEmergenciaNombre,
+          telefono: formData.contactoEmergenciaTelefono,
+          relacion: formData.contactoEmergenciaParentesco
+        },
+        seguroMedico: formData.tieneSeguro === 'si' ? {
+          empresa: formData.nombreSeguro,
+          numeroPoliza: formData.numeroPoliza,
+          vigencia: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 año desde hoy
+        } : undefined,
+        alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()) : [],
+        medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()) : [],
+        antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()) : [],
+        antecedentesFamiliares: [],
+        doctorAsignado: undefined
+      };
+      
+      // Agregar el paciente y crear su historia clínica vacía
+      const createdPatient = addNewPatient(newPatientData);
+      console.log('Paciente creado:', createdPatient);
       
       // Mostrar mensaje de éxito
-      alert('✅ Paciente registrado exitosamente');
+      showSuccess(
+        'Paciente registrado exitosamente',
+        'Se ha creado la historia clínica inicial del paciente'
+      );
       
-      // Limpiar formulario
-      setFormData({
-        nombres: '',
-        apellidos: '',
-        tipoDocumento: '',
-        numeroDocumento: '',
-        fechaNacimiento: '',
-        genero: '',
-        telefono: '',
-        email: '',
-        domicilio: '',
-        ciudad: '',
-        departamento: '',
-        provincia: '',
-        tipoSangre: '',
-        alergias: '',
-        medicamentos: '',
-        enfermedades: '',
-        contactoEmergenciaNombre: '',
-        contactoEmergenciaParentesco: '',
-        contactoEmergenciaTelefono: '',
-        tieneSeguro: '',
-        nombreSeguro: '',
-        numeroPoliza: ''
-      });
+      // Navegar de vuelta a la lista de pacientes
+      router.push('/pacientes');
       
-    } catch {
-      alert('❌ Error al registrar el paciente. Intente nuevamente.');
+    } catch (error) {
+      console.error('Error al registrar paciente:', error);
+      showError(
+        'Error al registrar el paciente',
+        'Por favor, verifique los datos e intente nuevamente'
+      );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Verificar si hay cambios en el formulario
+    const hasChanges = Object.values(formData).some(value => value.trim() !== '');
+    
+    if (hasChanges) {
+      // Confirmar cancelación si hay cambios
+      const confirmCancel = window.confirm(
+        '¿Estás seguro de que quieres cancelar? Se perderán todos los datos ingresados.'
+      );
+      
+      if (confirmCancel) {
+        router.push('/pacientes');
+      }
+    } else {
+      // Si no hay cambios, navegar directamente
+      router.push('/pacientes');
     }
   };
 
@@ -811,6 +856,7 @@ export default function NewPatientForm() {
         <div className="flex flex-col sm:flex-row gap-4 justify-end">
           <button
             type="button"
+            onClick={handleCancel}
             className="px-8 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all font-medium"
           >
             Cancelar
