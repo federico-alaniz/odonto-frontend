@@ -7,12 +7,12 @@ import {
   Calendar, 
   Clock, 
   UserCog, 
-  Building2,
   UserPlus,
   CalendarPlus,
   ClipboardList,
   Activity,
   TrendingUp,
+  type LucideIcon,
   CheckCircle,
   AlertCircle,
   Info,
@@ -33,7 +33,13 @@ export default function Home() {
     { label: 'Personal Activo', value: '0', icon: UserCog, color: 'purple' }
   ]);
 
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<Array<{
+    patient: string;
+    action: string;
+    time: string;
+    type: string;
+    icon: LucideIcon;
+  }>>([]);
 
   useEffect(() => {
     // Calcular estadísticas reales

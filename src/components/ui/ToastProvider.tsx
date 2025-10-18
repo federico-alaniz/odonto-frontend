@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import Toast, { ToastType, ToastProps } from './Toast';
+import Toast, { ToastProps } from './Toast';
 
 interface ToastContextType {
   showToast: (toast: Omit<ToastProps, 'id' | 'onClose' | 'isVisible'>) => void;

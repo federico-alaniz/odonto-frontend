@@ -317,7 +317,7 @@ export const addNewPatient = (patientData: Omit<Patient, 'id' | 'fechaRegistro' 
     if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('patients:updated', { detail: { patientId: newId } }));
     }
-  } catch (e) {
+  } catch {
     // no-op en entornos no browser
   }
   

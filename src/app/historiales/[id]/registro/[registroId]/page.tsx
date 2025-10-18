@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, FileText, Info, Edit3, User, Calendar, Stethoscope, Activity, Pill, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Info, Edit3, User, Calendar, Stethoscope, Activity, Pill, ClipboardList } from 'lucide-react';
 import { MedicalHistory, getMedicalHistoryById } from '../../../adapter';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
@@ -494,7 +494,14 @@ export default function RegistroDetailPage() {
       {/* Modal visor de imágenes */}
       {imageViewerOpen && registro.diagnosticImages && (
         <ImageViewerModal
-          images={registro.diagnosticImages as any}
+          images={registro.diagnosticImages as Array<{
+            id: string;
+            name: string;
+            description?: string;
+            type: 'radiografia' | 'ecografia' | 'tomografia' | 'resonancia' | 'endoscopia' | 'laboratorio' | 'otro';
+            url: string;
+            uploadDate: string;
+          }>}
           initialIndex={selectedImageIndex}
           isOpen={imageViewerOpen}
           onClose={() => setImageViewerOpen(false)}

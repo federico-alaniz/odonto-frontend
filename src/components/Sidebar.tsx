@@ -8,7 +8,6 @@ import {
   Calendar,
   Users,
   ClipboardList,
-  TrendingUp,
   Settings,
   Menu,
   ChevronLeft,

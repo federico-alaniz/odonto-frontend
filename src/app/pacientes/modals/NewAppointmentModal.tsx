@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Clock, User, Stethoscope } from 'lucide-react';
+import { Calendar, User, Stethoscope } from 'lucide-react';
 import MedicalModal from '@/components/ui/MedicalModal';
 import MedicalFormSection from '@/components/forms/MedicalFormSection';
 import MedicalInputField from '@/components/forms/MedicalInputField';

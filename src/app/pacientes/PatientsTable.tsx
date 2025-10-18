@@ -9,7 +9,6 @@ import {
   Calendar, 
   Phone, 
   Mail, 
-  MapPin, 
   User, 
   ChevronLeft, 
   ChevronRight,
@@ -55,11 +54,6 @@ const adaptPatientsForTable = (fakePatients: FakePatient[]): Patient[] => {
     ...patient,
     ciudad: patient.direccion.ciudad
   }));
-};
-
-// Función para obtener el paciente completo original por ID
-const getOriginalPatient = (patientId: string): FakePatient | undefined => {
-  return patients.find(p => p.id === patientId);
 };
 
 export default function PatientsTable({ filters }: PatientsTableProps) {

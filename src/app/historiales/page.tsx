@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ClipboardList, Info, Plus, FileText, Filter, Download, Users, Search } from 'lucide-react';
 import PatientHistoryList from './components/PatientHistoryList';
 import NewHistoryModal from './modals/NewHistoryModal';
-import { MedicalRecord } from './types';
 import { MedicalHistory, getAllMedicalHistories } from './adapter';
 
 function HistorialesContent() {

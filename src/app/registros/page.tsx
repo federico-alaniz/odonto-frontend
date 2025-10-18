@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Info, Plus, Download } from 'lucide-react';
-import { MedicalRecord } from '../historiales/types';
 import { MedicalHistory, getAllMedicalHistories } from '../historiales/adapter';
 
 export default function RegistrosMedicosPage() {
