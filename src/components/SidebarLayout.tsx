@@ -16,7 +16,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const safeCollapsed = isClient ? isCollapsed : false;
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-slate-200">{/* Color más definido */}
       {/* Mobile Overlay */}
       {safeMobile && !safeCollapsed && (
         <div 

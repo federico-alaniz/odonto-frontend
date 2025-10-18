@@ -115,29 +115,29 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
           <span>Hacer clic en cualquier fila para ver la historia clínica completa del paciente</span>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+      <div className="overflow-hidden">
+        <table className="w-full table-fixed divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/4 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Paciente
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Registros Médicos
+              <th className="w-1/8 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Registros
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Última Consulta
+              <th className="w-1/8 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                Últ. Consulta
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/6 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Doctor / Especialidad
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/4 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Último Diagnóstico
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/12 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Estado
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/12 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
@@ -150,65 +150,70 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
                 onClick={() => handleViewHistory(history)}
                 title="Hacer clic para ver detalles de la historia clínica"
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-800">
+                    <div className="flex-shrink-0 h-8 w-8">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-xs font-medium text-blue-800">
                           {history.patient.firstName.charAt(0)}{history.patient.lastName.charAt(0)}
                         </span>
                       </div>
                     </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="ml-3 min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate">
                         {history.patient.firstName} {history.patient.lastName}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs text-gray-700 truncate">
                         {history.patient.age} años • {history.patient.phone}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-center">
-                    <div className="text-lg font-semibold text-blue-600">
-                      {history.totalEntries || 1}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {(history.totalEntries || 1) === 1 ? 'registro' : 'registros'}
-                    </div>
+                <td className="px-4 py-4 text-center">
+                  <div className="text-sm font-semibold text-blue-600">
+                    {history.totalEntries || 1}
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    reg.
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <div className="text-sm text-gray-900">
-                    {new Date(history.consultationDate).toLocaleDateString('es-ES')}
+                    {new Date(history.consultationDate).toLocaleDateString('es-ES', { 
+                      day: '2-digit', 
+                      month: '2-digit', 
+                      year: '2-digit' 
+                    })}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs text-gray-700">
                     {history.consultationTime}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{history.doctor}</div>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSpecialtyColor(history.specialty)}`}>
-                    {getSpecialtyLabel(history.specialty)}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900 max-w-xs truncate" title={history.diagnosis}>
-                    {history.diagnosis}
-                  </div>
-                  <div className="text-sm text-gray-500 max-w-xs truncate" title={history.symptoms}>
-                    Síntomas: {history.symptoms}
+                <td className="px-4 py-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">{history.doctor}</div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSpecialtyColor(history.specialty)} truncate max-w-full`}>
+                      {getSpecialtyLabel(history.specialty)}
+                    </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-900 truncate" title={history.diagnosis}>
+                      {history.diagnosis}
+                    </div>
+                    <div className="text-xs text-gray-700 truncate" title={history.symptoms}>
+                      {history.symptoms}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(history.status)}`}>
                     {getStatusLabel(history.status)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="text-blue-600 flex items-center space-x-1">
-                    <span>Ver detalles</span>
+                <td className="px-4 py-4 text-center">
+                  <div className="text-blue-600 flex items-center justify-center">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

@@ -6,6 +6,7 @@ import MedicalModal from '@/components/ui/MedicalModal';
 import MedicalInput from '@/components/forms/MedicalInput';
 import MedicalSelect from '@/components/forms/MedicalSelect';
 import MedicalTextarea from '@/components/forms/MedicalTextarea';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface Patient {
   id: string;
@@ -19,7 +20,7 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  ultimaConsulta: string;
+  ultimaConsulta?: string;
   estado: 'activo' | 'inactivo';
   // Campos adicionales opcionales para edición
   direccion?: string;
@@ -47,6 +48,7 @@ interface FormErrors {
 }
 
 export default function EditPatientModal({ isOpen, onClose, patient, onSave }: EditPatientModalProps) {
+  const { showSuccess, showError } = useToast();
   const [formData, setFormData] = useState<Patient | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -158,11 +160,17 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
       // Llamar al callback con los datos actualizados
       onSave(formData);
       
-      alert('✅ Paciente actualizado exitosamente');
+      showSuccess(
+        'Paciente actualizado exitosamente',
+        'Los cambios se han guardado correctamente'
+      );
       onClose();
     } catch (error) {
       console.error('Error al actualizar paciente:', error);
-      alert('❌ Error al actualizar el paciente. Intente nuevamente.');
+      showError(
+        'Error al actualizar el paciente',
+        'Por favor, verifique los datos e intente nuevamente'
+      );
     } finally {
       setIsSaving(false);
     }

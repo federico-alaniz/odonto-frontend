@@ -1,10 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { Calendar, User, Stethoscope } from 'lucide-react';
 import MedicalModal from '@/components/ui/MedicalModal';
-import MedicalInput from '@/components/forms/MedicalInput';
-import MedicalSelect from '@/components/forms/MedicalSelect';
-import MedicalTextarea from '@/components/forms/MedicalTextarea';
+import MedicalFormSection from '@/components/forms/MedicalFormSection';
+import MedicalInputField from '@/components/forms/MedicalInputField';
+import MedicalSelectField from '@/components/forms/MedicalSelectField';
+import MedicalTextareaField from '@/components/forms/MedicalTextareaField';
+import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
+import MedicalFormActions from '@/components/forms/MedicalFormActions';
+import MedicalFormNotice from '@/components/forms/MedicalFormNotice';
+import MedicalButton from '@/components/forms/MedicalButton';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface Patient {
   id: string;
@@ -29,6 +36,7 @@ interface AppointmentData {
 }
 
 export default function NewAppointmentModal({ isOpen, onClose, patient }: NewAppointmentModalProps) {
+  const { showSuccess, showError, showWarning } = useToast();
   const [formData, setFormData] = useState<AppointmentData>({
     fecha: '',
     hora: '',
@@ -91,7 +99,10 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
     e.preventDefault();
     
     if (!formData.fecha || !formData.hora || !formData.tipoConsulta || !formData.medico) {
-      alert('Por favor complete todos los campos obligatorios');
+      showWarning(
+        'Campos requeridos',
+        'Por favor complete todos los campos obligatorios'
+      );
       return;
     }
 
@@ -106,7 +117,10 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
         cita: formData
       });
       
-      alert('✅ Cita programada exitosamente');
+      showSuccess(
+        'Cita programada exitosamente',
+        'La cita ha sido registrada en el calendario'
+      );
       onClose();
       
       // Limpiar formulario
@@ -121,7 +135,10 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
       });
       
     } catch {
-      alert('❌ Error al programar la cita. Intente nuevamente.');
+      showError(
+        'Error al programar la cita',
+        'Ha ocurrido un problema. Intente nuevamente'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -139,137 +156,145 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
       title={`Nueva Cita - ${patient.nombres} ${patient.apellidos}`}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Información del paciente */}
-        <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-          <div className="flex items-center">
-            <span className="text-2xl mr-3">👤</span>
-            <div>
-              <h3 className="font-semibold text-green-900">
-                {patient.nombres} {patient.apellidos}
-              </h3>
-              <p className="text-sm text-green-700">Programando nueva cita médica</p>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Información del Paciente */}
+        <MedicalFormSection
+          title="Información del Paciente"
+          description="Datos del paciente para quien se programa la cita"
+          icon={User}
+          iconColor="text-blue-600"
+        >
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <User className="w-5 h-5 text-blue-700" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-900">
+                  {patient.nombres} {patient.apellidos}
+                </h3>
+                <p className="text-sm text-blue-700">Programando nueva cita médica</p>
+              </div>
             </div>
           </div>
-        </div>
+        </MedicalFormSection>
 
-        {/* Información de la cita */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <MedicalInput
-            label="Fecha de la Cita"
-            type="date"
-            value={formData.fecha}
-            onChange={(e) => handleInputChange('fecha', e.target.value)}
-            min={today}
-            required
-          />
-          
-          <MedicalSelect
-            label="Hora de la Cita"
-            value={formData.hora}
-            onChange={(e) => handleInputChange('hora', e.target.value)}
-            options={horariosDisponibles}
-            placeholder="Seleccione la hora"
-            required
-          />
-          
-          <MedicalSelect
-            label="Tipo de Consulta"
-            value={formData.tipoConsulta}
-            onChange={(e) => handleInputChange('tipoConsulta', e.target.value)}
-            options={tiposConsulta}
-            placeholder="Seleccione el tipo"
-            required
-          />
-          
-          <MedicalSelect
-            label="Especialidad"
-            value={formData.especialidad}
-            onChange={(e) => handleInputChange('especialidad', e.target.value)}
-            options={especialidades}
-            placeholder="Seleccione especialidad"
-          />
-          
-          <div className="md:col-span-2">
-            <MedicalSelect
-              label="Médico Asignado"
-              value={formData.medico}
-              onChange={(e) => handleInputChange('medico', e.target.value)}
-              options={medicos}
-              placeholder="Seleccione el médico"
+        {/* Información de la Cita */}
+        <MedicalFormSection
+          title="Información de la Cita"
+          description="Detalles de fecha, hora y tipo de consulta"
+          icon={Calendar}
+          iconColor="text-green-600"
+        >
+          <MedicalFieldGroup columns={2}>
+            <MedicalInputField
+              label="Fecha de la Cita"
+              name="fecha"
+              type="date"
+              value={formData.fecha}
+              onChange={(value) => handleInputChange('fecha', value)}
+              min={today}
+              required
+              placeholder="dd/mm/aaaa"
+            />
+            
+            <MedicalSelectField
+              label="Hora de la Cita"
+              name="hora"
+              value={formData.hora}
+              onChange={(value) => handleInputChange('hora', value)}
+              options={horariosDisponibles}
+              placeholder="Seleccione la hora"
               required
             />
-          </div>
-        </div>
-
-        {/* Motivo y observaciones */}
-        <div className="space-y-4">
-          <MedicalInput
-            label="Motivo de la Consulta"
-            value={formData.motivo}
-            onChange={(e) => handleInputChange('motivo', e.target.value)}
-            placeholder="Ej: Dolor de cabeza, control rutinario, etc."
-          />
+            
+            <MedicalSelectField
+              label="Tipo de Consulta"
+              name="tipoConsulta"
+              value={formData.tipoConsulta}
+              onChange={(value) => handleInputChange('tipoConsulta', value)}
+              options={tiposConsulta}
+              placeholder="Seleccione el tipo"
+              required
+            />
+            
+            <MedicalSelectField
+              label="Especialidad"
+              name="especialidad"
+              value={formData.especialidad}
+              onChange={(value) => handleInputChange('especialidad', value)}
+              options={especialidades}
+              placeholder="Seleccione especialidad"
+            />
+          </MedicalFieldGroup>
           
-          <MedicalTextarea
-            label="Observaciones Adicionales"
-            value={formData.observaciones}
-            onChange={(e) => handleInputChange('observaciones', e.target.value)}
-            placeholder="Información adicional relevante para la consulta..."
-            rows={3}
+          <MedicalSelectField
+            label="Médico Asignado"
+            name="medico"
+            value={formData.medico}
+            onChange={(value) => handleInputChange('medico', value)}
+            options={medicos}
+            placeholder="Seleccione el médico"
+            required
           />
-        </div>
+        </MedicalFormSection>
 
-        {/* Información importante */}
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-start">
-            <span className="text-blue-600 mr-2 text-xl">ℹ️</span>
-            <div>
-              <p className="text-sm font-medium text-blue-800">Información Importante</p>
-              <ul className="text-sm text-blue-700 mt-1 space-y-1">
-                <li>• Las citas se confirmarán por teléfono o email</li>
-                <li>• Llegue 15 minutos antes de su cita</li>
-                <li>• Traiga documento de identidad y carnet de seguro</li>
-                <li>• Las cancelaciones deben hacerse con 24h de anticipación</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        {/* Motivo y Observaciones */}
+        <MedicalFormSection
+          title="Motivo de la Consulta"
+          description="Detalles adicionales sobre la cita médica"
+          icon={Stethoscope}
+          iconColor="text-purple-600"
+        >
+          <MedicalFieldGroup>
+            <MedicalInputField
+              label="Motivo de la Consulta"
+              name="motivo"
+              value={formData.motivo}
+              onChange={(value) => handleInputChange('motivo', value)}
+              placeholder="Ej: Dolor de cabeza, control rutinario, etc."
+            />
+            
+            <MedicalTextareaField
+              label="Observaciones Adicionales"
+              name="observaciones"
+              value={formData.observaciones}
+              onChange={(value) => handleInputChange('observaciones', value)}
+              placeholder="Información adicional relevante para la consulta..."
+              rows={3}
+            />
+          </MedicalFieldGroup>
+        </MedicalFormSection>
 
-        {/* Botones de acción */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-end border-t medical-border pt-4">
-          <button
+        {/* Información Importante */}
+        <MedicalFormNotice
+          type="info"
+          title="Información Importante"
+          message="• Las citas se confirmarán por teléfono o email
+• Llegue 15 minutos antes de su cita
+• Traiga documento de identidad y carnet de seguro
+• Las cancelaciones deben hacerse con 24h de anticipación"
+        />
+
+        {/* Acciones del Formulario */}
+        <MedicalFormActions>
+          <MedicalButton
             type="button"
+            variant="secondary"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-6 py-2 border medical-border rounded-lg text-slate-700 hover:bg-slate-50 transition-colors focus-ring disabled:opacity-50"
           >
             Cancelar
-          </button>
-          <button
+          </MedicalButton>
+          <MedicalButton
             type="submit"
-            disabled={isSubmitting}
-            className={`
-              px-8 py-2 rounded-lg font-medium transition-all focus-ring
-              ${isSubmitting 
-                ? 'bg-gray-400 text-white cursor-not-allowed' 
-                : 'medical-button-primary hover:shadow-lg'
-              }
-            `}
+            variant="primary"
+            loading={isSubmitting}
+            loadingText="Programando..."
           >
-            {isSubmitting ? (
-              <span className="flex items-center">
-                <span className="animate-spin mr-2">⏳</span>
-                Programando...
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <span className="mr-2">📅</span>
-                Programar Cita
-              </span>
-            )}
-          </button>
-        </div>
+            📅 Programar Cita
+          </MedicalButton>
+        </MedicalFormActions>
       </form>
     </MedicalModal>
   );

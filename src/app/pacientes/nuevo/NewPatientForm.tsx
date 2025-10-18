@@ -1,19 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   User, 
   Phone, 
   Stethoscope, 
   AlertTriangle, 
   Shield,
-  Loader2
+  Loader2,
+  UserPlus
 } from 'lucide-react';
 import { 
   getProvincias, 
   getDepartamentosPorProvincia, 
-  getCiudadesPorProvincia 
+  getCiudadesPorProvincia,
+  addNewPatient
 } from '../../../utils';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface PatientFormData {
   // Información Personal
@@ -54,6 +58,9 @@ interface FormErrors {
 }
 
 export default function NewPatientForm() {
+  const router = useRouter();
+  const { showSuccess, showError } = useToast();
+  
   const [formData, setFormData] = useState<PatientFormData>({
     nombres: '',
     apellidos: '',
@@ -211,58 +218,101 @@ export default function NewPatientForm() {
     setIsSubmitting(true);
     
     try {
-      // Simular llamada a API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Simular un pequeño delay para UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Aquí iría la llamada real a la API
-      console.log('Datos del paciente:', formData);
+      // Crear el objeto del paciente con el formato correcto
+      const newPatientData = {
+        nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        tipoDocumento: formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero',
+        numeroDocumento: formData.numeroDocumento,
+        fechaNacimiento: formData.fechaNacimiento,
+        genero: formData.genero as 'masculino' | 'femenino' | 'otro',
+        telefono: formData.telefono,
+        email: formData.email,
+        direccion: {
+          calle: formData.domicilio,
+          numero: '',
+          ciudad: formData.ciudad,
+          provincia: formData.provincia,
+          codigoPostal: ''
+        },
+        tipoSangre: formData.tipoSangre,
+        contactoEmergencia: {
+          nombre: formData.contactoEmergenciaNombre,
+          telefono: formData.contactoEmergenciaTelefono,
+          relacion: formData.contactoEmergenciaParentesco
+        },
+        seguroMedico: formData.tieneSeguro === 'si' ? {
+          empresa: formData.nombreSeguro,
+          numeroPoliza: formData.numeroPoliza,
+          vigencia: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 año desde hoy
+        } : undefined,
+        alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()) : [],
+        medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()) : [],
+        antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()) : [],
+        antecedentesFamiliares: [],
+        doctorAsignado: undefined
+      };
+      
+      // Agregar el paciente y crear su historia clínica vacía
+      const createdPatient = addNewPatient(newPatientData);
+      console.log('Paciente creado:', createdPatient);
       
       // Mostrar mensaje de éxito
-      alert('✅ Paciente registrado exitosamente');
+      showSuccess(
+        'Paciente registrado exitosamente',
+        'Se ha creado la historia clínica inicial del paciente'
+      );
       
-      // Limpiar formulario
-      setFormData({
-        nombres: '',
-        apellidos: '',
-        tipoDocumento: '',
-        numeroDocumento: '',
-        fechaNacimiento: '',
-        genero: '',
-        telefono: '',
-        email: '',
-        domicilio: '',
-        ciudad: '',
-        departamento: '',
-        provincia: '',
-        tipoSangre: '',
-        alergias: '',
-        medicamentos: '',
-        enfermedades: '',
-        contactoEmergenciaNombre: '',
-        contactoEmergenciaParentesco: '',
-        contactoEmergenciaTelefono: '',
-        tieneSeguro: '',
-        nombreSeguro: '',
-        numeroPoliza: ''
-      });
+      // Navegar de vuelta a la lista de pacientes
+      router.push('/pacientes');
       
-    } catch {
-      alert('❌ Error al registrar el paciente. Intente nuevamente.');
+    } catch (error) {
+      console.error('Error al registrar paciente:', error);
+      showError(
+        'Error al registrar el paciente',
+        'Por favor, verifique los datos e intente nuevamente'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleCancel = () => {
+    // Verificar si hay cambios en el formulario
+    const hasChanges = Object.values(formData).some(value => value.trim() !== '');
+    
+    if (hasChanges) {
+      // Confirmar cancelación si hay cambios
+      const confirmCancel = window.confirm(
+        '¿Estás seguro de que quieres cancelar? Se perderán todos los datos ingresados.'
+      );
+      
+      if (confirmCancel) {
+        router.push('/pacientes');
+      }
+    } else {
+      // Si no hay cambios, navegar directamente
+      router.push('/pacientes');
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Información Personal */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Información Personal</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <User className="w-5 h-5 text-blue-700" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Información Personal</h2>
+              <p className="text-sm text-gray-600 mt-1">Datos básicos de identificación del paciente</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-1">Datos básicos de identificación del paciente</p>
         </div>
         
         <div className="p-6 space-y-6">
@@ -276,7 +326,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.nombres}
                 onChange={(e) => handleInputChange('nombres', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.nombres ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Ingrese los nombres"
@@ -295,7 +345,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.apellidos}
                 onChange={(e) => handleInputChange('apellidos', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.apellidos ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Ingrese los apellidos"
@@ -313,7 +363,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.tipoDocumento}
                 onChange={(e) => handleInputChange('tipoDocumento', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.tipoDocumento ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -336,7 +386,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.numeroDocumento}
                 onChange={(e) => handleInputChange('numeroDocumento', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.numeroDocumento ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Ingrese el número de documento"
@@ -355,7 +405,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.fechaNacimiento}
                 onChange={(e) => handleInputChange('fechaNacimiento', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.fechaNacimiento ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
@@ -372,7 +422,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.genero}
                 onChange={(e) => handleInputChange('genero', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.genero ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -390,13 +440,17 @@ export default function NewPatientForm() {
       </div>
 
       {/* Información de Contacto */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Información de Contacto</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Phone className="w-5 h-5 text-green-700" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Información de Contacto</h2>
+              <p className="text-sm text-gray-600 mt-1">Datos de contacto y ubicación del paciente</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-1">Datos de contacto y ubicación del paciente</p>
         </div>
         
         <div className="p-6 space-y-6">
@@ -410,7 +464,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.telefono}
                 onChange={(e) => handleInputChange('telefono', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.telefono ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Ej: 3001234567"
@@ -428,7 +482,7 @@ export default function NewPatientForm() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.email ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="ejemplo@correo.com"
@@ -448,7 +502,7 @@ export default function NewPatientForm() {
               required
               value={formData.domicilio}
               onChange={(e) => handleInputChange('domicilio', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+              className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                 errors.domicilio ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Ej: Av. Corrientes 1234, Piso 5, Depto B"
@@ -467,7 +521,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.provincia}
                 onChange={(e) => handleProvinciaChange(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.provincia ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -489,7 +543,7 @@ export default function NewPatientForm() {
                 value={formData.departamento}
                 onChange={(e) => handleInputChange('departamento', e.target.value)}
                 disabled={!formData.provincia}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.departamento ? 'border-red-300' : 'border-gray-300'
                 } ${!formData.provincia ? 'bg-gray-100 text-gray-400' : ''}`}
               >
@@ -514,7 +568,7 @@ export default function NewPatientForm() {
                 value={formData.ciudad}
                 onChange={(e) => handleInputChange('ciudad', e.target.value)}
                 disabled={!formData.provincia}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.ciudad ? 'border-red-300' : 'border-gray-300'
                 } ${!formData.provincia ? 'bg-gray-100 text-gray-400' : ''}`}
               >
@@ -534,13 +588,17 @@ export default function NewPatientForm() {
       </div>
 
       {/* Información Médica */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Stethoscope className="w-5 h-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Información Médica</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Stethoscope className="w-5 h-5 text-purple-700" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Información Médica</h2>
+              <p className="text-sm text-gray-600 mt-1">Historial médico y condiciones de salud relevantes</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-1">Historial médico y condiciones de salud relevantes</p>
         </div>
         
         <div className="p-6 space-y-6">
@@ -552,7 +610,7 @@ export default function NewPatientForm() {
               <select
                 value={formData.tipoSangre}
                 onChange={(e) => handleInputChange('tipoSangre', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.tipoSangre ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -574,7 +632,7 @@ export default function NewPatientForm() {
                 rows={3}
                 value={formData.alergias}
                 onChange={(e) => handleInputChange('alergias', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${
+                className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors resize-y ${
                   errors.alergias ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Ingrese las alergias conocidas (medicamentos, alimentos, etc.)"
@@ -593,7 +651,7 @@ export default function NewPatientForm() {
               rows={3}
               value={formData.medicamentos}
               onChange={(e) => handleInputChange('medicamentos', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${
+              className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors resize-y ${
                 errors.medicamentos ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Lista de medicamentos que toma actualmente"
@@ -611,7 +669,7 @@ export default function NewPatientForm() {
               rows={3}
               value={formData.enfermedades}
               onChange={(e) => handleInputChange('enfermedades', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${
+              className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors resize-y ${
                 errors.enfermedades ? 'border-red-300' : 'border-gray-300'
               }`}
               placeholder="Historial de enfermedades o condiciones médicas"
@@ -624,13 +682,17 @@ export default function NewPatientForm() {
       </div>
 
       {/* Contacto de Emergencia */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Contacto de Emergencia</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-b border-gray-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-700" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Contacto de Emergencia</h2>
+              <p className="text-sm text-gray-600 mt-1">Persona a contactar en caso de emergencia médica</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-1">Persona a contactar en caso de emergencia médica</p>
         </div>
         
         <div className="p-6">
@@ -644,7 +706,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.contactoEmergenciaNombre}
                 onChange={(e) => handleInputChange('contactoEmergenciaNombre', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.contactoEmergenciaNombre ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Nombre del contacto de emergencia"
@@ -661,7 +723,7 @@ export default function NewPatientForm() {
               <select
                 value={formData.contactoEmergenciaParentesco}
                 onChange={(e) => handleInputChange('contactoEmergenciaParentesco', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                   errors.contactoEmergenciaParentesco ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -684,7 +746,7 @@ export default function NewPatientForm() {
                 required
                 value={formData.contactoEmergenciaTelefono}
                 onChange={(e) => handleInputChange('contactoEmergenciaTelefono', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                   errors.contactoEmergenciaTelefono ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Teléfono de emergencia"
@@ -698,13 +760,17 @@ export default function NewPatientForm() {
       </div>
 
       {/* Información de Seguro */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Información de Seguro Médico</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-gray-200 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Shield className="w-5 h-5 text-indigo-700" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Información de Seguro Médico</h2>
+              <p className="text-sm text-gray-600 mt-1">Datos del seguro médico o obra social del paciente</p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-1">Datos del seguro médico o obra social del paciente</p>
         </div>
         
         <div className="p-6 space-y-4">
@@ -715,7 +781,7 @@ export default function NewPatientForm() {
             <select
               value={formData.tieneSeguro}
               onChange={(e) => handleInputChange('tieneSeguro', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white ${
+              className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors bg-white ${
                 errors.tieneSeguro ? 'border-red-300' : 'border-gray-300'
               }`}
             >
@@ -738,7 +804,7 @@ export default function NewPatientForm() {
                   type="text"
                   value={formData.nombreSeguro}
                   onChange={(e) => handleInputChange('nombreSeguro', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                     errors.nombreSeguro ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Nombre de la aseguradora"
@@ -756,7 +822,7 @@ export default function NewPatientForm() {
                   type="text"
                   value={formData.numeroPoliza}
                   onChange={(e) => handleInputChange('numeroPoliza', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
                     errors.numeroPoliza ? 'border-red-300' : 'border-gray-300'
                   }`}
                   placeholder="Número de póliza o afiliación"
@@ -771,48 +837,55 @@ export default function NewPatientForm() {
       </div>
 
       {/* Nota informativa */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <div className="w-5 h-5 text-blue-400 mt-0.5">ℹ</div>
+      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-6">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+            <div className="w-5 h-5 text-blue-600 font-semibold flex items-center justify-center">ℹ</div>
           </div>
-          <div className="ml-3">
+          <div className="flex-1">
+            <h3 className="font-medium text-blue-900 mb-1">Información importante</h3>
             <p className="text-sm text-blue-700">
-              Los campos marcados con asterisco (*) son obligatorios. Asegúrese de completar toda la información requerida antes de continuar.
+              Los campos marcados con asterisco (*) son obligatorios. Asegúrese de completar toda la información requerida antes de continuar con el registro del paciente.
             </p>
           </div>
         </div>
       </div>
 
       {/* Botones de Acción */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6 border-t border-gray-200">
-        <button
-          type="button"
-          className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-        >
-          Cancelar
-        </button>
-        
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`
-            px-8 py-2 rounded-md font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-            ${isSubmitting 
-              ? 'bg-gray-400 text-white cursor-not-allowed' 
-              : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
-            }
-          `}
-        >
-          {isSubmitting ? (
-            <span className="flex items-center">
-              <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
-              Registrando...
-            </span>
-          ) : (
-            'Registrar Paciente'
-          )}
-        </button>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-end">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-8 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all font-medium"
+          >
+            Cancelar
+          </button>
+          
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`
+              px-10 py-3 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md
+              ${isSubmitting 
+                ? 'bg-gray-400 text-white cursor-not-allowed' 
+                : 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 hover:shadow-lg transform hover:-translate-y-0.5'
+              }
+            `}
+          >
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                Registrando...
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Registrar Paciente
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </form>
   );

@@ -14,8 +14,7 @@ import {
   X,
   Plus
 } from 'lucide-react';
-import { MedicalHistory, convertEntryToHistory } from '../../../../adapter';
-import { sampleMedicalRecords } from '../../../../sampleData';
+import { MedicalHistory, getMedicalHistoryById } from '../../../../adapter';
 import Odontogram from '../../../../components/Odontogram';
 import MedicalFormContainer from '@/components/forms/MedicalFormContainer';
 import MedicalFormSection from '@/components/forms/MedicalFormSection';
@@ -91,22 +90,11 @@ export default function RegistroEditPage() {
   });
 
   useEffect(() => {
-    // Buscar el registro médico específico
-    const findRegistro = () => {
-      for (const record of sampleMedicalRecords) {
-        for (const entry of record.entries) {
-          const convertedHistory = convertEntryToHistory(entry, record.patient);
-          if (convertedHistory.id === registroId) {
-            setPatientName(`${record.patient.firstName} ${record.patient.lastName}`);
-            return convertedHistory;
-          }
-        }
-      }
-      return null;
-    };
-
-    const foundRegistro = findRegistro();
+    // Buscar el registro médico específico usando el adaptador
+    const foundRegistro = getMedicalHistoryById(registroId);
+    
     if (foundRegistro) {
+      setPatientName(`${foundRegistro.patient.firstName} ${foundRegistro.patient.lastName}`);
       setRegistro(foundRegistro);
       setOdontogramData(foundRegistro.odontogram || []);
       // Inicializar el formulario con los datos del registro

@@ -18,3 +18,10 @@ export {
   validateGeographicData,
   formatArgentineAddress
 } from './argentina-utils';
+
+// Funciones para manejo de datos fake
+export {
+  addNewPatient,
+  createEmptyMedicalHistory,
+  ensureAllPatientsHaveHistory
+} from './fake-data';

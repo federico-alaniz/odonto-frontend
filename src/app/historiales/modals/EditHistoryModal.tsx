@@ -256,7 +256,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   type="date"
                   value={formData.date}
                   onChange={(e) => handleInputChange('date', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -268,7 +268,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   type="time"
                   value={formData.time}
                   onChange={(e) => handleInputChange('time', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -279,7 +279,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                 <select
                   value={formData.doctor}
                   onChange={(e) => handleInputChange('doctor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   {availableDoctors.map((doctor) => (
@@ -294,7 +294,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                 <select
                   value={formData.specialty}
                   onChange={(e) => handleInputChange('specialty', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   {availableSpecialties.map((specialty) => (
@@ -309,7 +309,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                 <select
                   value={formData.type}
                   onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="consultation">Consulta</option>
@@ -332,7 +332,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   value={formData.diagnosis}
                   onChange={(e) => handleInputChange('diagnosis', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Descripción del diagnóstico..."
                   required
                 />
@@ -345,7 +345,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   value={formData.symptoms}
                   onChange={(e) => handleInputChange('symptoms', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Descripción de los síntomas..."
                 />
               </div>
@@ -365,7 +365,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                     value={formData.vitalSigns.bloodPressure}
                     onChange={(e) => handleInputChange('vitalSigns.bloodPressure', e.target.value)}
                     placeholder="120/80"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -377,7 +377,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                     value={formData.vitalSigns.heartRate}
                     onChange={(e) => handleInputChange('vitalSigns.heartRate', e.target.value)}
                     placeholder="70"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -390,7 +390,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                     value={formData.vitalSigns.temperature}
                     onChange={(e) => handleInputChange('vitalSigns.temperature', e.target.value)}
                     placeholder="36.5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -403,7 +403,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                     value={formData.vitalSigns.weight}
                     onChange={(e) => handleInputChange('vitalSigns.weight', e.target.value)}
                     placeholder="70"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -415,7 +415,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                     value={formData.vitalSigns.height}
                     onChange={(e) => handleInputChange('vitalSigns.height', e.target.value)}
                     placeholder="170"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   value={formData.treatment}
                   onChange={(e) => handleInputChange('treatment', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Descripción del tratamiento recomendado..."
                 />
               </div>
@@ -444,7 +444,7 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
                   value={formData.medications}
                   onChange={(e) => handleInputChange('medications', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Formato: Nombre, Dosis, Frecuencia, Duración (una línea por medicamento)
 Ejemplo:
 Ibuprofeno, 400mg, Cada 8 horas, 5 días
@@ -462,7 +462,7 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Observaciones, recomendaciones especiales, etc..."
               />
             </div>
@@ -585,7 +585,7 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="active">Activo</option>
                 <option value="follow_up">Seguimiento</option>
