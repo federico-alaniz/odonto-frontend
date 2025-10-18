@@ -58,7 +58,7 @@ export default function MedicalModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-all duration-200"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-all duration-200"
         onClick={onClose}
       />
       
@@ -67,23 +67,23 @@ export default function MedicalModal({
         <div 
           className={`
             relative w-full ${sizeClasses[size]} 
-            bg-white rounded-lg shadow-xl border border-gray-200 max-h-[85vh] overflow-hidden
+            bg-white rounded-xl shadow-2xl border border-gray-200 max-h-[85vh] overflow-hidden
             transform transition-all duration-200 scale-100
             animate-in fade-in zoom-in-95 duration-200
           `}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-6 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h2 className="text-xl font-semibold text-blue-800">
               {title}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label="Cerrar modal"
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X className="w-5 h-5 text-blue-600 hover:text-blue-700" />
             </button>
           </div>
           

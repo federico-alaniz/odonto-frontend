@@ -252,17 +252,17 @@ export default function NewAppointmentModal({
         {/* Modal */}
         <div className="relative w-full max-w-4xl mx-4 bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="p-6 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="p-2 bg-blue-100 rounded-lg">
+                <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-200">
                   <Calendar className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-blue-800">
                     Nueva Cita Médica
                   </h2>
-                  <p className="text-gray-600 mt-1">
+                  <p className="text-blue-600 mt-1 font-medium">
                     Complete la información para programar una nueva cita
                   </p>
                 </div>
@@ -271,7 +271,7 @@ export default function NewAppointmentModal({
               <button
                 onClick={handleClose}
                 disabled={isSaving}
-                className="p-2 hover:bg-white/80 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
+                className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-blue-500 hover:text-blue-700"
                 title="Cerrar"
               >
                 <X className="w-6 h-6" />

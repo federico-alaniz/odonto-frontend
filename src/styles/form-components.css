@@ -1,0 +1,18 @@
+/* Estilos estándar para componentes de formulario */
+
+/* Documentación de clases estándar para formularios:
+ * 
+ * Inputs y Selects:
+ * - Padding: px-4 py-3
+ * - Altura: h-12
+ * - Bordes: border border-gray-300 rounded-lg
+ * - Focus: focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+ * - Hover: hover:border-gray-400 transition-colors
+ * 
+ * Textareas:
+ * - Padding: px-4 py-3 (sin altura fija)
+ * - Resize: resize-y
+ * - Bordes: border border-gray-300 rounded-lg
+ * - Focus: focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+ * - Hover: hover:border-gray-400 transition-colors
+ */

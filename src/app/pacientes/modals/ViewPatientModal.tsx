@@ -130,17 +130,17 @@ export default function ViewPatientModal({
     >
       <div className="space-y-6">
         {/* Header del perfil */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
+              <div className="p-3 bg-white shadow-sm rounded-xl border border-blue-200">
                 <User className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-800">
                   {patient.nombres} {patient.apellidos}
                 </h3>
-                <p className="text-gray-600 mt-1">
+                <p className="text-blue-700 mt-1 font-medium">
                   {calculateAge(patient.fechaNacimiento)} años • {getGenderLabel(patient.genero)}
                 </p>
               </div>
@@ -153,12 +153,12 @@ export default function ViewPatientModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Información Personal */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <CreditCard className="w-5 h-5 text-gray-600" />
+              <div className="p-2 bg-indigo-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900">
+              <h4 className="text-lg font-semibold text-gray-800">
                 Información Personal
               </h4>
             </div>
@@ -187,12 +187,12 @@ export default function ViewPatientModal({
           </div>
 
           {/* Información de Contacto */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl shadow-sm border border-emerald-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-green-100 rounded-lg">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-green-200">
                 <Phone className="w-5 h-5 text-green-600" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900">
+              <h4 className="text-lg font-semibold text-emerald-800">
                 Contacto
               </h4>
             </div>
@@ -233,12 +233,12 @@ export default function ViewPatientModal({
           </div>
 
           {/* Información Médica */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl shadow-sm border border-red-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-lg">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-red-200">
                 <Droplets className="w-5 h-5 text-red-600" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900">
+              <h4 className="text-lg font-semibold text-red-800">
                 Información Médica
               </h4>
             </div>
@@ -262,12 +262,12 @@ export default function ViewPatientModal({
           </div>
 
           {/* Acciones Rápidas */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl shadow-sm border border-purple-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-purple-200">
                 <ClipboardList className="w-5 h-5 text-purple-600" />
               </div>
-              <h4 className="text-lg font-semibold text-gray-900">
+              <h4 className="text-lg font-semibold text-purple-800">
                 Acciones Rápidas
               </h4>
             </div>
@@ -275,45 +275,45 @@ export default function ViewPatientModal({
             <div className="space-y-3">
               <button 
                 onClick={handleNewAppointment}
-                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 hover:border-emerald-300 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Calendar className="w-5 h-5 text-green-600" />
+                  <div className="p-2 bg-white shadow-sm rounded-lg border border-emerald-200">
+                    <Calendar className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">Nueva Cita</div>
-                    <div className="text-sm text-gray-600">Programar consulta</div>
+                    <div className="font-medium text-emerald-800">Nueva Cita</div>
+                    <div className="text-sm text-emerald-600">Programar consulta</div>
                   </div>
                 </div>
               </button>
               
               <button 
                 onClick={handleEditPatient}
-                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-200">
                     <Edit3 className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">Editar Información</div>
-                    <div className="text-sm text-gray-600">Actualizar datos</div>
+                    <div className="font-medium text-blue-800">Editar Información</div>
+                    <div className="text-sm text-blue-600">Actualizar datos</div>
                   </div>
                 </div>
               </button>
               
               <button 
                 onClick={handleViewHistory}
-                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 hover:border-purple-300 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
+                  <div className="p-2 bg-white shadow-sm rounded-lg border border-purple-200">
                     <ClipboardList className="w-5 h-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">Ver Historial</div>
-                    <div className="text-sm text-gray-600">Consultas anteriores</div>
+                    <div className="font-medium text-purple-800">Ver Historial</div>
+                    <div className="text-sm text-purple-600">Consultas anteriores</div>
                   </div>
                 </div>
               </button>
@@ -346,7 +346,7 @@ export default function ViewPatientModal({
           </button>
           <button 
             onClick={handleEditPatient}
-            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <Edit3 className="w-4 h-4" />
             <span>Editar Paciente</span>

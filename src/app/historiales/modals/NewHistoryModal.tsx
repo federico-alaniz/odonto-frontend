@@ -258,11 +258,18 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 z-50 overflow-y-auto">
         <div className="bg-white rounded-lg w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900">Nueva Historia Clínica</h2>
+          <div className="flex justify-between items-center p-6 border-b border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-purple-200">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-purple-800">Nueva Historia Clínica</h2>
+            </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2"
+              className="text-purple-400 hover:text-purple-600 p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -272,8 +279,15 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
 
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Selección de Paciente */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-lg text-gray-900 mb-4">Información del Paciente</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-200">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-lg text-blue-800">Información del Paciente</h3>
+              </div>
               
               <div className="flex space-x-4 mb-4">
                 <label className="flex items-center">
@@ -304,7 +318,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   <select
                     value={selectedPatientId}
                     onChange={(e) => handlePatientSelect(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
                     <option value="">Seleccione un paciente...</option>
@@ -325,7 +339,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                       type="text"
                       value={formData.patientName}
                       onChange={(e) => handleInputChange('patientName', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     />
                   </div>
@@ -337,7 +351,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                       type="number"
                       value={formData.patientAge}
                       onChange={(e) => handleInputChange('patientAge', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     />
                   </div>
@@ -349,7 +363,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                       type="tel"
                       value={formData.patientPhone}
                       onChange={(e) => handleInputChange('patientPhone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     />
                   </div>
@@ -367,7 +381,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   type="date"
                   value={formData.date}
                   onChange={(e) => handleInputChange('date', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -379,7 +393,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   type="time"
                   value={formData.time}
                   onChange={(e) => handleInputChange('time', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -390,7 +404,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                 <select
                   value={formData.doctor}
                   onChange={(e) => handleInputChange('doctor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   {availableDoctors.map((doctor) => (
@@ -405,7 +419,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                 <select
                   value={formData.specialty}
                   onChange={(e) => handleInputChange('specialty', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   {availableSpecialties.map((specialty) => (
@@ -420,7 +434,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                 <select
                   value={formData.type}
                   onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="consultation">Consulta</option>
@@ -443,7 +457,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   value={formData.diagnosis}
                   onChange={(e) => handleInputChange('diagnosis', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Descripción del diagnóstico..."
                   required
                 />
@@ -456,7 +470,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   value={formData.symptoms}
                   onChange={(e) => handleInputChange('symptoms', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Separe los síntomas con comas..."
                 />
               </div>
@@ -464,8 +478,15 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
 
             {/* Signos Vitales - Solo mostrar si NO es odontología */}
             {formData.specialty !== 'odontologia' && (
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-4">Signos Vitales</h3>
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border border-red-200 p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-white shadow-sm rounded-lg border border-red-200">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-lg text-red-800">Signos Vitales</h3>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -476,7 +497,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     value={formData.vitalSigns.bloodPressure}
                     onChange={(e) => handleInputChange('vitalSigns.bloodPressure', e.target.value)}
                     placeholder="120/80"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -488,7 +509,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     value={formData.vitalSigns.heartRate}
                     onChange={(e) => handleInputChange('vitalSigns.heartRate', e.target.value)}
                     placeholder="72"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -501,7 +522,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     value={formData.vitalSigns.temperature}
                     onChange={(e) => handleInputChange('vitalSigns.temperature', e.target.value)}
                     placeholder="36.5"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -514,7 +535,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     value={formData.vitalSigns.weight}
                     onChange={(e) => handleInputChange('vitalSigns.weight', e.target.value)}
                     placeholder="70"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -526,7 +547,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                     value={formData.vitalSigns.height}
                     onChange={(e) => handleInputChange('vitalSigns.height', e.target.value)}
                     placeholder="170"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -543,7 +564,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   value={formData.treatment}
                   onChange={(e) => handleInputChange('treatment', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Descripción del tratamiento recomendado..."
                 />
               </div>
@@ -555,7 +576,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
                   value={formData.medications}
                   onChange={(e) => handleInputChange('medications', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Formato: Nombre, Dosis, Frecuencia, Duración (una línea por medicamento)
 Ejemplo:
 Ibuprofeno, 400mg, Cada 8 horas, 5 días
@@ -573,7 +594,7 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Observaciones, recomendaciones especiales, etc..."
               />
             </div>
@@ -590,8 +611,15 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
             )}
 
             {/* Imágenes Diagnósticas */}
-            <div>
-              <h3 className="font-semibold text-lg text-gray-900 mb-4">Imágenes Diagnósticas</h3>
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl border border-emerald-200 p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-white shadow-sm rounded-lg border border-emerald-200">
+                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-lg text-emerald-800">Imágenes Diagnósticas</h3>
+              </div>
               
               {/* Campo de carga */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 mb-4">
@@ -693,7 +721,7 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="active">Activo</option>
                 <option value="follow_up">Seguimiento</option>
@@ -706,13 +734,13 @@ Paracetamol, 500mg, Cada 6 horas, 3 días"
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
               >
                 Guardar Historia Clínica
               </button>

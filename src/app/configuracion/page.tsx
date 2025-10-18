@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Bell, Shield, Palette, Globe } from 'lucide-react';
+import { Settings, Bell, Shield, Palette, Globe, Info } from 'lucide-react';
 import MedicalFormContainer from '@/components/forms/MedicalFormContainer';
 import MedicalFormSection from '@/components/forms/MedicalFormSection';
 import MedicalSelectField from '@/components/forms/MedicalSelectField';
@@ -39,32 +39,48 @@ export default function ConfiguracionPage() {
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Settings className="w-6 h-6 text-purple-600" />
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-md">
+                <Settings className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Configuración</h1>
+                <p className="text-gray-600 mt-1 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Personaliza la experiencia y configuración del sistema
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Personaliza la experiencia de la aplicación
-              </p>
-            </div>
+            
+            <MedicalButton
+              variant="primary"
+              onClick={handleSave}
+              loading={saving}
+              loadingText="Guardando..."
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-md"
+            >
+              Guardar Configuración
+            </MedicalButton>
           </div>
-          <MedicalButton
-            variant="primary"
-            onClick={handleSave}
-            loading={saving}
-            loadingText="Guardando..."
-          >
-            Guardar Configuración
-          </MedicalButton>
+        </div>
+        
+        {/* Breadcrumb visual */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center text-sm text-gray-500 space-x-2">
+            <span>Sistema</span>
+            <span>•</span>
+            <span className="text-indigo-600 font-medium">Configuración</span>
+            <span>•</span>
+            <span className="text-gray-700">Preferencias Generales</span>
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6 max-w-4xl mx-auto">
+      {/* Content Container */}
+      <div className="max-w-5xl mx-auto px-6 py-8">
         <MedicalFormContainer>
           
           {/* Apariencia */}

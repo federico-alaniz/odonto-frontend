@@ -19,7 +19,8 @@ import {
   User,
   Bell,
   Shield,
-  HelpCircle
+  HelpCircle,
+  FileText
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -27,6 +28,14 @@ interface SidebarItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
+  color: {
+    bg: string;
+    text: string;
+    hover: string;
+    active: string;
+    iconBg: string;
+    iconText: string;
+  };
 }
 
 interface SidebarSection {
@@ -42,13 +51,29 @@ const sidebarSections: SidebarSection[] = [
         label: 'Dashboard',
         href: '/',
         icon: BarChart3,
-        description: 'Vista general del sistema'
+        description: 'Vista general del sistema',
+        color: {
+          bg: 'hover:bg-blue-50',
+          text: 'hover:text-blue-700',
+          hover: 'hover:text-blue-700',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-blue-100',
+          iconText: 'hover:text-blue-600'
+        }
       },
       {
         label: 'Calendario',
         href: '/calendario',
         icon: Calendar,
-        description: 'Gestión de citas y horarios'
+        description: 'Gestión de citas y horarios',
+        color: {
+          bg: 'hover:bg-blue-50',
+          text: 'hover:text-blue-700',
+          hover: 'hover:text-blue-700',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-blue-100',
+          iconText: 'hover:text-blue-600'
+        }
       }
     ]
   },
@@ -59,13 +84,29 @@ const sidebarSections: SidebarSection[] = [
         label: 'Pacientes',
         href: '/pacientes',
         icon: Users,
-        description: 'Gestionar información de pacientes'
+        description: 'Gestionar información de pacientes',
+        color: {
+          bg: 'hover:bg-blue-50',
+          text: 'hover:text-blue-700',
+          hover: 'hover:text-blue-700',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-blue-100',
+          iconText: 'hover:text-blue-600'
+        }
       },
       {
         label: 'Historiales',
         href: '/historiales',
         icon: ClipboardList,
-        description: 'Historias clínicas completas'
+        description: 'Historias clínicas completas',
+        color: {
+          bg: 'hover:bg-purple-50',
+          text: 'hover:text-purple-700',
+          hover: 'hover:text-purple-700',
+          active: 'bg-purple-600 text-white border-l-purple-400',
+          iconBg: 'bg-purple-100',
+          iconText: 'hover:text-purple-600'
+        }
       }
     ]
   },
@@ -73,16 +114,32 @@ const sidebarSections: SidebarSection[] = [
     title: 'Administración',
     items: [
       {
-        label: 'Reportes',
-        href: '/reportes',
-        icon: TrendingUp,
-        description: 'Generar reportes y estadísticas'
+        label: 'Registros',
+        href: '/registros',
+        icon: FileText,
+        description: 'Consultas y registros médicos',
+        color: {
+          bg: 'hover:bg-emerald-50',
+          text: 'hover:text-emerald-700',
+          hover: 'hover:text-emerald-700',
+          active: 'bg-emerald-600 text-white border-l-emerald-400',
+          iconBg: 'bg-emerald-100',
+          iconText: 'hover:text-emerald-600'
+        }
       },
       {
         label: 'Configuración',
         href: '/configuracion',
         icon: Settings,
-        description: 'Configuración del sistema'
+        description: 'Configuración del sistema',
+        color: {
+          bg: 'hover:bg-indigo-50',
+          text: 'hover:text-indigo-700',
+          hover: 'hover:text-indigo-700',
+          active: 'bg-indigo-600 text-white border-l-indigo-400',
+          iconBg: 'bg-indigo-100',
+          iconText: 'hover:text-indigo-600'
+        }
       }
     ]
   }
@@ -97,6 +154,32 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   const pathname = usePathname();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Helper function para obtener las clases CSS correctas basadas en el color
+  const getItemClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
+    const baseClasses = 'flex items-center rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const paddingClasses = isCollapsed ? 'p-3 justify-center' : 'p-3';
+    
+    if (isActive) {
+      if (isCollapsed) {
+        return `${baseClasses} ${paddingClasses} ${item.color.active.split(' border-l-')[0]} shadow-md`;
+      }
+      return `${baseClasses} ${paddingClasses} ${item.color.active} shadow-md border-l-4`;
+    }
+    
+    return `${baseClasses} ${paddingClasses} text-gray-700 ${item.color.bg} ${item.color.text} hover:shadow-sm`;
+  };
+
+  const getIconClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
+    const baseClasses = 'w-5 h-5 flex-shrink-0 transition-colors';
+    const marginClass = isCollapsed ? '' : 'mr-3';
+    
+    if (isActive) {
+      return `${baseClasses} ${marginClass} text-white`;
+    }
+    
+    return `${baseClasses} ${marginClass} text-gray-500 ${item.color.iconText}`;
+  };
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -129,41 +212,41 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       flex flex-col
     `}>
       {/* Header */}
-      <div className={`border-b border-gray-200 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 ${isCollapsed ? 'p-2' : 'p-4'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center space-y-3">
             <button
               onClick={onToggle}
-              className="w-10 h-10 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 flex items-center justify-center"
+              className="w-10 h-10 rounded-lg bg-white shadow-sm hover:shadow-md hover:bg-blue-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 flex items-center justify-center border border-blue-100"
               aria-label="Expandir sidebar"
             >
               <Menu className="w-5 h-5 text-blue-600" />
             </button>
-            <div className="p-1.5 bg-blue-100 rounded-lg">
+            <div className="p-1.5 bg-white shadow-sm rounded-lg border border-blue-100">
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-100">
                 <Building2 className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-xl font-bold text-gray-800">
                   MediCore
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-blue-600 font-medium">
                   Sistema de Gestión Médica
                 </p>
               </div>
             </div>
             <button
               onClick={onToggle}
-              className="p-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               aria-label="Colapsar sidebar"
             >
-              <X className="w-5 h-5 text-gray-600 hover:text-blue-600 transition-colors" />
+              <X className="w-5 h-5 text-gray-600 hover:text-blue-700 transition-colors" />
             </button>
           </div>
         )}
@@ -180,40 +263,28 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             )}
             <ul className={`space-y-1 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
               {section.items.map((item, itemIndex) => {
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
                 const IconComponent = item.icon;
                 return (
                   <li key={itemIndex}>
                     <Link
                       href={item.href}
-                      className={`
-                        flex items-center rounded-lg transition-all duration-200 group
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                        ${isCollapsed ? 'p-3 justify-center' : 'p-3'}
-                        ${isActive 
-                          ? isCollapsed 
-                            ? 'bg-blue-600 text-white shadow-md' 
-                            : 'bg-blue-600 text-white shadow-md border-l-4 border-blue-400'
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm'
-                        }
-                      `}
+                      className={getItemClasses(item, isActive, isCollapsed)}
                       title={isCollapsed ? item.label : ''}
                     >
-                      <IconComponent className={`w-5 h-5 flex-shrink-0 transition-colors ${
-                        isCollapsed ? '' : 'mr-3'
-                      } ${
-                        isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'
-                      }`} />
+                      <IconComponent className={getIconClasses(item, isActive, isCollapsed)} />
                       {!isCollapsed && (
                         <div className="flex-1 min-w-0">
                           <span className={`block font-medium transition-colors ${
-                            isActive ? 'text-white' : 'group-hover:text-blue-700'
+                            isActive ? 'text-white' : item.color.text
                           }`}>
                             {item.label}
                           </span>
                           {item.description && (
                             <span className={`block text-xs mt-0.5 transition-colors ${
-                              isActive ? 'text-blue-100' : 'text-gray-500 group-hover:text-blue-600'
+                              isActive 
+                                ? 'text-white opacity-75'
+                                : `text-gray-500 ${item.color.text}`
                             }`}>
                               {item.description}
                             </span>
@@ -258,10 +329,10 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
 
             {/* Dropdown Menu */}
             {isUserDropdownOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">Dr. Usuario</p>
-                  <p className="text-xs text-gray-500">usuario@clinica.com</p>
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-300 py-2 z-50">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                  <p className="text-sm font-semibold text-gray-900">Dr. Usuario</p>
+                  <p className="text-xs text-gray-700 font-medium">usuario@clinica.com</p>
                 </div>
                 
                 <Link
@@ -275,7 +346,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 
                 <Link
                   href="/configuracion"
-                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
                   <Settings className="w-4 h-4" />
@@ -284,7 +355,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 
                 <Link
                   href="/notificaciones"
-                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
                   <Bell className="w-4 h-4" />
@@ -293,7 +364,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 
                 <Link
                   href="/seguridad"
-                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
                   <Shield className="w-4 h-4" />
@@ -302,21 +373,21 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 
                 <Link
                   href="/ayuda"
-                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
                   <HelpCircle className="w-4 h-4" />
                   <span>Ayuda</span>
                 </Link>
                 
-                <div className="border-t border-gray-100 mt-2 pt-2">
+                <div className="border-t border-gray-300 mt-2 pt-2">
                   <button
                     onClick={() => {
                       setIsUserDropdownOpen(false);
                       // Aquí iría la lógica de logout
                       console.log('Cerrando sesión...');
                     }}
-                    className="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                    className="flex items-center space-x-3 px-4 py-3 text-sm text-red-700 font-semibold hover:bg-red-50 hover:text-red-800 transition-colors duration-200 w-full text-left"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Cerrar Sesión</span>

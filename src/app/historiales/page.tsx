@@ -2,6 +2,7 @@
 
 import { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ClipboardList, Info, Plus, FileText, Filter, Download, Users, Search } from 'lucide-react';
 import PatientHistoryList from './components/PatientHistoryList';
 import NewHistoryModal from './modals/NewHistoryModal';
 import { MedicalRecord } from './types';
@@ -177,115 +178,138 @@ function HistorialesContent() {
   const activeFiltersCount = Object.values(filters).filter(Boolean).length;
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Historias Clínicas</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Historias clínicas completas y expedientes de pacientes
-            </p>
-            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-              <span>👥 {medicalRecords.length} pacientes con historia</span>
-              <span>📋 {medicalRecords.reduce((total, record) => total + record.entries.length, 0)} registros totales</span>
-              <span>🔍 {filteredHistories.length} historias mostradas</span>
-            </div>
-          </div>
-
-          {/* Banner when filtered by patientId */}
-          {searchParams?.get('patientId') && (
-            <div className="w-full mt-3">
-              <div className="flex items-center justify-between bg-purple-50 border border-purple-100 rounded-md px-4 py-2">
-                <div className="text-sm text-purple-800">
-                  Mostrando historias para el paciente seleccionado
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => router.push('/historiales')}
-                    className="text-sm px-3 py-1 bg-white border border-gray-200 rounded-md hover:bg-gray-50"
-                  >
-                    Limpiar filtro
-                  </button>
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-md">
+                <ClipboardList className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Historias Clínicas</h1>
+                <p className="text-gray-600 mt-1 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Expedientes médicos completos y consultas de pacientes
+                </p>
+                <div className="flex items-center space-x-4 mt-2 text-sm text-gray-700">
+                  <span className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    {medicalRecords.length} pacientes con historia
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <FileText className="w-4 h-4" />
+                    {medicalRecords.reduce((total, record) => total + record.entries.length, 0)} registros totales
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Search className="w-4 h-4" />
+                    {filteredHistories.length} historias mostradas
+                  </span>
                 </div>
               </div>
             </div>
-          )}
-          
-          {/* Búsqueda rápida */}
-          <div className="flex-1 max-w-md mx-8">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Búsqueda rápida por paciente o doctor..."
-                value={filters.patientName}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  handleFilterChange('patientName', value);
-                  // También buscar en doctor
-                  handleFilterChange('doctorName', value);
-                }}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {filters.patientName && (
-                <button
-                  onClick={() => {
-                    handleFilterChange('patientName', '');
-                    handleFilterChange('doctorName', '');
-                  }}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
 
-          <div className="flex space-x-3">
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-colors relative"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-              </svg>
-              <span>Filtros</span>
-              {activeFiltersCount > 0 && (
-                <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
-            <button className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Exportar Historias</span>
-            </button>
-            <button
-              onClick={() => setShowNewHistoryModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Nueva Consulta</span>
-            </button>
+            
+            <div className="flex items-center space-x-3">
+              {/* Búsqueda rápida */}
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Búsqueda por paciente o doctor..."
+                    value={filters.patientName}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleFilterChange('patientName', value);
+                      handleFilterChange('doctorName', value);
+                    }}
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  {filters.patientName && (
+                    <button
+                      onClick={() => {
+                        handleFilterChange('patientName', '');
+                        handleFilterChange('doctorName', '');
+                      }}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      <svg className="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-all relative"
+              >
+                <Filter className="w-5 h-5" />
+                <span>Filtros</span>
+                {activeFiltersCount > 0 && (
+                  <span className="bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+              
+              <button className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-all">
+                <Download className="w-5 h-5" />
+                <span>Exportar</span>
+              </button>
+              
+              <button
+                onClick={() => setShowNewHistoryModal(true)}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-violet-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-md flex items-center space-x-2"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nueva Consulta</span>
+              </button>
+            </div>
           </div>
         </div>
+        
+        {/* Breadcrumb visual */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center text-sm text-gray-500 space-x-2">
+            <span>Gestión</span>
+            <span>•</span>
+            <span className="text-purple-600 font-medium">Historias Clínicas</span>
+            <span>•</span>
+            <span className="text-gray-700">Expedientes Médicos</span>
+          </div>
+        </div>
+        
+        {/* Banner when filtered by patientId */}
+        {searchParams?.get('patientId') && (
+          <div className="px-6 pb-4">
+            <div className="flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-xl px-4 py-3">
+              <div className="text-sm text-purple-800 font-medium flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Mostrando historias para el paciente seleccionado
+              </div>
+              <button
+                onClick={() => router.push('/historiales')}
+                className="text-sm px-3 py-1 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 text-purple-700 font-medium transition-all"
+              >
+                Limpiar filtro
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Panel de Filtros */}
       {showFilters && (
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="max-w-7xl mx-auto">
+        <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-purple-200">
+          <div className="max-w-7xl mx-auto px-6 py-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Búsqueda por nombre */}
@@ -296,7 +320,7 @@ function HistorialesContent() {
                   placeholder="Buscar por nombre..."
                   value={filters.patientName}
                   onChange={(e) => handleFilterChange('patientName', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -308,7 +332,7 @@ function HistorialesContent() {
                   placeholder="Buscar por doctor..."
                   value={filters.doctorName}
                   onChange={(e) => handleFilterChange('doctorName', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -318,7 +342,7 @@ function HistorialesContent() {
                 <select
                   value={filters.specialty}
                   onChange={(e) => handleFilterChange('specialty', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todas las especialidades</option>
                   <option value="clinica-medica">Clínica Médica</option>
@@ -346,7 +370,7 @@ function HistorialesContent() {
                 <select
                   value={filters.status}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Todos los estados</option>
                   <option value="active">Activo</option>
@@ -362,7 +386,7 @@ function HistorialesContent() {
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -373,7 +397,7 @@ function HistorialesContent() {
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -385,7 +409,7 @@ function HistorialesContent() {
                   placeholder="Buscar en diagnóstico..."
                   value={filters.diagnosis}
                   onChange={(e) => handleFilterChange('diagnosis', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -403,8 +427,8 @@ function HistorialesContent() {
         </div>
       )}
 
-      {/* Content */}
-      <div className="flex-1 p-6">
+      {/* Content Container */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <PatientHistoryList
           histories={filteredHistories}
         />

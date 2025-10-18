@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { FileText, Info, Plus, Download } from 'lucide-react';
 import { MedicalRecord } from '../historiales/types';
 import { MedicalHistory, convertEntryToHistory } from '../historiales/adapter';
 import { sampleMedicalRecords } from '../historiales/sampleData';
@@ -145,54 +146,69 @@ export default function RegistrosMedicosPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Registros Médicos</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Consultas y registros individuales de pacientes
-            </p>
-            
-            {/* Estadísticas rápidas */}
-            <div className="flex items-center space-x-6 mt-3">
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                <span className="text-gray-600">Total: <strong>{stats.total}</strong></span>
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-md">
+                <FileText className="w-7 h-7 text-white" />
               </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-gray-600">Hoy: <strong>{stats.today}</strong></span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
-                <span className="text-gray-600">Este mes: <strong>{stats.thisMonth}</strong></span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm">
-                <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                <span className="text-gray-600">Activos: <strong>{stats.active}</strong></span>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Registros Médicos</h1>
+                <p className="text-gray-600 mt-1 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Consultas y registros individuales de pacientes
+                </p>
+                
+                {/* Estadísticas rápidas */}
+                <div className="flex items-center space-x-6 mt-3">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="w-3 h-3 bg-emerald-500 rounded-full"></span>
+                    <span className="text-gray-600">Total: <strong className="text-gray-900">{stats.total}</strong></span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                    <span className="text-gray-600">Hoy: <strong className="text-gray-900">{stats.today}</strong></span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
+                    <span className="text-gray-600">Este mes: <strong className="text-gray-900">{stats.thisMonth}</strong></span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                    <span className="text-gray-600">Activos: <strong className="text-gray-900">{stats.active}</strong></span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="flex space-x-3">
-            <button className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Exportar</span>
-            </button>
             
-            <button 
-              onClick={() => console.log('Abrir modal de nueva consulta')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>Nueva Consulta</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium border border-gray-300 flex items-center space-x-2 transition-all">
+                <Download className="w-5 h-5" />
+                <span>Exportar</span>
+              </button>
+              
+              <button 
+                onClick={() => console.log('Abrir modal de nueva consulta')}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-green-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-md flex items-center space-x-2"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Nueva Consulta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Breadcrumb visual */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center text-sm text-gray-500 space-x-2">
+            <span>Gestión</span>
+            <span>•</span>
+            <span className="text-emerald-600 font-medium">Registros Médicos</span>
+            <span>•</span>
+            <span className="text-gray-700">Consultas Individuales</span>
           </div>
         </div>
       </div>
@@ -265,8 +281,8 @@ export default function RegistrosMedicosPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6">
+      {/* Content Container */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {filteredEntries.length === 0 ? (
           <div className="text-center py-12">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

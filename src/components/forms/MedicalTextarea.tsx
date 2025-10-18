@@ -23,7 +23,7 @@ const MedicalTextarea = forwardRef<HTMLTextAreaElement, MedicalTextareaProps>(
           className={`
             w-full px-4 py-3 rounded-lg border border-gray-300
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            hover:border-gray-400 transition-colors resize-vertical placeholder:text-sm
+            hover:border-gray-400 transition-colors resize-y placeholder:text-sm
             ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
             ${className}
           `}

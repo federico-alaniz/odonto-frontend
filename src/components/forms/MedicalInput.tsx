@@ -21,7 +21,7 @@ const MedicalInput = forwardRef<HTMLInputElement, MedicalInputProps>(
         <input
           ref={ref}
           className={`
-            w-full px-4 py-3 rounded-lg border border-gray-300
+            w-full px-4 py-3 h-12 rounded-lg border border-gray-300
             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
             hover:border-gray-400 transition-colors placeholder:text-sm
             ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}

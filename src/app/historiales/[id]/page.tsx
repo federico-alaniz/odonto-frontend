@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { UserCircle, ArrowLeft, Edit3, Info, Filter, Plus } from 'lucide-react';
 import { MedicalHistory, convertEntryToHistory } from '../adapter';
 import { MedicalRecord } from '../types';
 import { sampleMedicalRecords } from '../sampleData';
@@ -281,53 +282,79 @@ export default function HistoryDetailPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={handleBack}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Historia Clínica</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                {history.patient.firstName} {history.patient.lastName} • {formatDate(history.consultationDate)}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleBack}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-md">
+                <UserCircle className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Historia Clínica</h1>
+                <p className="text-gray-600 mt-1 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  {history.patient.firstName} {history.patient.lastName} • {formatDate(history.consultationDate)}
               </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {getStatusBadge(history.status)}
+              <button
+                onClick={handleEdit}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-violet-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-violet-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-md flex items-center space-x-2"
+              >
+                <Edit3 className="w-5 h-5" />
+                <span>Editar Historia</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            {getStatusBadge(history.status)}
-            <button
-              onClick={handleEdit}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>Editar</span>
-            </button>
+        </div>
+        
+        {/* Breadcrumb visual */}
+        <div className="px-6 pb-4">
+          <div className="flex items-center text-sm text-gray-500 space-x-2">
+            <span>Gestión</span>
+            <span>•</span>
+            <span className="text-purple-600 font-medium">Historias Clínicas</span>
+            <span>•</span>
+            <span className="text-gray-700">{history.patient.firstName} {history.patient.lastName}</span>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      {/* Content Container */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="space-y-8">
           
           {/* Información del Paciente */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Información del Paciente</h2>
-              <div className="text-sm text-gray-500">
-                {allHistories.length} registros médicos
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <UserCircle className="w-5 h-5 text-blue-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Información del Paciente</h2>
+                    <p className="text-sm text-gray-600 mt-1">Datos demográficos y contacto</p>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-lg border border-gray-200">
+                  {allHistories.length} registros médicos
+                </div>
               </div>
             </div>
+            
+            <div className="p-6">
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-1">
@@ -385,25 +412,28 @@ export default function HistoryDetailPage() {
           </div>
 
           {/* Tabla de Registros Médicos */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200 px-6 py-5">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Historial Médico Completo</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {filteredHistories.length} de {allHistories.length} registros médicos
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <Plus className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Historial Médico Completo</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {filteredHistories.length} de {allHistories.length} registros médicos
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
-                  </svg>
+                  <Filter className="w-4 h-4" />
                   <span>Filtros</span>
                   {(filters.dateFrom || filters.dateTo || filters.specialty || filters.type || filters.status || filters.search) && (
-                    <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">
                       {[filters.dateFrom, filters.dateTo, filters.specialty, filters.type, filters.status, filters.search].filter(Boolean).length}
                     </span>
                   )}
@@ -413,7 +443,7 @@ export default function HistoryDetailPage() {
 
             {/* Panel de Filtros */}
             {showFilters && (
-              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <div className="px-6 py-4 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-gray-200">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Búsqueda</label>
@@ -631,6 +661,7 @@ export default function HistoryDetailPage() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

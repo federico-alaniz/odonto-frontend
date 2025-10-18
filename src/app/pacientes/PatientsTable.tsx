@@ -18,7 +18,8 @@ import {
   ArrowDown,
   CheckCircle,
   XCircle,
-  Droplets
+  Droplets,
+  Search
 } from 'lucide-react';
 import ViewPatientModal from './modals/ViewPatientModal';
 import NewAppointmentModal from './modals/NewAppointmentModal';
@@ -407,12 +408,12 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-hidden">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="w-1/4 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('apellidos')}
               >
                 <div className="flex items-center space-x-2">
@@ -421,7 +422,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="w-1/6 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('numeroDocumento')}
               >
                 <div className="flex items-center space-x-2">
@@ -429,28 +430,25 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                   {getSortIcon('numeroDocumento')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/8 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Edad
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/4 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Contacto
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Información
-              </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                className="w-1/8 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('ultimaConsulta')}
               >
                 <div className="flex items-center space-x-2">
-                  <span>Última Consulta</span>
+                  <span>Últ. Consulta</span>
                   {getSortIcon('ultimaConsulta')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/12 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Estado
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="w-1/8 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
@@ -458,87 +456,79 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
           <tbody className="divide-y divide-gray-200">
             {paginatedPatients.map((patient) => (
               <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
+                <td className="px-4 py-4">
+                  <div className="truncate">
+                    <div className="text-sm font-medium text-gray-900 truncate">
                       {patient.nombres} {patient.apellidos}
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <User className="w-3 h-3" />
-                      <span>{patient.genero === 'masculino' ? 'Masculino' : 'Femenino'}</span>
-                      <span>•</span>
-                      <MapPin className="w-3 h-3" />
-                      <span>{patient.ciudad}</span>
+                    <div className="flex items-center space-x-2 text-xs text-gray-700">
+                      <User className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{patient.genero === 'masculino' ? 'M' : 'F'} • {patient.ciudad}</span>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
+                  <div className="text-sm text-gray-900 truncate">
+                    <div className="font-medium">{patient.numeroDocumento}</div>
+                    <div className="text-xs text-gray-700">{getDocumentTypeLabel(patient.tipoDocumento).slice(0, 10)}</div>
+                  </div>
+                </td>
+                <td className="px-4 py-4">
                   <div className="text-sm text-gray-900">
-                    {getDocumentTypeLabel(patient.tipoDocumento)} {patient.numeroDocumento}
+                    <div className="font-medium">{calculateAge(patient.fechaNacimiento)}</div>
+                    <div className="text-xs text-gray-700">años</div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
+                  <div className="truncate">
+                    <div className="flex items-center space-x-2 text-xs text-gray-700">
+                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{patient.telefono}</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-xs text-gray-700">
+                      <Mail className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{patient.email}</span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-4">
                   <div className="text-sm text-gray-900">
-                    {calculateAge(patient.fechaNacimiento)} años
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {formatDate(patient.fechaNacimiento)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2 text-sm text-gray-900 mb-1">
-                    <Phone className="w-3 h-3" />
-                    <span>{patient.telefono}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-600">
-                    <Mail className="w-3 h-3" />
-                    <span>{patient.email}</span>
+                    <div className="font-medium">{formatDate(patient.ultimaConsulta)}</div>
+                    <div className="flex items-center space-x-1 text-xs text-gray-700">
+                      <Droplets className="w-3 h-3 text-red-500 flex-shrink-0" />
+                      <span>{patient.tipoSangre}</span>
+                    </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2 text-sm text-gray-900 mb-1">
-                    <Droplets className="w-3 h-3 text-red-500" />
-                    <span>{patient.tipoSangre}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-600">
-                    <MapPin className="w-3 h-3" />
-                    <span>{patient.ciudad}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatDate(patient.ultimaConsulta)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   {getStatusBadge(patient.estado)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2">
+                <td className="px-4 py-4">
+                  <div className="flex space-x-1">
                     <button 
                       onClick={() => handleViewPatient(patient)}
-                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
+                      className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
                       title="Ver perfil completo"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleEditPatient(patient)}
-                      className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" 
+                      className="p-1.5 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" 
                       title="Editar información"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleNewAppointment(patient)}
-                      className="p-2 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2" 
+                      className="p-1.5 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2" 
                       title="Programar nueva cita"
                     >
                       <Calendar className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDeletePatient(patient)}
-                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
+                      className="p-1.5 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
                       title="Eliminar paciente"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -554,7 +544,9 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
       {/* Footer */}
       {filteredAndSortedPatients.length === 0 && (
         <div className="p-12 text-center">
-          <div className="text-4xl mb-4">🔍</div>
+          <div className="flex justify-center mb-4">
+            <Search className="w-16 h-16 text-gray-400" />
+          </div>
           <h3 className="text-lg font-medium text-slate-900 mb-2">No se encontraron pacientes</h3>
           <p className="medical-text-secondary">
             Intenta modificar los filtros de búsqueda o{' '}
