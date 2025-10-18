@@ -1,23 +1,31 @@
 'use client';
 
-import { MedicalHistory } from '../page';
+import { useRouter } from 'next/navigation';
+import { MedicalHistory } from '../adapter';
+import { MedicalEntry } from '../types';
+
+interface ConsolidatedHistory extends MedicalHistory {
+  totalEntries?: number;
+  lastUpdated?: string;
+  allEntries?: MedicalEntry[];
+}
 
 interface PatientHistoryListProps {
-  histories: MedicalHistory[];
-  onViewHistory: (history: MedicalHistory) => void;
+  histories: ConsolidatedHistory[];
+  onViewHistory?: (history: ConsolidatedHistory) => void; // Ahora es opcional
 }
 
 export default function PatientHistoryList({ histories, onViewHistory }: PatientHistoryListProps) {
-  const getTypeLabel = (type: string) => {
-    const types: { [key: string]: string } = {
-      'consultation': 'Consulta',
-      'followup': 'Seguimiento',
-      'emergency': 'Urgencia',
-      'checkup': 'Control',
-      'surgery': 'Cirugía',
-      'therapy': 'Terapia'
-    };
-    return types[type] || type;
+  const router = useRouter();
+
+  const handleViewHistory = (history: ConsolidatedHistory) => {
+    if (onViewHistory) {
+      // Si se proporciona onViewHistory, usarlo (para compatibilidad)
+      onViewHistory(history);
+    } else {
+      // Por defecto, navegar a la página de detalles
+      router.push(`/historiales/${history.id}`);
+    }
   };
 
   const getStatusLabel = (status: string) => {
@@ -82,18 +90,6 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'consultation': return 'bg-blue-100 text-blue-800';
-      case 'followup': return 'bg-amber-100 text-amber-800';
-      case 'emergency': return 'bg-red-100 text-red-800';
-      case 'checkup': return 'bg-green-100 text-green-800';
-      case 'surgery': return 'bg-purple-100 text-purple-800';
-      case 'therapy': return 'bg-indigo-100 text-indigo-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (histories.length === 0) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
@@ -116,7 +112,7 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Hacer clic en cualquier fila para ver los detalles completos de la historia clínica</span>
+          <span>Hacer clic en cualquier fila para ver la historia clínica completa del paciente</span>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -127,19 +123,16 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
                 Paciente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha / Hora
+                Registros Médicos
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Doctor
+                Última Consulta
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Especialidad
+                Doctor / Especialidad
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Diagnóstico
+                Último Diagnóstico
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Estado
@@ -154,7 +147,7 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
               <tr 
                 key={history.id} 
                 className="hover:bg-blue-50 hover:shadow-sm transition-all duration-200 cursor-pointer border-l-4 border-transparent hover:border-blue-400"
-                onClick={() => onViewHistory(history)}
+                onClick={() => handleViewHistory(history)}
                 title="Hacer clic para ver detalles de la historia clínica"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -177,6 +170,16 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-blue-600">
+                      {history.totalEntries || 1}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {(history.totalEntries || 1) === 1 ? 'registro' : 'registros'}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
                     {new Date(history.consultationDate).toLocaleDateString('es-ES')}
                   </div>
@@ -185,16 +188,9 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{history.doctor}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{history.doctor}</div>
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSpecialtyColor(history.specialty)}`}>
                     {getSpecialtyLabel(history.specialty)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(history.type)}`}>
-                    {getTypeLabel(history.type)}
                   </span>
                 </td>
                 <td className="px-6 py-4">
@@ -202,7 +198,7 @@ export default function PatientHistoryList({ histories, onViewHistory }: Patient
                     {history.diagnosis}
                   </div>
                   <div className="text-sm text-gray-500 max-w-xs truncate" title={history.symptoms}>
-                    {history.symptoms}
+                    Síntomas: {history.symptoms}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

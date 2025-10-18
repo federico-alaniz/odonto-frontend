@@ -1,6 +1,25 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  Eye, 
+  Edit3, 
+  Trash2, 
+  Calendar, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  User, 
+  ChevronLeft, 
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  CheckCircle,
+  XCircle,
+  Droplets
+} from 'lucide-react';
 import ViewPatientModal from './modals/ViewPatientModal';
 import NewAppointmentModal from './modals/NewAppointmentModal';
 import DeletePatientModal from './modals/DeletePatientModal';
@@ -19,7 +38,6 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  estadoCivil: string;
   ultimaConsulta: string;
   estado: 'activo' | 'inactivo';
 }
@@ -31,99 +49,108 @@ interface PatientsTableProps {
 // Datos de muestra
 const samplePatients: Patient[] = [
   {
-    id: '1',
+    id: 'pat_001',
     nombres: 'María Elena',
-    apellidos: 'González Rodríguez',
-    tipoDocumento: 'cc',
+    apellidos: 'González',
+    tipoDocumento: 'dni',
     numeroDocumento: '12345678',
-    fechaNacimiento: '1985-03-15',
+    fechaNacimiento: '1978-03-15',
     genero: 'femenino',
     telefono: '3001234567',
     email: 'maria.gonzalez@email.com',
-    ciudad: 'Bogotá',
+    ciudad: 'Buenos Aires',
     tipoSangre: 'O+',
-    estadoCivil: 'casado',
-    ultimaConsulta: '2024-10-10',
+    ultimaConsulta: '2025-10-14',
     estado: 'activo'
   },
   {
-    id: '2',
+    id: 'pat_002',
     nombres: 'Juan Carlos',
-    apellidos: 'Pérez López',
-    tipoDocumento: 'cc',
-    numeroDocumento: '87654321',
-    fechaNacimiento: '1992-07-22',
+    apellidos: 'Rodríguez',
+    tipoDocumento: 'dni',
+    numeroDocumento: '23456789',
+    fechaNacimiento: '1985-07-22',
     genero: 'masculino',
-    telefono: '3109876543',
-    email: 'juan.perez@email.com',
-    ciudad: 'Medellín',
+    telefono: '3009876543',
+    email: 'juan.rodriguez@email.com',
+    ciudad: 'Córdoba',
     tipoSangre: 'A+',
-    estadoCivil: 'soltero',
-    ultimaConsulta: '2024-10-12',
+    ultimaConsulta: '2025-10-09',
     estado: 'activo'
   },
   {
-    id: '3',
+    id: 'pat_003',
     nombres: 'Ana Sofía',
-    apellidos: 'Martínez Silva',
-    tipoDocumento: 'cc',
-    numeroDocumento: '45678912',
-    fechaNacimiento: '1978-12-08',
+    apellidos: 'Martínez',
+    tipoDocumento: 'dni',
+    numeroDocumento: '34567890',
+    fechaNacimiento: '1990-12-05',
     genero: 'femenino',
-    telefono: '3201357924',
+    telefono: '3005555555',
     email: 'ana.martinez@email.com',
-    ciudad: 'Cali',
-    tipoSangre: 'B-',
-    estadoCivil: 'divorciado',
-    ultimaConsulta: '2024-09-28',
+    ciudad: 'Rosario',
+    tipoSangre: 'B+',
+    ultimaConsulta: '2025-10-11',
     estado: 'activo'
   },
   {
-    id: '4',
-    nombres: 'Carlos Alberto',
-    apellidos: 'Ramírez Torres',
-    tipoDocumento: 'cc',
-    numeroDocumento: '78912345',
-    fechaNacimiento: '1990-05-18',
+    id: 'pat_004',
+    nombres: 'Carlos Eduardo',
+    apellidos: 'Vargas',
+    tipoDocumento: 'dni',
+    numeroDocumento: '45678901',
+    fechaNacimiento: '1975-09-12',
     genero: 'masculino',
-    telefono: '3158024613',
-    email: 'carlos.ramirez@email.com',
-    ciudad: 'Barranquilla',
+    telefono: '3003333333',
+    email: 'carlos.vargas@email.com',
+    ciudad: 'Mendoza',
     tipoSangre: 'AB+',
-    estadoCivil: 'union_libre',
-    ultimaConsulta: '2024-10-08',
+    ultimaConsulta: '2025-10-13',
     estado: 'activo'
   },
   {
-    id: '5',
-    nombres: 'Patricia',
-    apellidos: 'Hernández Moreno',
-    tipoDocumento: 'cc',
-    numeroDocumento: '65432178',
-    fechaNacimiento: '1973-11-30',
+    id: 'pat_005',
+    nombres: 'Isabella',
+    apellidos: 'Ramírez',
+    tipoDocumento: 'dni',
+    numeroDocumento: '56789012',
+    fechaNacimiento: '2015-04-18',
     genero: 'femenino',
-    telefono: '3007531468',
-    email: 'patricia.hernandez@email.com',
-    ciudad: 'Cartagena',
+    telefono: '3006666666',
+    email: 'isabella.ramirez@email.com',
+    ciudad: 'La Plata',
     tipoSangre: 'O-',
-    estadoCivil: 'viudo',
-    ultimaConsulta: '2024-10-05',
-    estado: 'inactivo'
+    ultimaConsulta: '2025-10-10',
+    estado: 'activo'
   },
   {
-    id: '6',
+    id: 'pat_006',
     nombres: 'Roberto',
-    apellidos: 'García Castillo',
-    tipoDocumento: 'cc',
-    numeroDocumento: '32165487',
+    apellidos: 'García',
+    tipoDocumento: 'dni',
+    numeroDocumento: '67890123',
     fechaNacimiento: '1988-09-12',
     genero: 'masculino',
-    telefono: '3129634785',
+    telefono: '3007777777',
     email: 'roberto.garcia@email.com',
-    ciudad: 'Bucaramanga',
+    ciudad: 'San Miguel de Tucumán',
     tipoSangre: 'A-',
-    estadoCivil: 'casado',
-    ultimaConsulta: '2024-10-14',
+    ultimaConsulta: '2025-10-12',
+    estado: 'activo'
+  },
+  {
+    id: 'pat_007',
+    nombres: 'Daniela',
+    apellidos: 'Torres',
+    tipoDocumento: 'dni',
+    numeroDocumento: '78901234',
+    fechaNacimiento: '1992-08-25',
+    genero: 'femenino',
+    telefono: '3001010101',
+    email: 'daniela.torres@email.com',
+    ciudad: 'Medellín',
+    tipoSangre: 'B-',
+    ultimaConsulta: '2025-10-15',
     estado: 'activo'
   }
 ];
@@ -140,6 +167,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const router = useRouter();
 
   // Lista de pacientes (actualizable)
   const [patients, setPatients] = useState<Patient[]>(samplePatients);
@@ -173,6 +201,21 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     setPatients(prev => prev.map(p => 
       p.id === updatedPatient.id ? updatedPatient : p
     ));
+  };
+
+  const handleViewHistoryFromModal = (patient: Patient) => {
+    // Navegar a la página de historiales filtrada por paciente
+    router.push(`/historiales?patientId=${encodeURIComponent(patient.id)}`);
+  };
+
+  const handleEditPatientFromModal = () => {
+    setShowViewModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleNewAppointmentFromModal = () => {
+    setShowViewModal(false);
+    setShowAppointmentModal(true);
   };
 
   const closeModals = () => {
@@ -213,8 +256,10 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
         );
       }
 
-      if (filters.tipoDocumento) {
-        filtered = filtered.filter(patient => patient.tipoDocumento === filters.tipoDocumento);
+      if (filters.numeroDocumento) {
+        filtered = filtered.filter(patient => 
+          patient.numeroDocumento.includes(filters.numeroDocumento)
+        );
       }
 
       if (filters.genero) {
@@ -228,10 +273,6 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
 
       if (filters.tipoSangre) {
         filtered = filtered.filter(patient => patient.tipoSangre === filters.tipoSangre);
-      }
-
-      if (filters.estadoCivil) {
-        filtered = filtered.filter(patient => patient.estadoCivil === filters.estadoCivil);
       }
 
       if (filters.edadMin) {
@@ -279,8 +320,10 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   };
 
   const getSortIcon = (field: keyof Patient) => {
-    if (sortField !== field) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
+    if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="w-4 h-4 text-blue-600" /> : 
+      <ArrowDown className="w-4 h-4 text-blue-600" />;
   };
 
   const formatDate = (dateString: string) => {
@@ -293,8 +336,18 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
 
   const getStatusBadge = (estado: string) => {
     return estado === 'activo' 
-      ? <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">🟢 Activo</span>
-      : <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">🔴 Inactivo</span>;
+      ? (
+          <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3" />
+            <span>Activo</span>
+          </span>
+        )
+      : (
+          <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+            <XCircle className="w-3 h-3" />
+            <span>Inactivo</span>
+          </span>
+        );
   };
 
   const getDocumentTypeLabel = (type: string) => {
@@ -309,37 +362,44 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   };
 
   return (
-    <div className="medical-card">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header de la tabla */}
-      <div className="p-6 border-b medical-border">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800">
-              📋 Pacientes Registrados
-            </h2>
-            <p className="text-sm medical-text-secondary">
-              Total: {filteredAndSortedPatients.length} paciente(s) encontrado(s)
-            </p>
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <User className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Pacientes Registrados
+              </h2>
+              <p className="text-sm text-gray-600">
+                Total: {filteredAndSortedPatients.length} paciente(s) encontrado(s)
+              </p>
+            </div>
           </div>
           
-          <div className="mt-4 sm:mt-0 flex items-center space-x-4">
-            <span className="text-sm medical-text-secondary">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
               Página {currentPage} de {totalPages}
             </span>
             <div className="flex space-x-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border medical-border rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                ← Anterior
+                <ChevronLeft className="w-4 h-4" />
+                <span>Anterior</span>
               </button>
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border medical-border rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Siguiente →
+                <span>Siguiente</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -349,79 +409,104 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
       {/* Tabla */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-slate-50">
+          <thead className="bg-gray-50">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('apellidos')}
               >
-                Paciente {getSortIcon('apellidos')}
+                <div className="flex items-center space-x-2">
+                  <span>Paciente</span>
+                  {getSortIcon('apellidos')}
+                </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('numeroDocumento')}
               >
-                Documento {getSortIcon('numeroDocumento')}
+                <div className="flex items-center space-x-2">
+                  <span>Documento</span>
+                  {getSortIcon('numeroDocumento')}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Edad
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contacto
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Información
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:bg-slate-100"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => handleSort('ultimaConsulta')}
               >
-                Última Consulta {getSortIcon('ultimaConsulta')}
+                <div className="flex items-center space-x-2">
+                  <span>Última Consulta</span>
+                  {getSortIcon('ultimaConsulta')}
+                </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Estado
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {paginatedPatients.map((patient) => (
-              <tr key={patient.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="text-sm font-medium text-gray-900">
                       {patient.nombres} {patient.apellidos}
                     </div>
-                    <div className="text-sm medical-text-secondary">
-                      {patient.genero === 'masculino' ? '♂️' : '♀️'} {patient.ciudad}
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <User className="w-3 h-3" />
+                      <span>{patient.genero === 'masculino' ? 'Masculino' : 'Femenino'}</span>
+                      <span>•</span>
+                      <MapPin className="w-3 h-3" />
+                      <span>{patient.ciudad}</span>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">
+                  <div className="text-sm text-gray-900">
                     {getDocumentTypeLabel(patient.tipoDocumento)} {patient.numeroDocumento}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">
+                  <div className="text-sm text-gray-900">
                     {calculateAge(patient.fechaNacimiento)} años
                   </div>
-                  <div className="text-xs medical-text-secondary">
+                  <div className="text-xs text-gray-600">
                     {formatDate(patient.fechaNacimiento)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">📱 {patient.telefono}</div>
-                  <div className="text-xs medical-text-secondary">📧 {patient.email}</div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-900 mb-1">
+                    <Phone className="w-3 h-3" />
+                    <span>{patient.telefono}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-gray-600">
+                    <Mail className="w-3 h-3" />
+                    <span>{patient.email}</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">🩸 {patient.tipoSangre}</div>
-                  <div className="text-xs medical-text-secondary">💑 {patient.estadoCivil}</div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-900 mb-1">
+                    <Droplets className="w-3 h-3 text-red-500" />
+                    <span>{patient.tipoSangre}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-gray-600">
+                    <MapPin className="w-3 h-3" />
+                    <span>{patient.ciudad}</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-900">
+                  <div className="text-sm text-gray-900">
                     {formatDate(patient.ultimaConsulta)}
                   </div>
                 </td>
@@ -432,31 +517,31 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                   <div className="flex space-x-2">
                     <button 
                       onClick={() => handleViewPatient(patient)}
-                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-all focus-ring" 
+                      className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
                       title="Ver perfil completo"
                     >
-                      👁️
+                      <Eye className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleEditPatient(patient)}
-                      className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-all focus-ring" 
+                      className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" 
                       title="Editar información"
                     >
-                      ✏️
+                      <Edit3 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleNewAppointment(patient)}
-                      className="p-2 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-all focus-ring" 
+                      className="p-2 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2" 
                       title="Programar nueva cita"
                     >
-                      📅
+                      <Calendar className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDeletePatient(patient)}
-                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-all focus-ring" 
+                      className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2" 
                       title="Eliminar paciente"
                     >
-                      🗑️
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -485,6 +570,9 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
         isOpen={showViewModal}
         onClose={closeModals}
         patient={selectedPatient}
+        onEditPatient={handleEditPatientFromModal}
+        onNewAppointment={handleNewAppointmentFromModal}
+        onViewHistory={handleViewHistoryFromModal}
       />
 
       <EditPatientModal

@@ -2,6 +2,7 @@
 
 import { useSidebar } from '@/hooks/useSidebar';
 import Sidebar from './Sidebar';
+import { Building2, Menu } from 'lucide-react';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const safeCollapsed = isClient ? isCollapsed : false;
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Mobile Overlay */}
       {safeMobile && !safeCollapsed && (
         <div 
@@ -41,17 +42,22 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
         {safeMobile && (
-          <header className="bg-white shadow-sm medical-border border-b p-4 md:hidden">
+          <header className="bg-white shadow-sm border-b border-gray-200 p-4 md:hidden">
             <div className="flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-blue-800">
-                🏥 MediCore
-              </h1>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="w-5 h-5 text-blue-600" />
+                </div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  MediCore
+                </h1>
+              </div>
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg hover:bg-blue-50 transition-colors focus-ring"
+                className="p-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 aria-label="Abrir menú"
               >
-                <span className="text-xl text-blue-600">☰</span>
+                <Menu className="w-5 h-5 text-gray-600 hover:text-blue-600 transition-colors" />
               </button>
             </div>
           </header>

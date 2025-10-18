@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 interface MedicalModalProps {
   isOpen: boolean;
@@ -9,7 +10,6 @@ interface MedicalModalProps {
   title: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  icon?: string;
 }
 
 export default function MedicalModal({ 
@@ -17,8 +17,7 @@ export default function MedicalModal({
   onClose, 
   title, 
   children, 
-  size = 'md',
-  icon 
+  size = 'md'
 }: MedicalModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -68,26 +67,23 @@ export default function MedicalModal({
         <div 
           className={`
             relative w-full ${sizeClasses[size]} 
-            medical-card max-h-[85vh] overflow-hidden
+            bg-white rounded-lg shadow-xl border border-gray-200 max-h-[85vh] overflow-hidden
             transform transition-all duration-200 scale-100
-            shadow-2xl animate-in fade-in zoom-in-95 duration-200
+            animate-in fade-in zoom-in-95 duration-200
           `}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b medical-border bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center">
-              {icon && <span className="mr-3 text-xl">{icon}</span>}
-              <h2 className="text-lg font-semibold text-blue-900">
-                {title}
-              </h2>
-            </div>
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {title}
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/70 rounded-lg transition-colors focus-ring"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
               aria-label="Cerrar modal"
             >
-              <span className="text-xl text-slate-600">✕</span>
+              <X className="w-5 h-5 text-gray-600" />
             </button>
           </div>
           
