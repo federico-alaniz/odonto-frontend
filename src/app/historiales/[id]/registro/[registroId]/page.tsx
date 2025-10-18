@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ArrowLeft, FileText, Info, Edit3 } from 'lucide-react';
 import { MedicalHistory, getMedicalHistoryById } from '../../../adapter';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
@@ -140,7 +141,7 @@ export default function RegistroDetailPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -149,13 +150,12 @@ export default function RegistroDetailPage() {
               onClick={handleBack}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ArrowLeft className="w-6 h-6" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Registro Médico</h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <h1 className="text-3xl font-bold text-gray-900">Registro Médico</h1>
+              <p className="text-gray-600 mt-1 flex items-center gap-2">
+                <Info className="w-4 h-4" />
                 {patientName} • {formatDate(registro.consultationDate)}
               </p>
             </div>
@@ -164,12 +164,10 @@ export default function RegistroDetailPage() {
             {getStatusBadge(registro.status)}
             <button
               onClick={handleEdit}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md inline-flex items-center space-x-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>Editar</span>
+              <Edit3 className="w-5 h-5" />
+              <span>Editar Registro</span>
             </button>
           </div>
         </div>
