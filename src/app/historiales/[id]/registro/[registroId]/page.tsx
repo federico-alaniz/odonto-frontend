@@ -141,11 +141,12 @@ export default function RegistroDetailPage() {
   }
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
+    <div className="flex flex-col bg-gray-50 -m-6 min-h-[calc(100vh-3rem)]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
             <button
               onClick={handleBack}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -171,6 +172,7 @@ export default function RegistroDetailPage() {
             </button>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Content */}
