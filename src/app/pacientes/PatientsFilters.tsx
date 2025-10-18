@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Search, X } from 'lucide-react';
 import MedicalInput from '@/components/forms/MedicalInput';
 import MedicalSelect from '@/components/forms/MedicalSelect';
 
@@ -10,10 +11,9 @@ interface FiltersProps {
 
 export interface PatientFilters {
   search: string;
-  tipoDocumento: string;
+  numeroDocumento: string;
   genero: string;
   tipoSangre: string;
-  estadoCivil: string;
   edadMin: string;
   edadMax: string;
   ciudad: string;
@@ -22,25 +22,15 @@ export interface PatientFilters {
 export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
   const [filters, setFilters] = useState<PatientFilters>({
     search: '',
-    tipoDocumento: '',
+    numeroDocumento: '',
     genero: '',
     tipoSangre: '',
-    estadoCivil: '',
     edadMin: '',
     edadMax: '',
     ciudad: ''
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const tiposDocumento = [
-    { value: '', label: 'Todos los tipos' },
-    { value: 'cc', label: 'Cédula de Ciudadanía' },
-    { value: 'ti', label: 'Tarjeta de Identidad' },
-    { value: 'ce', label: 'Cédula de Extranjería' },
-    { value: 'pasaporte', label: 'Pasaporte' },
-    { value: 'rc', label: 'Registro Civil' }
-  ];
 
   const generos = [
     { value: '', label: 'Todos los géneros' },
@@ -61,15 +51,6 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
     { value: 'O-', label: 'O-' }
   ];
 
-  const estadosCiviles = [
-    { value: '', label: 'Todos los estados' },
-    { value: 'soltero', label: 'Soltero/a' },
-    { value: 'casado', label: 'Casado/a' },
-    { value: 'union_libre', label: 'Unión Libre' },
-    { value: 'divorciado', label: 'Divorciado/a' },
-    { value: 'viudo', label: 'Viudo/a' }
-  ];
-
   const handleFilterChange = (field: keyof PatientFilters, value: string) => {
     const newFilters = { ...filters, [field]: value };
     setFilters(newFilters);
@@ -79,10 +60,9 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
   const clearFilters = () => {
     const emptyFilters: PatientFilters = {
       search: '',
-      tipoDocumento: '',
+      numeroDocumento: '',
       genero: '',
       tipoSangre: '',
-      estadoCivil: '',
       edadMin: '',
       edadMax: '',
       ciudad: ''
@@ -94,18 +74,29 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
   const hasActiveFilters = Object.values(filters).some(value => value !== '');
 
   return (
-    <div className="medical-card p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h2 className="text-lg font-semibold text-slate-800 mb-2 sm:mb-0">
-          🔍 Filtros de Búsqueda
-        </h2>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gray-100 rounded-lg">
+            <Search className="w-5 h-5 text-gray-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Filtros de Búsqueda
+            </h2>
+            <p className="text-sm text-gray-600">
+              Utiliza los filtros para encontrar pacientes específicos
+            </p>
+          </div>
+        </div>
         <div className="flex items-center space-x-3">
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="text-sm text-red-600 hover:text-red-700 font-medium"
+              className="inline-flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg font-medium transition-colors"
             >
-              🗑️ Limpiar filtros
+              <X className="w-4 h-4" />
+              <span>Limpiar filtros</span>
             </button>
           )}
           <button
@@ -121,7 +112,6 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
       <div className="mb-6">
         <MedicalInput
           label="Búsqueda General"
-          icon="🔍"
           value={filters.search}
           onChange={(e) => handleFilterChange('search', e.target.value)}
           placeholder="Buscar por nombre, apellido, documento o email..."
@@ -131,56 +121,36 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
 
       {/* Filtros básicos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <MedicalSelect
-          label="Tipo de Documento"
-          icon="🆔"
-          value={filters.tipoDocumento}
-          onChange={(e) => handleFilterChange('tipoDocumento', e.target.value)}
-          options={tiposDocumento}
+        <MedicalInput
+          label="Número de Documento"
+          value={filters.numeroDocumento}
+          onChange={(e) => handleFilterChange('numeroDocumento', e.target.value)}
+          placeholder="Ingrese número de documento"
         />
         
         <MedicalSelect
           label="Género"
-          icon="⚧️"
           value={filters.genero}
           onChange={(e) => handleFilterChange('genero', e.target.value)}
           options={generos}
         />
         
-        <MedicalInput
-          label="Ciudad"
-          icon="🏙️"
-          value={filters.ciudad}
-          onChange={(e) => handleFilterChange('ciudad', e.target.value)}
-          placeholder="Filtrar por ciudad"
+        <MedicalSelect
+          label="Tipo de Sangre"
+          value={filters.tipoSangre}
+          onChange={(e) => handleFilterChange('tipoSangre', e.target.value)}
+          options={tiposSangre}
         />
       </div>
 
       {/* Filtros avanzados */}
       {showAdvanced && (
-        <div className="border-t medical-border pt-4">
-          <h3 className="text-sm font-medium text-slate-700 mb-4">Filtros Avanzados</h3>
+        <div className="border-t border-gray-200 pt-6 mt-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-4">Filtros Avanzados</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MedicalSelect
-              label="Tipo de Sangre"
-              icon="🩸"
-              value={filters.tipoSangre}
-              onChange={(e) => handleFilterChange('tipoSangre', e.target.value)}
-              options={tiposSangre}
-            />
-            
-            <MedicalSelect
-              label="Estado Civil"
-              icon="💑"
-              value={filters.estadoCivil}
-              onChange={(e) => handleFilterChange('estadoCivil', e.target.value)}
-              options={estadosCiviles}
-            />
-            
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <MedicalInput
               label="Edad Mínima"
-              icon="📅"
               type="number"
               value={filters.edadMin}
               onChange={(e) => handleFilterChange('edadMin', e.target.value)}
@@ -191,7 +161,6 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
             
             <MedicalInput
               label="Edad Máxima"
-              icon="📅"
               type="number"
               value={filters.edadMax}
               onChange={(e) => handleFilterChange('edadMax', e.target.value)}
@@ -199,15 +168,22 @@ export default function PatientsFilters({ onFiltersChange }: FiltersProps) {
               min="0"
               max="120"
             />
+
+            <MedicalInput
+              label="Ciudad"
+              value={filters.ciudad}
+              onChange={(e) => handleFilterChange('ciudad', e.target.value)}
+              placeholder="Filtrar por ciudad"
+            />
           </div>
         </div>
       )}
 
       {/* Contador de resultados */}
       {hasActiveFilters && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            📊 Filtros activos: {Object.values(filters).filter(v => v !== '').length}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700 font-medium">
+            Filtros activos: {Object.values(filters).filter(v => v !== '').length}
           </p>
         </div>
       )}

@@ -1,7 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { 
+  User, 
+  Calendar, 
+  Stethoscope, 
+  Edit3, 
+  X, 
+  Save 
+} from 'lucide-react';
 import Portal from '../components/Portal';
+import MedicalButton from '@/components/forms/MedicalButton';
+import MedicalInputField from '@/components/forms/MedicalInputField';
+import MedicalSelectField from '@/components/forms/MedicalSelectField';
+import MedicalTextareaField from '@/components/forms/MedicalTextareaField';
+import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
+import MedicalFormSection from '@/components/forms/MedicalFormSection';
 
 interface Appointment {
   id: string;
@@ -137,16 +151,6 @@ export default function EditAppointmentModal({
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'consulta': return 'border-blue-300 bg-blue-50';
-      case 'control': return 'border-green-300 bg-green-50';
-      case 'procedimiento': return 'border-purple-300 bg-purple-50';
-      case 'urgencia': return 'border-red-300 bg-red-50';
-      default: return 'border-gray-300 bg-gray-50';
-    }
-  };
-
   return (
     <Portal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -157,258 +161,209 @@ export default function EditAppointmentModal({
         />
         
         {/* Modal */}
-        <div className="relative w-full max-w-3xl medical-card max-h-[90vh] overflow-y-auto">
+        <div className="relative w-full max-w-4xl mx-4 bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto">`
           {/* Header */}
-          <div className="p-6 border-b medical-border bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-1">
-                  ✏️ Editar Cita
-                </h2>
-                <p className="text-slate-600">
-                  Modifica los detalles de la cita médica
-                </p>
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Edit3 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    Editar Cita
+                  </h2>
+                  <p className="text-gray-600">
+                    Modifica los detalles de la cita médica
+                  </p>
+                </div>
               </div>
               
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/80 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+                className="p-2 hover:bg-white/80 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
                 title="Cerrar"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-6 h-6" />
               </button>
             </div>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-8">
               {/* Información del Paciente */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">
-                  👤 Información del Paciente
-                </h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Nombre completo *
-                  </label>
-                  <input
-                    type="text"
+              <MedicalFormSection
+                title="Información del Paciente"
+                description="Datos del paciente asociado a la cita"
+                icon={User}
+                iconColor="text-blue-600"
+              >
+                <MedicalFieldGroup>
+                  <MedicalInputField
+                    label="Nombre completo"
                     value={formData.patientName}
-                    onChange={(e) => handleInputChange('patientName', e.target.value)}
-                    className={`medical-input ${errors.patientName ? 'border-red-300' : ''}`}
+                    onChange={(value) => handleInputChange('patientName', value)}
+                    error={errors.patientName}
                     placeholder="Nombre del paciente"
+                    required
                   />
-                  {errors.patientName && (
-                    <p className="text-red-500 text-sm mt-1">{errors.patientName}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      ID Paciente
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.patientId}
-                      onChange={(e) => handleInputChange('patientId', e.target.value)}
-                      className="medical-input"
-                      placeholder="ID"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Edad
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.patientAge || ''}
-                      onChange={(e) => handleInputChange('patientAge', parseInt(e.target.value) || undefined)}
-                      className={`medical-input ${errors.patientAge ? 'border-red-300' : ''}`}
-                      placeholder="Edad"
-                      min="0"
-                      max="150"
-                    />
-                    {errors.patientAge && (
-                      <p className="text-red-500 text-sm mt-1">{errors.patientAge}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Teléfono
-                  </label>
-                  <input
+                  <MedicalInputField
+                    label="ID Paciente"
+                    value={formData.patientId}
+                    onChange={(value) => handleInputChange('patientId', value)}
+                    placeholder="ID del paciente"
+                  />
+                  <MedicalInputField
+                    label="Edad"
+                    type="number"
+                    value={formData.patientAge?.toString() || ''}
+                    onChange={(value) => handleInputChange('patientAge', parseInt(value) || undefined)}
+                    error={errors.patientAge}
+                    placeholder="Edad"
+                    min={0}
+                    max={150}
+                  />
+                  <MedicalInputField
+                    label="Teléfono"
                     type="tel"
                     value={formData.patientPhone || ''}
-                    onChange={(e) => handleInputChange('patientPhone', e.target.value)}
-                    className={`medical-input ${errors.patientPhone ? 'border-red-300' : ''}`}
+                    onChange={(value) => handleInputChange('patientPhone', value)}
+                    error={errors.patientPhone}
                     placeholder="3001234567"
                   />
-                  {errors.patientPhone && (
-                    <p className="text-red-500 text-sm mt-1">{errors.patientPhone}</p>
-                  )}
-                </div>
-              </div>
+                </MedicalFieldGroup>
+              </MedicalFormSection>
 
               {/* Información de la Cita */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-900 border-b border-slate-200 pb-2">
-                  📅 Información de la Cita
-                </h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Fecha *
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => handleInputChange('date', e.target.value)}
-                      className={`medical-input ${errors.date ? 'border-red-300' : ''}`}
-                    />
-                    {errors.date && (
-                      <p className="text-red-500 text-sm mt-1">{errors.date}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Hora *
-                    </label>
-                    <select
-                      value={formData.time}
-                      onChange={(e) => handleInputChange('time', e.target.value)}
-                      className={`medical-input ${errors.time ? 'border-red-300' : ''}`}
-                    >
-                      <option value="">Seleccionar hora</option>
-                      {timeSlots.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                    {errors.time && (
-                      <p className="text-red-500 text-sm mt-1">{errors.time}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Tipo de Cita *
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['consulta', 'control', 'procedimiento', 'urgencia'] as const).map(type => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => handleInputChange('type', type)}
-                        className={`
-                          p-3 rounded-lg border-2 transition-all text-sm font-medium
-                          ${formData.type === type 
-                            ? `${getTypeColor(type)} border-current` 
-                            : 'border-slate-200 bg-white hover:bg-slate-50'
-                          }
-                        `}
-                      >
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Duración (minutos) *
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => handleInputChange('duration', parseInt(e.target.value))}
-                      className={`medical-input ${errors.duration ? 'border-red-300' : ''}`}
-                      min="15"
-                      max="120"
-                      step="15"
-                    />
-                    {errors.duration && (
-                      <p className="text-red-500 text-sm mt-1">{errors.duration}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Estado
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => handleInputChange('status', e.target.value)}
-                      className="medical-input"
-                    >
-                      <option value="programada">Programada</option>
-                      <option value="confirmada">Confirmada</option>
-                      <option value="completada">Completada</option>
-                      <option value="cancelada">Cancelada</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Doctor *
-                  </label>
-                  <select
+              <MedicalFormSection
+                title="Información de la Cita"
+                description="Detalles y programación de la cita médica"
+                icon={Calendar}
+                iconColor="text-green-600"
+              >
+                <MedicalFieldGroup>
+                  <MedicalInputField
+                    label="Fecha"
+                    type="date"
+                    value={formData.date}
+                    onChange={(value) => handleInputChange('date', value)}
+                    error={errors.date}
+                    required
+                  />
+                  <MedicalSelectField
+                    label="Hora"
+                    value={formData.time}
+                    onChange={(value) => handleInputChange('time', value)}
+                    error={errors.time}
+                    options={timeSlots.map(time => ({ value: time, label: time }))}
+                    placeholder="Seleccionar hora"
+                    required
+                  />
+                  <MedicalInputField
+                    label="Duración (minutos)"
+                    type="number"
+                    value={formData.duration.toString()}
+                    onChange={(value) => handleInputChange('duration', parseInt(value))}
+                    error={errors.duration}
+                    min={15}
+                    max={120}
+                    step={15}
+                    required
+                  />
+                  <MedicalSelectField
+                    label="Doctor"
                     value={formData.doctor}
-                    onChange={(e) => handleInputChange('doctor', e.target.value)}
-                    className={`medical-input ${errors.doctor ? 'border-red-300' : ''}`}
-                  >
-                    <option value="">Seleccionar doctor</option>
-                    {availableDoctors.map(doctor => (
-                      <option key={doctor} value={doctor}>{doctor}</option>
-                    ))}
-                  </select>
-                  {errors.doctor && (
-                    <p className="text-red-500 text-sm mt-1">{errors.doctor}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+                    onChange={(value) => handleInputChange('doctor', value)}
+                    error={errors.doctor}
+                    options={availableDoctors.map(doctor => ({ value: doctor, label: doctor }))}
+                    placeholder="Seleccionar doctor"
+                    required
+                  />
+                </MedicalFieldGroup>
 
-            {/* Notas */}
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                📝 Notas y Observaciones
-              </label>
-              <textarea
-                value={formData.notes || ''}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="medical-input h-24 resize-none"
-                placeholder="Notas adicionales sobre la cita..."
-              />
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Tipo de Cita
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {(['consulta', 'control', 'procedimiento', 'urgencia'] as const).map(type => {
+                      const typeColors = {
+                        consulta: 'border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100',
+                        control: 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100',
+                        procedimiento: 'border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100',
+                        urgencia: 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100'
+                      };
+                      
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => handleInputChange('type', type)}
+                          className={`
+                            p-3 rounded-lg border-2 transition-all text-sm font-medium
+                            ${formData.type === type 
+                              ? `${typeColors[type]} border-current` 
+                              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                            }
+                          `}
+                        >
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <MedicalSelectField
+                    label="Estado"
+                    value={formData.status}
+                    onChange={(value) => handleInputChange('status', value)}
+                    options={[
+                      { value: 'programada', label: 'Programada' },
+                      { value: 'confirmada', label: 'Confirmada' },
+                      { value: 'completada', label: 'Completada' },
+                      { value: 'cancelada', label: 'Cancelada' }
+                    ]}
+                  />
+                </div>
+              </MedicalFormSection>
+
+              {/* Notas */}
+              <MedicalFormSection
+                title="Notas y Observaciones"
+                description="Información adicional sobre la cita"
+                icon={Stethoscope}
+                iconColor="text-purple-600"
+              >
+                <MedicalTextareaField
+                  label="Notas adicionales"
+                  value={formData.notes || ''}
+                  onChange={(value) => handleInputChange('notes', value)}
+                  placeholder="Notas adicionales sobre la cita..."
+                  rows={4}
+                />
+              </MedicalFormSection>
             </div>
 
             {/* Botones */}
-            <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-200">
-              <button
+            <div className="flex flex-col sm:flex-row gap-3 justify-end pt-6 border-t border-gray-200">
+              <MedicalButton
                 type="button"
+                variant="secondary"
                 onClick={onClose}
-                className="px-6 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 Cancelar
-              </button>
+              </MedicalButton>
               
-              <button
+              <MedicalButton
                 type="submit"
-                className="medical-button-primary px-8 py-3"
+                variant="primary"
               >
-                💾 Guardar Cambios
-              </button>
+                <Save className="w-4 h-4 mr-2" />
+                Guardar Cambios
+              </MedicalButton>
             </div>
           </form>
         </div>

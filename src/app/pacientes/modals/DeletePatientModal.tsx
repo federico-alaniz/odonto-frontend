@@ -68,7 +68,6 @@ export default function DeletePatientModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Eliminar Paciente"
-      icon="⚠️"
       size="md"
     >
       <div className="space-y-6">

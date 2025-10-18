@@ -1,5 +1,20 @@
 'use client';
 
+import { 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Calendar, 
+  Edit3, 
+  ClipboardList, 
+  Droplets, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle,
+  CreditCard,
+  Cake
+} from 'lucide-react';
 import MedicalModal from '@/components/ui/MedicalModal';
 
 interface Patient {
@@ -14,7 +29,6 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  estadoCivil: string;
   ultimaConsulta: string;
   estado: 'activo' | 'inactivo';
 }
@@ -23,10 +37,32 @@ interface ViewPatientModalProps {
   isOpen: boolean;
   onClose: () => void;
   patient: Patient | null;
+  onEditPatient?: (patient: Patient) => void;
+  onNewAppointment?: (patient: Patient) => void;
+  onViewHistory?: (patient: Patient) => void;
 }
 
-export default function ViewPatientModal({ isOpen, onClose, patient }: ViewPatientModalProps) {
+export default function ViewPatientModal({ 
+  isOpen, 
+  onClose, 
+  patient, 
+  onEditPatient,
+  onNewAppointment,
+  onViewHistory 
+}: ViewPatientModalProps) {
   if (!patient) return null;
+
+  const handleNewAppointment = () => {
+    onNewAppointment?.(patient);
+  };
+
+  const handleEditPatient = () => {
+    onEditPatient?.(patient);
+  };
+
+  const handleViewHistory = () => {
+    onViewHistory?.(patient);
+  };
 
   const calculateAge = (birthDate: string): number => {
     const today = new Date();
@@ -62,8 +98,8 @@ export default function ViewPatientModal({ isOpen, onClose, patient }: ViewPatie
 
   const getGenderLabel = (gender: string) => {
     const genders: { [key: string]: string } = {
-      'masculino': 'Masculino ♂️',
-      'femenino': 'Femenino ♀️',
+      'masculino': 'Masculino',
+      'femenino': 'Femenino',
       'otro': 'Otro'
     };
     return genders[gender] || gender;
@@ -71,8 +107,18 @@ export default function ViewPatientModal({ isOpen, onClose, patient }: ViewPatie
 
   const getStatusBadge = (estado: string) => {
     return estado === 'activo' 
-      ? <span className="px-3 py-1 text-sm rounded-full bg-green-100 text-green-800 font-medium">🟢 Activo</span>
-      : <span className="px-3 py-1 text-sm rounded-full bg-red-100 text-red-800 font-medium">🔴 Inactivo</span>;
+      ? (
+          <span className="inline-flex items-center space-x-1 px-3 py-1 text-sm font-medium rounded-full bg-green-100 text-green-800">
+            <CheckCircle className="w-4 h-4" />
+            <span>Activo</span>
+          </span>
+        )
+      : (
+          <span className="inline-flex items-center space-x-1 px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-800">
+            <XCircle className="w-4 h-4" />
+            <span>Inactivo</span>
+          </span>
+        );
   };
 
   return (
@@ -80,143 +126,194 @@ export default function ViewPatientModal({ isOpen, onClose, patient }: ViewPatie
       isOpen={isOpen}
       onClose={onClose}
       title={`Perfil de ${patient.nombres} ${patient.apellidos}`}
-      icon="👤"
-      size="lg"
+      size="xl"
     >
       <div className="space-y-6">
         {/* Header del perfil */}
-        <div className="flex items-start justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-          <div>
-            <h3 className="text-xl font-bold text-blue-900">
-              {patient.nombres} {patient.apellidos}
-            </h3>
-            <p className="text-blue-700 mt-1">
-              {calculateAge(patient.fechaNacimiento)} años • {getGenderLabel(patient.genero)}
-            </p>
-          </div>
-          <div>
-            {getStatusBadge(patient.estado)}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <User className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {patient.nombres} {patient.apellidos}
+                </h3>
+                <p className="text-gray-600 mt-1">
+                  {calculateAge(patient.fechaNacimiento)} años • {getGenderLabel(patient.genero)}
+                </p>
+              </div>
+            </div>
+            <div>
+              {getStatusBadge(patient.estado)}
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Información Personal */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center">
-              <span className="mr-2">👤</span>
-              Información Personal
-            </h4>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <CreditCard className="w-5 h-5 text-gray-600" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900">
+                Información Personal
+              </h4>
+            </div>
             
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Documento:</span>
-                <span className="text-slate-900">{getDocumentTypeLabel(patient.tipoDocumento)}</span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="font-medium text-gray-600">Documento:</span>
+                <span className="text-gray-900 font-medium">{getDocumentTypeLabel(patient.tipoDocumento)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Número:</span>
-                <span className="text-slate-900">{patient.numeroDocumento}</span>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <span className="font-medium text-gray-600">Número:</span>
+                <span className="text-gray-900 font-medium">{patient.numeroDocumento}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Fecha Nacimiento:</span>
-                <span className="text-slate-900">{formatDate(patient.fechaNacimiento)}</span>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <Cake className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-gray-600">Fecha Nacimiento:</span>
+                </div>
+                <span className="text-gray-900">{formatDate(patient.fechaNacimiento)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Edad:</span>
-                <span className="text-slate-900">{calculateAge(patient.fechaNacimiento)} años</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Estado Civil:</span>
-                <span className="text-slate-900 capitalize">{patient.estadoCivil.replace('_', ' ')}</span>
+              <div className="flex items-center justify-between py-2">
+                <span className="font-medium text-gray-600">Edad:</span>
+                <span className="text-gray-900 font-semibold">{calculateAge(patient.fechaNacimiento)} años</span>
               </div>
             </div>
           </div>
 
           {/* Información de Contacto */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center">
-              <span className="mr-2">📞</span>
-              Contacto
-            </h4>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Phone className="w-5 h-5 text-green-600" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900">
+                Contacto
+              </h4>
+            </div>
             
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Teléfono:</span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <Phone className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-gray-600">Teléfono:</span>
+                </div>
                 <a 
                   href={`tel:${patient.telefono}`}
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                 >
-                  📱 {patient.telefono}
+                  {patient.telefono}
                 </a>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Email:</span>
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-gray-600">Email:</span>
+                </div>
                 <a 
                   href={`mailto:${patient.email}`}
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                 >
-                  📧 {patient.email}
+                  {patient.email}
                 </a>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Ciudad:</span>
-                <span className="text-slate-900">🏙️ {patient.ciudad}</span>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-gray-600">Ciudad:</span>
+                </div>
+                <span className="text-gray-900">{patient.ciudad}</span>
               </div>
             </div>
           </div>
 
           {/* Información Médica */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center">
-              <span className="mr-2">🩺</span>
-              Información Médica
-            </h4>
-            
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Tipo de Sangre:</span>
-                <span className="text-slate-900 font-semibold text-red-600">🩸 {patient.tipoSangre}</span>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Droplets className="w-5 h-5 text-red-600" />
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-slate-600">Última Consulta:</span>
-                <span className="text-slate-900">{formatDate(patient.ultimaConsulta)}</span>
+              <h4 className="text-lg font-semibold text-gray-900">
+                Información Médica
+              </h4>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div className="flex items-center space-x-2">
+                  <Droplets className="w-4 h-4 text-red-500" />
+                  <span className="font-medium text-gray-600">Tipo de Sangre:</span>
+                </div>
+                <span className="text-red-600 font-semibold">{patient.tipoSangre}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium text-gray-600">Última Consulta:</span>
+                </div>
+                <span className="text-gray-900">{formatDate(patient.ultimaConsulta)}</span>
               </div>
             </div>
           </div>
 
           {/* Acciones Rápidas */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center">
-              <span className="mr-2">⚡</span>
-              Acciones Rápidas
-            </h4>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <ClipboardList className="w-5 h-5 text-purple-600" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900">
+                Acciones Rápidas
+              </h4>
+            </div>
             
             <div className="space-y-3">
-              <button className="w-full p-3 text-left rounded-lg border medical-border hover:border-green-300 hover:bg-green-50 transition-all focus-ring">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">📅</span>
+              <button 
+                onClick={handleNewAppointment}
+                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Calendar className="w-5 h-5 text-green-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-slate-800">Nueva Cita</div>
-                    <div className="text-sm medical-text-secondary">Programar consulta</div>
+                    <div className="font-medium text-gray-900">Nueva Cita</div>
+                    <div className="text-sm text-gray-600">Programar consulta</div>
                   </div>
                 </div>
               </button>
               
-              <button className="w-full p-3 text-left rounded-lg border medical-border hover:border-blue-300 hover:bg-blue-50 transition-all focus-ring">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">✏️</span>
+              <button 
+                onClick={handleEditPatient}
+                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Edit3 className="w-5 h-5 text-blue-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-slate-800">Editar Información</div>
-                    <div className="text-sm medical-text-secondary">Actualizar datos</div>
+                    <div className="font-medium text-gray-900">Editar Información</div>
+                    <div className="text-sm text-gray-600">Actualizar datos</div>
                   </div>
                 </div>
               </button>
               
-              <button className="w-full p-3 text-left rounded-lg border medical-border hover:border-purple-300 hover:bg-purple-50 transition-all focus-ring">
-                <div className="flex items-center">
-                  <span className="text-2xl mr-3">📋</span>
+              <button 
+                onClick={handleViewHistory}
+                className="w-full p-4 text-left rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <ClipboardList className="w-5 h-5 text-purple-600" />
+                  </div>
                   <div>
-                    <div className="font-medium text-slate-800">Ver Historial</div>
-                    <div className="text-sm medical-text-secondary">Consultas anteriores</div>
+                    <div className="font-medium text-gray-900">Ver Historial</div>
+                    <div className="text-sm text-gray-600">Consultas anteriores</div>
                   </div>
                 </div>
               </button>
@@ -225,31 +322,34 @@ export default function ViewPatientModal({ isOpen, onClose, patient }: ViewPatie
         </div>
 
         {/* Notas adicionales */}
-        <div className="border-t medical-border pt-4">
-          <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <div className="flex items-start">
-              <span className="text-yellow-600 mr-2">⚠️</span>
-              <div>
-                <p className="text-sm font-medium text-yellow-800">Información Importante</p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  Recuerda verificar los datos de contacto y información médica antes de cada consulta.
-                </p>
-              </div>
+        <div className="bg-amber-50 rounded-lg border border-amber-200 p-4">
+          <div className="flex items-start space-x-3">
+            <div className="p-1">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-amber-800">Información Importante</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Recuerda verificar los datos de contacto y información médica antes de cada consulta.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Botones de acción */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-end border-t medical-border pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 justify-end border-t border-gray-200 pt-6">
           <button
             onClick={onClose}
-            className="px-6 py-2 border medical-border rounded-lg text-slate-700 hover:bg-slate-50 transition-colors focus-ring"
+            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
           >
             Cerrar
           </button>
-          <button className="medical-button-primary px-6 py-2 rounded-lg hover:shadow-md transition-all focus-ring">
-            <span className="mr-2">✏️</span>
-            Editar Paciente
+          <button 
+            onClick={handleEditPatient}
+            className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Editar Paciente</span>
           </button>
         </div>
       </div>

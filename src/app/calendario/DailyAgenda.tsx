@@ -1,6 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Calendar as CalendarIcon, 
+  Clock, 
+  List, 
+  User, 
+  CheckCircle, 
+  XCircle
+} from 'lucide-react';
 import NewAppointmentModal from './modals/NewAppointmentModal';
 import AppointmentDetailModal from './modals/AppointmentDetailModal';
 import EditAppointmentModal from './modals/EditAppointmentModal';
@@ -211,13 +221,33 @@ export default function DailyAgenda() {
   const getStatusBadge = (status: Appointment['status']) => {
     switch (status) {
       case 'confirmada': 
-        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">✅ Confirmada</span>;
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 flex items-center space-x-1">
+            <CheckCircle className="w-3 h-3" />
+            <span>Confirmada</span>
+          </span>
+        );
       case 'programada': 
-        return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">⏳ Programada</span>;
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 flex items-center space-x-1">
+            <Clock className="w-3 h-3" />
+            <span>Programada</span>
+          </span>
+        );
       case 'completada': 
-        return <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">✅ Completada</span>;
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 flex items-center space-x-1">
+            <CheckCircle className="w-3 h-3" />
+            <span>Completada</span>
+          </span>
+        );
       case 'cancelada': 
-        return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">❌ Cancelada</span>;
+        return (
+          <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 flex items-center space-x-1">
+            <XCircle className="w-3 h-3" />
+            <span>Cancelada</span>
+          </span>
+        );
       default: 
         return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">• Sin estado</span>;
     }
@@ -330,7 +360,7 @@ export default function DailyAgenda() {
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors focus-ring"
               title="Día anterior"
             >
-              ◀️
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
@@ -345,16 +375,17 @@ export default function DailyAgenda() {
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors focus-ring"
               title="Día siguiente"
             >
-              ▶️
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
           
           <div className="flex space-x-2">
             <button
               onClick={() => setSelectedDate(new Date())}
-              className="medical-button-secondary text-sm"
+              className="medical-button-secondary text-sm flex items-center space-x-1"
             >
-              📅 Ir a Hoy
+              <CalendarIcon className="w-4 h-4" />
+              <span>Ir a Hoy</span>
             </button>
             <input
               type="date"
@@ -406,8 +437,9 @@ export default function DailyAgenda() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Columna izquierda: Horarios */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              🕐 Horarios del Día
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center space-x-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              <span>Horarios del Día</span>
             </h3>
             
             <div className="space-y-1 max-h-96 overflow-y-auto">
@@ -489,13 +521,14 @@ export default function DailyAgenda() {
 
           {/* Columna derecha: Lista detallada de citas */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center">
-              📋 Citas del Día ({dayAppointments.length})
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center space-x-2">
+              <List className="w-5 h-5 text-green-600" />
+              <span>Citas del Día ({dayAppointments.length})</span>
             </h3>
             
             {dayAppointments.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
-                <div className="text-4xl mb-2">📅</div>
+                <CalendarIcon className="w-16 h-16 mx-auto mb-2 text-slate-300" />
                 <p>No hay citas programadas para este día</p>
                 <button 
                   onClick={() => handleNewAppointment()}
@@ -540,13 +573,25 @@ export default function DailyAgenda() {
                         {appointment.patientName}
                       </h4>
                       <div className="text-sm text-slate-600 space-y-1">
-                        <p>👨‍⚕️ {appointment.doctor}</p>
-                        <p>⏱️ {appointment.duration} minutos</p>
+                        <p className="flex items-center space-x-1">
+                          <User className="w-3 h-3" />
+                          <span>{appointment.doctor}</span>
+                        </p>
+                        <p className="flex items-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{appointment.duration} minutos</span>
+                        </p>
                         {appointment.patientAge && (
-                          <p>👤 {appointment.patientAge} años</p>
+                          <p className="flex items-center space-x-1">
+                            <User className="w-3 h-3" />
+                            <span>{appointment.patientAge} años</span>
+                          </p>
                         )}
                         {appointment.patientPhone && (
-                          <p>📱 {appointment.patientPhone}</p>
+                          <p className="flex items-center space-x-1">
+                            <span>📱</span>
+                            <span>{appointment.patientPhone}</span>
+                          </p>
                         )}
                       </div>
                     </div>
@@ -579,9 +624,10 @@ export default function DailyAgenda() {
                       </button>
                       <button 
                         onClick={() => handleCancelAppointment(appointment.id)}
-                        className="medical-button-secondary text-xs text-red-600 hover:text-red-700"
+                        className="medical-button-secondary text-xs text-red-600 hover:text-red-700 flex items-center space-x-1"
                       >
-                        ❌ Cancelar
+                        <XCircle className="w-3 h-3" />
+                        <span>Cancelar</span>
                       </button>
                     </div>
                   </div>

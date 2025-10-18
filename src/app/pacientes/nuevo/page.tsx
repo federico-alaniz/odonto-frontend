@@ -1,4 +1,4 @@
-import NewPatientForm from "@/app/pacientes/nuevo/NewPatientForm";
+import NewPatientForm from "./NewPatientForm";
 
 export default function NewPatientPage() {
   return (

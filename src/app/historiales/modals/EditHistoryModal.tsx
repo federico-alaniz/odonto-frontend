@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
-import { MedicalHistory } from '../page';
+import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
 
 interface EditHistoryModalProps {

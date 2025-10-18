@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -187,7 +188,7 @@ export default function Calendar() {
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors focus-ring"
               title="Mes anterior"
             >
-              ◀️
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <h2 className="text-xl font-semibold text-slate-900">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -197,16 +198,17 @@ export default function Calendar() {
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors focus-ring"
               title="Mes siguiente"
             >
-              ▶️
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
           
           <div className="flex space-x-2">
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="medical-button-secondary text-sm"
+              className="medical-button-secondary text-sm flex items-center space-x-1"
             >
-              📅 Hoy
+              <CalendarIcon className="w-4 h-4" />
+              <span>Hoy</span>
             </button>
           </div>
         </div>

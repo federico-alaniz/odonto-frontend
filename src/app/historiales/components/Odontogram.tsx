@@ -7,7 +7,7 @@ interface ToothSector {
   hasRestoration: boolean;
 }
 
-interface ToothCondition {
+export interface ToothCondition {
   id: number;
   status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
   sectors?: ToothSector[];
@@ -469,9 +469,8 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
+    <div>
       <div className="mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4">Odontograma</h3>
         
         {/* Simbología y Controles */}
         {!readOnly && (
@@ -617,10 +616,6 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
       {/* Odontograma SVG */}
       <div className="flex justify-center mb-6">
         <svg width="900" height="400" viewBox="0 0 900 400" className="border border-gray-300 rounded bg-white">
-          {/* Título */}
-          <text x="50" y="40" className="text-2xl font-bold fill-black">
-            Odontograma
-          </text>
 
           {/* DIENTES PERMANENTES SUPERIORES */}
           {/* Fila superior izquierda (18-11) */}

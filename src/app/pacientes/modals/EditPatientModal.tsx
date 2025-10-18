@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { User, Phone, MapPin, Heart, Shield, Save, X } from 'lucide-react';
 import MedicalModal from '@/components/ui/MedicalModal';
 import MedicalInput from '@/components/forms/MedicalInput';
 import MedicalSelect from '@/components/forms/MedicalSelect';
@@ -18,7 +19,6 @@ interface Patient {
   email: string;
   ciudad: string;
   tipoSangre: string;
-  estadoCivil: string;
   ultimaConsulta: string;
   estado: 'activo' | 'inactivo';
   // Campos adicionales opcionales para edición
@@ -57,9 +57,8 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
       setFormData({
         ...patient,
         // Asegurar que tengan valores por defecto
-        tipoDocumento: patient.tipoDocumento || 'cedula',
+        tipoDocumento: patient.tipoDocumento || 'dni',
         genero: patient.genero || 'masculino',
-        estadoCivil: patient.estadoCivil || 'soltero',
         direccion: patient.direccion || '',
         departamento: patient.departamento || 'Cundinamarca',
         tipoSangre: patient.tipoSangre || 'O+',
@@ -182,19 +181,20 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
     <MedicalModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Editar Paciente"
-      icon="✏️"
+      title="Editar Información del Paciente"
       size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Información Personal */}
-        <div className="medical-section">
-          <div className="medical-section-header">
-            <span className="medical-section-icon">👤</span>
-            <h3 className="medical-section-title">Información Personal</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex-shrink-0">
+              <User className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Información Personal</h3>
           </div>
-          <div className="medical-section-content">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MedicalInput
                 label="Nombres"
                 value={formData.nombres}
@@ -214,10 +214,12 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
                 value={formData.tipoDocumento || ''}
                 onChange={handleFormChange('tipoDocumento')}
                 options={[
-                  { value: 'cedula', label: 'Cédula de Ciudadanía' },
-                  { value: 'cedula_extranjeria', label: 'Cédula de Extranjería' },
+                  { value: 'dni', label: 'DNI (Documento Nacional de Identidad)' },
+                  { value: 'le', label: 'LE (Libreta de Enrolamiento)' },
+                  { value: 'lc', label: 'LC (Libreta Cívica)' },
+                  { value: 'ci', label: 'CI (Cédula de Identidad)' },
                   { value: 'pasaporte', label: 'Pasaporte' },
-                  { value: 'tarjeta_identidad', label: 'Tarjeta de Identidad' }
+                  { value: 'extranjero', label: 'Documento de Extranjero' }
                 ]}
                 required
               />
@@ -247,31 +249,20 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
                 ]}
                 required
               />
-              <MedicalSelect
-                label="Estado Civil"
-                value={formData.estadoCivil || ''}
-                onChange={handleFormChange('estadoCivil')}
-                options={[
-                  { value: 'soltero', label: 'Soltero/a' },
-                  { value: 'casado', label: 'Casado/a' },
-                  { value: 'union_libre', label: 'Unión Libre' },
-                  { value: 'divorciado', label: 'Divorciado/a' },
-                  { value: 'viudo', label: 'Viudo/a' }
-                ]}
-                required
-              />
             </div>
           </div>
         </div>
 
         {/* Información de Contacto */}
-        <div className="medical-section">
-          <div className="medical-section-header">
-            <span className="medical-section-icon">📞</span>
-            <h3 className="medical-section-title">Información de Contacto</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+            <div className="flex-shrink-0">
+              <Phone className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Información de Contacto</h3>
           </div>
-          <div className="medical-section-content">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MedicalInput
                 label="Teléfono"
                 value={formData.telefono}
@@ -348,13 +339,15 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
         </div>
 
         {/* Información Médica */}
-        <div className="medical-section">
-          <div className="medical-section-header">
-            <span className="medical-section-icon">🩺</span>
-            <h3 className="medical-section-title">Información Médica</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-pink-50">
+            <div className="flex-shrink-0">
+              <Heart className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Información Médica</h3>
           </div>
-          <div className="medical-section-content">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MedicalSelect
                 label="Tipo de Sangre"
                 value={formData.tipoSangre || ''}
@@ -403,13 +396,15 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
         </div>
 
         {/* Contacto de Emergencia */}
-        <div className="medical-section">
-          <div className="medical-section-header">
-            <span className="medical-section-icon">🚨</span>
-            <h3 className="medical-section-title">Contacto de Emergencia</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
+            <div className="flex-shrink-0">
+              <MapPin className="w-6 h-6 text-orange-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Contacto de Emergencia</h3>
           </div>
-          <div className="medical-section-content">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MedicalInput
                 label="Nombre Completo"
                 value={formData.contactoEmergenciaNombre || ''}
@@ -442,13 +437,15 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
         </div>
 
         {/* Información de Seguro */}
-        <div className="medical-section">
-          <div className="medical-section-header">
-            <span className="medical-section-icon">🛡️</span>
-            <h3 className="medical-section-title">Información de Seguro Médico</h3>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+            <div className="flex-shrink-0">
+              <Shield className="w-6 h-6 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Información de Seguro Médico</h3>
           </div>
-          <div className="medical-section-content">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MedicalSelect
                 label="¿Tiene Seguro Médico?"
                 value={formData.tieneSeguro || ''}
@@ -479,28 +476,29 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
         </div>
 
         {/* Botones de Acción */}
-        <div className="flex justify-end space-x-4 pt-6 border-t medical-border">
+        <div className="flex justify-end space-x-4 pt-8">
           <button
             type="button"
             onClick={handleClose}
             disabled={isSaving}
-            className="medical-button-secondary"
+            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200 font-medium"
           >
+            <X className="w-4 h-4 inline-block mr-2" />
             Cancelar
           </button>
           <button
             type="submit"
             disabled={isSaving}
-            className="medical-button-primary"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? (
               <>
-                <span className="animate-spin inline-block mr-2">⏳</span>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full inline-block mr-2"></div>
                 Guardando...
               </>
             ) : (
               <>
-                <span className="mr-2">💾</span>
+                <Save className="w-4 h-4 inline-block mr-2" />
                 Guardar Cambios
               </>
             )}

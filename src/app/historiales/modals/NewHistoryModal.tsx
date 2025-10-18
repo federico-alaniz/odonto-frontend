@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
-import { MedicalHistory } from '../page';
+import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
 
 type MedicalSpecialty = 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia';

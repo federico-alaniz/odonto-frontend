@@ -137,7 +137,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
       isOpen={isOpen}
       onClose={onClose}
       title={`Nueva Cita - ${patient.nombres} ${patient.apellidos}`}
-      icon="📅"
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -158,7 +157,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <MedicalInput
             label="Fecha de la Cita"
-            icon="📅"
             type="date"
             value={formData.fecha}
             onChange={(e) => handleInputChange('fecha', e.target.value)}
@@ -168,7 +166,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
           
           <MedicalSelect
             label="Hora de la Cita"
-            icon="🕐"
             value={formData.hora}
             onChange={(e) => handleInputChange('hora', e.target.value)}
             options={horariosDisponibles}
@@ -178,7 +175,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
           
           <MedicalSelect
             label="Tipo de Consulta"
-            icon="🏥"
             value={formData.tipoConsulta}
             onChange={(e) => handleInputChange('tipoConsulta', e.target.value)}
             options={tiposConsulta}
@@ -188,7 +184,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
           
           <MedicalSelect
             label="Especialidad"
-            icon="🩺"
             value={formData.especialidad}
             onChange={(e) => handleInputChange('especialidad', e.target.value)}
             options={especialidades}
@@ -198,7 +193,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
           <div className="md:col-span-2">
             <MedicalSelect
               label="Médico Asignado"
-              icon="👨‍⚕️"
               value={formData.medico}
               onChange={(e) => handleInputChange('medico', e.target.value)}
               options={medicos}
@@ -212,7 +206,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
         <div className="space-y-4">
           <MedicalInput
             label="Motivo de la Consulta"
-            icon="📝"
             value={formData.motivo}
             onChange={(e) => handleInputChange('motivo', e.target.value)}
             placeholder="Ej: Dolor de cabeza, control rutinario, etc."
@@ -220,7 +213,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
           
           <MedicalTextarea
             label="Observaciones Adicionales"
-            icon="📋"
             value={formData.observaciones}
             onChange={(e) => handleInputChange('observaciones', e.target.value)}
             placeholder="Información adicional relevante para la consulta..."

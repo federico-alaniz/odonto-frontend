@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Calendar as CalendarIcon, List, Plus } from 'lucide-react';
 import Calendar from '@/app/calendario/Calendar';
 import DailyAgenda from './DailyAgenda';
 import NewAppointmentModal from './modals/NewAppointmentModal';
@@ -13,7 +14,7 @@ export default function CalendarioPage() {
     <div className="medical-page">
       <div className="medical-page-header">
         <div className="flex items-center">
-          <span className="text-2xl mr-3">📅</span>
+          <CalendarIcon className="w-8 h-8 mr-3 text-blue-600" />
           <div>
             <h1 className="medical-page-title">Calendario de Citas</h1>
             <p className="medical-page-description">
@@ -28,35 +29,37 @@ export default function CalendarioPage() {
             <button
               onClick={() => setViewMode('calendar')}
               className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all
+                px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2
                 ${viewMode === 'calendar' 
                   ? 'bg-white text-blue-700 shadow-sm' 
                   : 'text-slate-600 hover:text-slate-800'
                 }
               `}
             >
-              📅 Calendario
+              <CalendarIcon className="w-4 h-4" />
+              <span>Calendario</span>
             </button>
             <button
               onClick={() => setViewMode('agenda')}
               className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all
+                px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2
                 ${viewMode === 'agenda' 
                   ? 'bg-white text-blue-700 shadow-sm' 
                   : 'text-slate-600 hover:text-slate-800'
                 }
               `}
             >
-              📋 Agenda
+              <List className="w-4 h-4" />
+              <span>Agenda</span>
             </button>
           </div>
           
           <button
-            className="medical-button-primary"
+            className="medical-button-primary flex items-center space-x-2"
             onClick={() => setShowNewAppointmentModal(true)}
           >
-            <span className="mr-2">➕</span>
-            Nueva Cita
+            <Plus className="w-4 h-4" />
+            <span>Nueva Cita</span>
           </button>
         </div>
       </div>
