@@ -85,6 +85,107 @@ export const appointments: Appointment[] = [
     creadoPor: 'user_sec_003'
   },
 
+  // Citas de prueba para el doctor - día actual y siguientes (samples)
+  // Citas del día 21 de octubre de 2025 ("hoy" en entorno actual)
+  {
+    id: 'apt_018',
+    patientId: 'pat_006',
+    doctorId: 'user_doc_001',
+    especialidad: 'clinica-medica',
+    fecha: '2025-10-21',
+    horaInicio: '08:30',
+    horaFin: '09:00',
+    tipo: 'consulta',
+    estado: 'confirmada',
+    consultorio: 'Consultorio 1',
+    motivo: 'Revisión de gastritis',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-18T09:00:00Z',
+    creadoPor: 'user_sec_001'
+  },
+  {
+    id: 'apt_019',
+    patientId: 'pat_003',
+    doctorId: 'user_doc_001',
+    especialidad: 'clinica-medica',
+    fecha: '2025-10-21',
+    horaInicio: '09:15',
+    horaFin: '09:45',
+    tipo: 'consulta',
+    estado: 'confirmada',
+    consultorio: 'Consultorio 1',
+    motivo: 'Consulta por dolor de cabeza',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-19T10:30:00Z',
+    creadoPor: 'user_sec_002'
+  },
+  {
+    id: 'apt_020',
+    patientId: 'pat_002',
+    doctorId: 'user_doc_002',
+    especialidad: 'odontologia',
+    fecha: '2025-10-21',
+    horaInicio: '10:00',
+    horaFin: '10:30',
+    tipo: 'consulta',
+    estado: 'confirmada',
+    consultorio: 'Consultorio Odontológico A',
+    motivo: 'Dolor en molar superior',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-19T11:00:00Z',
+    creadoPor: 'user_sec_001'
+  },
+  {
+    id: 'apt_021',
+    patientId: 'pat_005',
+    doctorId: 'user_doc_003',
+    especialidad: 'pediatria',
+    fecha: '2025-10-21',
+    horaInicio: '11:00',
+    horaFin: '11:30',
+    tipo: 'control',
+    estado: 'confirmada',
+    consultorio: 'Consultorio Pediátrico',
+    motivo: 'Control pediátrico programado',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-20T08:30:00Z',
+    creadoPor: 'user_sec_002'
+  },
+
+  // Citas en 2025-10-20 para pruebas del dashboard que usa fecha simulada '2025-10-20'
+  {
+    id: 'apt_022',
+    patientId: 'pat_001',
+    doctorId: 'user_doc_001',
+    especialidad: 'clinica-medica',
+    fecha: '2025-10-20',
+    horaInicio: '14:00',
+    horaFin: '14:30',
+    tipo: 'consulta',
+    estado: 'confirmada',
+    consultorio: 'Consultorio 1',
+    motivo: 'Control de presión arterial',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-18T12:00:00Z',
+    creadoPor: 'user_sec_001'
+  },
+  {
+    id: 'apt_023',
+    patientId: 'pat_006',
+    doctorId: 'user_doc_001',
+    especialidad: 'clinica-medica',
+    fecha: '2025-10-20',
+    horaInicio: '15:00',
+    horaFin: '15:30',
+    tipo: 'consulta',
+    estado: 'confirmada',
+    consultorio: 'Consultorio 1',
+    motivo: 'Consulta por seguimiento',
+    recordatorioEnviado: true,
+    fechaCreacion: '2025-10-19T09:30:00Z',
+    creadoPor: 'user_sec_002'
+  },
+
   // Citas de mañana (19 de octubre de 2025)
   {
     id: 'apt_006',

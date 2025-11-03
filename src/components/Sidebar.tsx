@@ -19,8 +19,31 @@ import {
   Bell,
   Shield,
   HelpCircle,
-  FileText
+  FileText,
+  Stethoscope,
+  TestTube,
+  Crown
 } from 'lucide-react';
+
+// Importar hooks de autenticación y roles
+import { useCurrentRole } from '../hooks/useAuth';
+
+// Mapeo de iconos por nombre de string
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  BarChart3,
+  Calendar,
+  Users,
+  ClipboardList,
+  Settings,
+  Stethoscope,
+  FileText,
+  TestTube,
+  Crown,
+  User,
+  Bell,
+  Shield,
+  HelpCircle
+};
 
 interface SidebarItem {
   label: string;
@@ -110,6 +133,25 @@ const sidebarSections: SidebarSection[] = [
     ]
   },
   {
+    title: 'Área Médica',
+    items: [
+      {
+        label: 'Dashboard Doctor',
+        href: '/doctor/dashboard',
+        icon: BarChart3,
+        description: 'Panel médico especializado',
+        color: {
+          bg: 'hover:bg-green-50',
+          text: 'hover:text-green-700',
+          hover: 'hover:text-green-700',
+          active: 'bg-green-600 text-white border-l-green-400',
+          iconBg: 'bg-green-100',
+          iconText: 'hover:text-green-600'
+        }
+      }
+    ]
+  },
+  {
     title: 'Administración',
     items: [
       {
@@ -150,9 +192,51 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
+  const currentRole = useCurrentRole();
   const pathname = usePathname();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Obtener secciones del sidebar basadas en el rol actual
+  const getSidebarSections = (): SidebarSection[] => {
+    if (!currentRole) {
+      // Fallback a secciones básicas si no hay rol definido
+      return [
+        {
+          title: 'Panel Principal',
+          items: [
+            {
+              label: 'Dashboard',
+              href: '/',
+              icon: BarChart3,
+              description: 'Vista general del sistema',
+              color: {
+                bg: 'hover:bg-blue-50',
+                text: 'hover:text-blue-700',
+                hover: 'hover:text-blue-700',
+                active: 'bg-blue-600 text-white border-l-blue-400',
+                iconBg: 'bg-blue-100',
+                iconText: 'hover:text-blue-600'
+              }
+            }
+          ]
+        }
+      ];
+    }
+    
+    return currentRole.sidebarSections.map(section => ({
+      title: section.title,
+      items: section.items.map(item => ({
+        label: item.label,
+        href: item.href,
+        icon: iconMap[item.icon] || User,
+        description: item.description,
+        color: item.color
+      }))
+    }));
+  };
+
+  const dynamicSidebarSections = getSidebarSections();
 
   // Helper function para obtener las clases CSS correctas basadas en el color
   const getItemClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
@@ -253,7 +337,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
 
       {/* Navigation */}
       <nav className={`flex-1 space-y-6 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-        {sidebarSections.map((section, sectionIndex) => (
+        {dynamicSidebarSections.map((section, sectionIndex) => (
           <div key={sectionIndex}>
             {!isCollapsed && (
               <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3 px-3">
