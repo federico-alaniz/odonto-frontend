@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
 import { 
   Calendar, 
   Clock, 
@@ -85,6 +86,7 @@ const SPECIALTIES = Array.from(
 
 export default function NewAppointmentPage() {
   const router = useRouter();
+  const { showSuccess, showWarning } = useToast();
   const searchParams = useSearchParams();
   
   const [selectedPatient, setSelectedPatient] = useState<typeof patients[0] | null>(null);
@@ -211,7 +213,7 @@ export default function NewAppointmentPage() {
     e.preventDefault();
     
     if (!selectedPatient || !selectedDoctor || !selectedDate || !selectedTime) {
-      alert('Por favor complete todos los campos requeridos');
+      showWarning('Campos requeridos', 'Por favor complete todos los campos requeridos');
       return;
     }
 
@@ -224,7 +226,7 @@ export default function NewAppointmentPage() {
       motivo
     });
     
-    alert('Turno agendado exitosamente');
+    showSuccess('Turno agendado', 'El turno se agendó exitosamente');
     router.push('/secretary/appointments');
   };
 

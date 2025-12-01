@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
 import { 
   Calendar, 
   Clock, 
@@ -48,6 +49,8 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 export default function NewAppointmentWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { showSuccess, showError, showWarning } = useToast();
   
   // Estados del wizard
   const [currentStep, setCurrentStep] = useState(1);
@@ -281,7 +284,7 @@ export default function NewAppointmentWizard() {
 
   const handleSubmit = async () => {
     if (!selectedPatient || !selectedDoctor || !selectedDate || !selectedTime) {
-      alert('Por favor complete todos los campos');
+      showWarning('Campos requeridos', 'Por favor complete todos los campos');
       return;
     }
 
@@ -319,11 +322,11 @@ export default function NewAppointmentWizard() {
 
       console.log('✅ Cita creada:', response);
 
-      alert('Turno agendado exitosamente');
+      showSuccess('Turno agendado', 'El turno se agenдó exitosamente');
       router.push('/secretary/appointments');
     } catch (error: any) {
       console.error('❌ Error al agendar turno:', error);
-      alert('Error al agendar el turno: ' + error.message);
+      showError('Error al agendar', 'Error al agendar el turno: ' + error.message);
     }
   };
 

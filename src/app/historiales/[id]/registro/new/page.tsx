@@ -24,11 +24,13 @@ import {
   Phone,
   Printer
 } from 'lucide-react';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function NewMedicalRecordPage() {
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
+  const { showSuccess, showError } = useToast();
 
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -98,7 +100,7 @@ export default function NewMedicalRecordPage() {
         if (error.message.includes('404') || error.message.includes('no encontrado')) {
           setPatient(null);
         } else {
-          alert(`Error al cargar los datos del paciente: ${error.message}`);
+          showError('Error al cargar paciente', error.message);
         }
       } finally {
         setLoading(false);
@@ -188,14 +190,14 @@ export default function NewMedicalRecordPage() {
       const response = await medicalRecordsService.create(recordData);
       
       if (response.success) {
-        alert('Registro médico guardado exitosamente');
+        showSuccess('Registro guardado', 'El registro médico se guardó exitosamente');
         router.push(`/historiales/${patientId}`);
       } else {
         throw new Error(response.errors?.[0] || 'Error al guardar');
       }
     } catch (error: any) {
       console.error('Error guardando registro:', error);
-      alert(error.message || 'Error al guardar el registro médico');
+      showError('Error al guardar', error.message || 'Error al guardar el registro médico');
     } finally {
       setSaving(false);
     }

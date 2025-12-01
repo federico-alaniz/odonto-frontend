@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
 import Link from 'next/link';
 import { 
   ArrowLeft,
@@ -86,6 +87,7 @@ interface ConsultationData {
 export default function NewConsultationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { showSuccess } = useToast();
   
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>(null);
   const [appointmentInfo, setAppointmentInfo] = useState<AppointmentInfo | null>(null);
@@ -179,7 +181,7 @@ export default function NewConsultationPage() {
     setSaving(false);
     
     // Mostrar mensaje de éxito y redirigir
-    alert('Consulta guardada exitosamente');
+    showSuccess('Consulta guardada', 'La consulta se guardó exitosamente');
     router.push('/doctor/dashboard');
   };
 
