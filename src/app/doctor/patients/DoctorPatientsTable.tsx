@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Eye, 
-  Edit3, 
   Calendar, 
   Phone, 
   Mail, 
@@ -16,18 +15,16 @@ import {
   ArrowUp,
   ArrowDown,
   CheckCircle,
-  XCircle,
   Droplets,
-  Search,
   AlertTriangle,
   Clock,
   FileText,
-  Heart,
-  Stethoscope
+  Stethoscope,
+  UserPlus,
+  UserMinus
 } from 'lucide-react';
 import { DoctorPatientFilters } from './DoctorPatientsFilters';
-import { patients } from '@/utils/fake-patients';
-import { appointments } from '@/utils/fake-appointments';
+import { patientsService } from '@/services/api/patients.service';
 
 // Interface para pacientes del doctor con información adicional
 interface DoctorPatient {
@@ -51,7 +48,6 @@ interface DoctorPatient {
   doctorAsignado?: string;
   age: number;
   lastVisitType: string;
-  nextAppointmentDate?: string;
   urgency: 'low' | 'medium' | 'high';
   riskFactors: number;
   daysSinceLastVisit: number;
@@ -59,82 +55,140 @@ interface DoctorPatient {
 
 interface DoctorPatientsTableProps {
   filters?: DoctorPatientFilters;
+  showOnlyAssigned?: boolean;
 }
 
 type SortKey = 'name' | 'age' | 'lastVisit' | 'urgency' | 'document' | 'bloodType';
 type SortOrder = 'asc' | 'desc';
 
-export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProps) {
+export default function DoctorPatientsTable({ filters, showOnlyAssigned = false }: DoctorPatientsTableProps) {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [loading, setLoading] = useState(true);
   const [doctorPatients, setDoctorPatients] = useState<DoctorPatient[]>([]);
+  const [error, setError] = useState<string | null>(null);
   
   const itemsPerPage = 10;
-  const currentDoctorId = 'user_doc_001'; // ID del doctor en fake data
+  const currentDoctorId = typeof window !== 'undefined' ? localStorage.getItem('userId') || 'user_doc_001' : 'user_doc_001';
 
-  // Cargar y procesar datos de pacientes del doctor
-  useEffect(() => {
-    const loadDoctorPatients = () => {
-      const today = new Date();
+  // Función para asignar doctor
+  const handleAssignDoctor = async (patientId: string) => {
+    try {
+      const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+      const userId = localStorage.getItem('userId') || 'system';
       
-      // Filtrar pacientes asignados al doctor actual
-      const processedPatients = patients
-        .filter(patient => patient.doctorAsignado === currentDoctorId)
-        .map(patient => {
-          // Calcular edad
-          const birthDate = new Date(patient.fechaNacimiento);
-          const age = today.getFullYear() - birthDate.getFullYear();
-          
-          // Encontrar última cita
-          const patientAppointments = appointments.filter(apt => apt.patientId === patient.id);
-          const lastAppointment = patientAppointments
-            .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
-          
-          // Encontrar próxima cita
-          const futureAppointments = patientAppointments
-            .filter(apt => new Date(apt.fecha) > today)
-            .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-          
-          // Calcular días desde última consulta
-          const daysSinceLastVisit = patient.ultimaConsulta ? 
-            Math.floor((today.getTime() - new Date(patient.ultimaConsulta).getTime()) / (1000 * 3600 * 24)) : 999;
-          
-          // Calcular factores de riesgo
-          const riskFactors = (patient.alergias?.length || 0) + 
-                             (patient.antecedentesPersonales?.length || 0) + 
-                             (patient.medicamentosActuales?.length || 0);
-          
-          // Determinar urgencia
-          let urgency: 'low' | 'medium' | 'high' = 'low';
-          if (riskFactors >= 3 || daysSinceLastVisit > 180) urgency = 'high';
-          else if (riskFactors >= 2 || daysSinceLastVisit > 90) urgency = 'medium';
+      const response = await patientsService.assignDoctor(patientId, currentDoctorId, clinicId, userId);
+      
+      if (response.success) {
+        // Actualizar el paciente en la lista local
+        setDoctorPatients(prev => prev.map(p => 
+          p.id === patientId ? { ...p, doctorAsignado: currentDoctorId } : p
+        ));
+        alert('Te has asignado como doctor de este paciente');
+      }
+    } catch (error: any) {
+      console.error('Error asignando doctor:', error);
+      alert(error.message || 'Error al asignarte como doctor');
+    }
+  };
 
-          return {
-            ...patient,
-            age,
-            lastVisitType: lastAppointment?.tipo || 'N/A',
-            nextAppointmentDate: futureAppointments[0]?.fecha,
-            urgency,
-            riskFactors,
-            daysSinceLastVisit
-          } as DoctorPatient;
+  // Función para desasignar doctor
+  const handleUnassignDoctor = async (patientId: string) => {
+    try {
+      const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+      const userId = localStorage.getItem('userId') || 'system';
+      
+      const response = await patientsService.unassignDoctor(patientId, clinicId, userId);
+      
+      if (response.success) {
+        // Actualizar el paciente en la lista local
+        setDoctorPatients(prev => prev.map(p => 
+          p.id === patientId ? { ...p, doctorAsignado: undefined } : p
+        ));
+        alert('Te has desasignado de este paciente');
+      }
+    } catch (error: any) {
+      console.error('Error desasignando doctor:', error);
+      alert(error.message || 'Error al desasignarte');
+    }
+  };
+
+  // Cargar pacientes desde el backend
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+        
+        const response = await patientsService.getPatients(clinicId, {
+          page: 1,
+          limit: 1000 // Cargar todos para filtrado local
         });
 
-      setDoctorPatients(processedPatients);
-      setLoading(false);
+        if (response.success && response.data) {
+          const today = new Date();
+          
+          // Procesar pacientes
+          const processedPatients = response.data.map((patient: any) => {
+            // Calcular edad
+            const birthDate = new Date(patient.fechaNacimiento);
+            const age = today.getFullYear() - birthDate.getFullYear();
+            
+            // Calcular días desde última consulta
+            const daysSinceLastVisit = patient.ultimaConsulta ? 
+              Math.floor((today.getTime() - new Date(patient.ultimaConsulta).getTime()) / (1000 * 3600 * 24)) : 999;
+            
+            // Calcular factores de riesgo
+            const riskFactors = (patient.alergias?.length || 0) + 
+                               (patient.antecedentesPersonales?.length || 0) + 
+                               (patient.medicamentosActuales?.length || 0);
+            
+            // Determinar urgencia
+            let urgency: 'low' | 'medium' | 'high' = 'low';
+            if (riskFactors >= 3 || daysSinceLastVisit > 180) urgency = 'high';
+            else if (riskFactors >= 2 || daysSinceLastVisit > 90) urgency = 'medium';
+
+            return {
+              ...patient,
+              age,
+              lastVisitType: 'N/A', // TODO: Obtener del historial médico
+              urgency,
+              riskFactors,
+              daysSinceLastVisit,
+              ciudad: patient.direccion?.ciudad
+            } as DoctorPatient;
+          });
+
+          setDoctorPatients(processedPatients);
+        } else {
+          setError('No se pudieron cargar los pacientes');
+        }
+      } catch (err: any) {
+        console.error('Error cargando pacientes:', err);
+        setError(err.message || 'Error al cargar los pacientes');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(loadDoctorPatients, 800); // Simular carga
+    loadPatients();
   }, []);
 
   // Filtrar pacientes basado en los filtros aplicados
   const filteredPatients = useMemo(() => {
-    if (!filters) return doctorPatients;
+    let patients = doctorPatients;
 
-    return doctorPatients.filter(patient => {
+    // Filtro por pacientes asignados
+    if (showOnlyAssigned) {
+      patients = patients.filter(patient => patient.doctorAsignado === currentDoctorId);
+    }
+
+    if (!filters) return patients;
+
+    return patients.filter(patient => {
       // Filtro de búsqueda por nombre
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();
@@ -168,7 +222,7 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
 
       return true;
     });
-  }, [doctorPatients, filters]);
+  }, [doctorPatients, filters, showOnlyAssigned, currentDoctorId]);
 
   // Ordenar pacientes
   const sortedPatients = useMemo(() => {
@@ -273,6 +327,26 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Error al cargar pacientes</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       
@@ -280,8 +354,14 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
       <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Stethoscope className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Mis Pacientes</h3>
+            {showOnlyAssigned ? (
+              <Stethoscope className="w-5 h-5 text-green-600" />
+            ) : (
+              <Users className="w-5 h-5 text-green-600" />
+            )}
+            <h3 className="text-lg font-semibold text-gray-900">
+              {showOnlyAssigned ? 'Mis Pacientes Asignados' : 'Todos los Pacientes'}
+            </h3>
             <span className="bg-green-100 text-green-700 text-sm px-2 py-1 rounded-full">
               {filteredPatients.length} paciente{filteredPatients.length !== 1 ? 's' : ''}
             </span>
@@ -443,6 +523,25 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
                     {/* Acciones */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Botón de asignación/desasignación */}
+                        {patient.doctorAsignado === currentDoctorId ? (
+                          <button
+                            onClick={() => handleUnassignDoctor(patient.id)}
+                            className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                            title="Desasignarme de este paciente"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </button>
+                        ) : !patient.doctorAsignado ? (
+                          <button
+                            onClick={() => handleAssignDoctor(patient.id)}
+                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Asignarme este paciente"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </button>
+                        ) : null}
+                        
                         <button
                           onClick={() => router.push(`/historiales/${patient.id}`)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -458,9 +557,9 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
                           <Calendar className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => router.push(`/doctor/consultations/new?patient=${patient.id}`)}
+                          onClick={() => router.push(`/historiales/${patient.id}/registro/new`)}
                           className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="Nueva consulta"
+                          title="Nuevo registro médico"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
@@ -511,7 +610,9 @@ export default function DoctorPatientsTable({ filters }: DoctorPatientsTableProp
           <p className="text-gray-600 mb-6">
             {filters && Object.values(filters).some(v => v !== '') 
               ? 'Intenta ajustar los filtros de búsqueda'
-              : 'Aún no tienes pacientes asignados'
+              : showOnlyAssigned
+                ? 'Aún no tienes pacientes asignados'
+                : 'Aún no hay pacientes registrados en la clínica'
             }
           </p>
         </div>

@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simular carga inicial desde localStorage o session
+    // Cargar usuario desde localStorage
     const loadStoredUser = () => {
       try {
         const storedUser = localStorage.getItem('currentUser');
@@ -68,19 +68,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const user = JSON.parse(storedUser);
           setCurrentUser(user);
         } else {
-          // Por defecto cargar doctor para testing
-          setCurrentUser(DEMO_USERS.doctor);
+          // No hay usuario guardado - dejar como null para que redirija al login
+          setCurrentUser(null);
         }
       } catch (error) {
         console.error('Error loading stored user:', error);
-        setCurrentUser(DEMO_USERS.doctor);
+        setCurrentUser(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     // Simular delay de carga
-    setTimeout(loadStoredUser, 1000);
+    setTimeout(loadStoredUser, 500);
   }, []);
 
   const login = (user: User) => {

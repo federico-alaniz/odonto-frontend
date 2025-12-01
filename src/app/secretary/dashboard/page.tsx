@@ -22,9 +22,13 @@ import {
   PhoneCall
 } from 'lucide-react';
 
-// Importar datos fake
-import { appointments } from '../../../utils/fake-appointments';
-import { patients } from '../../../utils/fake-patients';
+// TODO: Reemplazar con llamadas al backend
+// import { appointments } from '../../../utils/fake-appointments';
+// import { patients } from '../../../utils/fake-patients';
+
+// Datos temporales vacíos hasta integrar con backend
+const appointments: any[] = [];
+const patients: any[] = [];
 
 interface SecretaryStats {
   citasHoy: number;

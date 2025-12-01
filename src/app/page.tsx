@@ -20,10 +20,15 @@ import {
   BarChart3
 } from 'lucide-react';
 
-// Importar datos fake
-import { patients } from '../utils/fake-patients';
-import { appointments } from '../utils/fake-appointments';
-import { users } from '../utils/fake-users';
+// TODO: Reemplazar con llamadas al backend
+// import { patients } from '../utils/fake-patients';
+// import { appointments } from '../utils/fake-appointments';
+// import { users } from '../utils/fake-users';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
+const appointments: any[] = [];
+const users: any[] = [];
 
 export default function Home() {
   const [stats, setStats] = useState([

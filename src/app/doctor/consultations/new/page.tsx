@@ -21,9 +21,13 @@ import {
   Eye
 } from 'lucide-react';
 
-// Importar datos fake
-import { patients } from '../../../../utils/fake-patients';
-import { appointments } from '../../../../utils/fake-appointments';
+// TODO: Reemplazar con llamadas al backend
+// import { patients } from '../../../../utils/fake-patients';
+// import { appointments } from '../../../../utils/fake-appointments';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
+const appointments: any[] = [];
 
 interface PatientInfo {
   id: string;

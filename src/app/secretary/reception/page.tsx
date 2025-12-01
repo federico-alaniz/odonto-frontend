@@ -24,10 +24,11 @@ import {
   Filter
 } from 'lucide-react';
 import Link from 'next/link';
-
-// Importar datos fake
-import { appointments } from '../../../utils/fake-appointments';
-import { patients } from '../../../utils/fake-patients';
+import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { usersService } from '@/services/api/users.service';
+import { patientsService, Patient } from '@/services/api/patients.service';
+import { User as UserType } from '@/types/roles';
+import { dateHelper } from '@/utils/date-helper';
 
 interface ReceptionAppointment {
   id: string;
@@ -59,6 +60,9 @@ interface WaitingStats {
 export default function ReceptionPage() {
   const [todayAppointments, setTodayAppointments] = useState<ReceptionAppointment[]>([]);
   const [filteredAppointments, setFilteredAppointments] = useState<ReceptionAppointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<UserType[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [stats, setStats] = useState<WaitingStats>({
     esperando: 0,
     enConsulta: 0,
@@ -69,7 +73,10 @@ export default function ReceptionPage() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(dateHelper.now());
+  const [showColon, setShowColon] = useState(true);
+
+  const clinicId = 'clinic_001'; // TODO: obtener del contexto
 
   // Actualizar hora actual cada minuto
   useEffect(() => {
@@ -79,74 +86,123 @@ export default function ReceptionPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Parpadeo de los dos puntos cada segundo
   useEffect(() => {
-    const loadReceptionData = () => {
-      const today = '2025-10-20'; // Fecha actual
-      
-      // Filtrar citas de hoy y procesarlas
-      const todayCitas = appointments
-        .filter(apt => apt.fecha === today)
-        .map(apt => {
-          const patient = patients.find(p => p.id === apt.patientId);
-          const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
-          
-          // Simular doctor names
-          const doctorNames: Record<string, string> = {
-            'user_doc_001': 'Dr. Juan Pérez',
-            'user_doc_002': 'Dra. María González', 
-            'user_doc_003': 'Dr. Carlos Rodríguez'
-          };
-          
-          const specialties: Record<string, string> = {
-            'clinica-medica': 'Clínica Médica',
-            'cardiologia': 'Cardiología',
-            'pediatria': 'Pediatría',
-            'dermatologia': 'Dermatología'
-          };
-
-          // Calcular tiempo estimado de finalización
-          const startTime = apt.horaInicio;
-          const duration = 30; // 30 minutos por defecto
-          const [hours, minutes] = startTime.split(':').map(Number);
-          const endTime = `${String(hours + Math.floor((minutes + duration) / 60)).padStart(2, '0')}:${String((minutes + duration) % 60).padStart(2, '0')}`;
-
-          return {
-            id: apt.id,
-            patientId: apt.patientId,
-            patientName,
-            patientPhone: patient?.telefono || 'N/A',
-            doctorId: apt.doctorId,
-            doctorName: doctorNames[apt.doctorId] || 'Doctor no asignado',
-            specialty: specialties[apt.especialidad] || apt.especialidad,
-            time: apt.horaInicio,
-            endTime,
-            consultorio: apt.consultorio,
-            motivo: apt.motivo,
-            status: apt.estado as any,
-            arrivalTime: apt.estado === 'confirmada' ? '08:45' : undefined, // Simular hora de llegada
-            priority: Math.random() > 0.8 ? 'urgent' : 'normal' as any,
-            isNewPatient: Math.random() > 0.7,
-            estimatedDuration: duration
-          } as ReceptionAppointment;
-        })
-        .sort((a, b) => a.time.localeCompare(b.time));
-
-      // Calcular estadísticas
-      const newStats = {
-        esperando: todayCitas.filter(apt => apt.status === 'esperando').length,
-        enConsulta: todayCitas.filter(apt => apt.status === 'en-curso').length,
-        completadas: todayCitas.filter(apt => apt.status === 'completada').length,
-        noShow: todayCitas.filter(apt => apt.status === 'no-show').length,
-        promedio: 15 // Simular promedio de espera
-      };
-
-      setTodayAppointments(todayCitas);
-      setStats(newStats);
-      setLoading(false);
-    };
-
-    setTimeout(loadReceptionData, 800);
+    const interval = setInterval(() => {
+      setShowColon(prev => !prev);
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    loadReceptionData();
+  }, []);
+
+  const loadReceptionData = async () => {
+    try {
+      setLoading(true);
+      console.log('📊 Cargando datos de recepción...');
+
+      // Cargar datos en paralelo
+      const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
+        appointmentsService.getAppointments(clinicId),
+        usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' }),
+        patientsService.getPatients(clinicId)
+      ]);
+
+      console.log('🔍 Respuestas del backend:');
+      console.log('  - Appointments:', appointmentsRes);
+      console.log('  - Doctors:', doctorsRes);
+      console.log('  - Patients:', patientsRes);
+
+      if (appointmentsRes.success && doctorsRes.success && patientsRes.success) {
+        setAppointments(appointmentsRes.data);
+        setDoctors(doctorsRes.data);
+        setPatients(patientsRes.data);
+
+        // Obtener fecha de hoy (respeta modo debug)
+        const today = dateHelper.today();
+        console.log('📅 Filtrando citas del día:', today);
+        console.log('📊 Total de citas en el backend:', appointmentsRes.data?.length || 0);
+        
+        if (appointmentsRes.data && appointmentsRes.data.length > 0) {
+          console.log('📋 Fechas disponibles:', [...new Set(appointmentsRes.data.map(a => a.fecha))]);
+          console.log('📋 Primera cita como ejemplo:', appointmentsRes.data[0]);
+        } else {
+          console.warn('⚠️ No hay citas en appointmentsRes.data');
+        }
+
+        // Filtrar citas de hoy y procesarlas
+        const todayCitas = (appointmentsRes.data || [])
+          .filter(apt => {
+            console.log(`  Comparando: "${apt.fecha}" === "${today}" = ${apt.fecha === today}`);
+            return apt.fecha === today;
+          })
+          .map(apt => {
+            const patient = patientsRes.data.find(p => p.id === apt.patientId);
+            const doctor = doctorsRes.data.find(d => d.id === apt.doctorId);
+            
+            const patientName = patient 
+              ? `${patient.nombres} ${patient.apellidos}` 
+              : 'Paciente desconocido';
+            
+            const doctorName = doctor
+              ? `Dr. ${doctor.nombres} ${doctor.apellidos}`
+              : 'Doctor no asignado';
+
+            const specialty = doctor?.especialidades?.[0] || 'General';
+            const consultorio = doctor?.consultorio || 'N/A';
+
+            // Calcular tiempo estimado de finalización
+            const startTime = apt.horaInicio;
+            const duration = 30; // 30 minutos por defecto
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const endTime = `${String(hours + Math.floor((minutes + duration) / 60)).padStart(2, '0')}:${String((minutes + duration) % 60).padStart(2, '0')}`;
+
+            return {
+              id: apt.id,
+              patientId: apt.patientId,
+              patientName,
+              patientPhone: patient?.telefono || 'N/A',
+              doctorId: apt.doctorId,
+              doctorName,
+              specialty,
+              time: apt.horaInicio,
+              endTime,
+              consultorio,
+              motivo: apt.motivo || 'Consulta general',
+              status: apt.estado as any,
+              arrivalTime: apt.estado === 'confirmada' ? '08:45' : undefined,
+              priority: 'normal' as any,
+              isNewPatient: false,
+              estimatedDuration: duration
+            } as ReceptionAppointment;
+          })
+          .sort((a, b) => a.time.localeCompare(b.time));
+
+        console.log(`✅ ${todayCitas.length} citas encontradas para hoy`);
+        console.log('📋 Citas procesadas:', todayCitas);
+
+        // Calcular estadísticas
+        const newStats = {
+          esperando: todayCitas.filter(apt => apt.status === 'esperando' || apt.status === 'confirmada' || apt.status === 'programada').length,
+          enConsulta: todayCitas.filter(apt => apt.status === 'en-curso').length,
+          completadas: todayCitas.filter(apt => apt.status === 'completada').length,
+          noShow: todayCitas.filter(apt => apt.status === 'no-show').length,
+          promedio: 15
+        };
+
+        console.log('📊 Estadísticas:', newStats);
+
+        setTodayAppointments(todayCitas);
+        setStats(newStats);
+      }
+    } catch (error) {
+      console.error('❌ Error cargando datos de recepción:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtrar citas
   useEffect(() => {
@@ -239,8 +295,10 @@ export default function ReceptionPage() {
           // Si se confirma llegada, agregar hora de llegada
           if (newStatus === 'esperando') {
             updatedApt.arrivalTime = new Date().toLocaleTimeString('es-AR', { 
+              timeZone: 'America/Argentina/Buenos_Aires',
               hour: '2-digit', 
-              minute: '2-digit' 
+              minute: '2-digit',
+              hour12: false
             });
           }
           
@@ -262,16 +320,33 @@ export default function ReceptionPage() {
   const getWaitingTime = (appointment: ReceptionAppointment) => {
     if (!appointment.arrivalTime) return '';
     
-    const [arrHours, arrMinutes] = appointment.arrivalTime.split(':').map(Number);
-    const [nowHours, nowMinutes] = [currentTime.getHours(), currentTime.getMinutes()];
-    
-    const arrivalTotalMinutes = arrHours * 60 + arrMinutes;
-    const nowTotalMinutes = nowHours * 60 + nowMinutes;
-    const waitingMinutes = nowTotalMinutes - arrivalTotalMinutes;
-    
-    if (waitingMinutes < 0) return '';
-    if (waitingMinutes < 60) return `${waitingMinutes}m`;
-    return `${Math.floor(waitingMinutes / 60)}h ${waitingMinutes % 60}m`;
+    try {
+      const timeParts = appointment.arrivalTime.split(':');
+      if (timeParts.length !== 2) return '';
+      
+      const arrHours = parseInt(timeParts[0], 10);
+      const arrMinutes = parseInt(timeParts[1], 10);
+      
+      // Validar que sean números válidos
+      if (isNaN(arrHours) || isNaN(arrMinutes)) return '';
+      
+      const nowHours = currentTime.getHours();
+      const nowMinutes = currentTime.getMinutes();
+      
+      const arrivalTotalMinutes = arrHours * 60 + arrMinutes;
+      const nowTotalMinutes = nowHours * 60 + nowMinutes;
+      const waitingMinutes = nowTotalMinutes - arrivalTotalMinutes;
+      
+      if (waitingMinutes < 0) return '';
+      if (waitingMinutes < 60) return `${waitingMinutes}m`;
+      
+      const hours = Math.floor(waitingMinutes / 60);
+      const minutes = waitingMinutes % 60;
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      console.error('Error calculando tiempo de espera:', error);
+      return '';
+    }
   };
 
   if (loading) {
@@ -292,8 +367,9 @@ export default function ReceptionPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-between gap-6">
+            {/* Título e ícono */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md">
                 <UserCheck className="w-7 h-7 text-white" />
               </div>
@@ -305,14 +381,67 @@ export default function ReceptionPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Hora actual</div>
-                <div className="text-xl font-bold text-green-600">
+
+            {/* Barra de búsqueda */}
+            <div className="flex-1 max-w-2xl relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Buscar paciente, doctor o consultorio..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Filtros y acciones */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Filtro por estado */}
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <select
+                  value={selectedFilter}
+                  onChange={(e) => setSelectedFilter(e.target.value)}
+                  className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white text-sm"
+                >
+                  <option value="all">Todos</option>
+                  <option value="programada">Programadas</option>
+                  <option value="confirmada">Confirmadas</option>
+                  <option value="esperando">En espera</option>
+                  <option value="en-curso">En consulta</option>
+                  <option value="completada">Completadas</option>
+                  <option value="no-show">No asistió</option>
+                </select>
+              </div>
+
+              {/* Botón actualizar */}
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2"
+                title="Actualizar"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+
+              {/* Hora actual */}
+              <div className="text-right pl-3 border-l border-gray-300">
+                <div className="text-xs text-gray-500">Hora actual (Buenos Aires)</div>
+                <div className="text-lg font-bold text-green-600 font-mono">
                   {currentTime.toLocaleTimeString('es-AR', { 
+                    timeZone: 'America/Argentina/Buenos_Aires',
                     hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
+                    minute: '2-digit',
+                    hour12: false
+                  }).split(':').map((part, index) => (
+                    <span key={index}>
+                      {part}
+                      {index === 0 && (
+                        <span className={`transition-opacity duration-200 ${showColon ? 'opacity-100' : 'opacity-0'}`}>
+                          :
+                        </span>
+                      )}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>
@@ -383,52 +512,6 @@ export default function ReceptionPage() {
                 <div className="text-2xl font-bold text-gray-900">{stats.promedio}m</div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Filtros y Búsqueda */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4">
-            
-            {/* Búsqueda */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Buscar paciente, doctor o consultorio..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filtro por estado */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                value={selectedFilter}
-                onChange={(e) => setSelectedFilter(e.target.value)}
-                className="pl-10 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white min-w-[200px]"
-              >
-                <option value="all">Todos los estados</option>
-                <option value="programada">Programadas</option>
-                <option value="confirmada">Confirmadas</option>
-                <option value="esperando">En espera</option>
-                <option value="en-curso">En consulta</option>
-                <option value="completada">Completadas</option>
-                <option value="no-show">No asistió</option>
-              </select>
-            </div>
-
-            {/* Botón actualizar */}
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Actualizar
-            </button>
-
           </div>
         </div>
 

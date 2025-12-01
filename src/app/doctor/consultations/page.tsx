@@ -37,48 +37,21 @@ export default function ConsultationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simular carga de consultas
-    const mockConsultations: Consultation[] = [
-      {
-        id: 'con_001',
-        patientName: 'María Elena González',
-        patientId: 'pat_001',
-        date: '2025-10-20',
-        time: '09:30',
-        reason: 'Control de rutina',
-        diagnosis: 'Paciente estable. Continuar tratamiento.',
-        status: 'completed',
-        type: 'follow-up'
-      },
-      {
-        id: 'con_002',
-        patientName: 'Juan Carlos Rodríguez',
-        patientId: 'pat_002',
-        date: '2025-10-20',
-        time: '10:15',
-        reason: 'Dolor en el pecho',
-        diagnosis: 'Evaluación cardiológica en curso',
-        status: 'in-progress',
-        type: 'consultation'
-      },
-      {
-        id: 'con_003',
-        patientName: 'Ana Sofía Martínez',
-        patientId: 'pat_003',
-        date: '2025-10-19',
-        time: '14:00',
-        reason: 'Seguimiento post-cirugía',
-        diagnosis: 'Recuperación satisfactoria',
-        status: 'completed',
-        type: 'follow-up'
-      }
-    ];
+    // TODO: Cargar consultas reales desde el backend
+    // const fetchConsultations = async () => {
+    //   const data = await getConsultations();
+    //   setConsultations(data);
+    //   setFilteredConsultations(data);
+    //   setLoading(false);
+    // };
+    // fetchConsultations();
 
+    // Por ahora, array vacío hasta integrar con backend
     setTimeout(() => {
-      setConsultations(mockConsultations);
-      setFilteredConsultations(mockConsultations);
+      setConsultations([]);
+      setFilteredConsultations([]);
       setLoading(false);
-    }, 1000);
+    }, 500);
   }, []);
 
   useEffect(() => {

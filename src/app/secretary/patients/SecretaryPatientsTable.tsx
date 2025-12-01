@@ -24,10 +24,11 @@ import {
   MapPin,
   AlertTriangle,
   FileText,
-  UserCheck
+  UserCheck,
+  X
 } from 'lucide-react';
 import { SecretaryPatientFilters } from './SecretaryPatientsFilters';
-import { patients, type Patient as FakePatient } from '@/utils/fake-data';
+import { patientsService, Patient } from '@/services/api/patients.service';
 
 // Interface adaptada para secretaria
 interface SecretaryPatient {
@@ -48,16 +49,18 @@ interface SecretaryPatient {
   fechaRegistro: string;
   requiereSeguimiento?: boolean;
   observaciones?: string;
+  doctorAsignado?: string;
 }
 
 interface SecretaryPatientsTableProps {
   filters?: SecretaryPatientFilters;
+  showOnlyAssigned?: boolean;
 }
 
 type SortField = keyof SecretaryPatient;
 type SortOrder = 'asc' | 'desc';
 
-export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTableProps) {
+export default function SecretaryPatientsTable({ filters, showOnlyAssigned = false }: SecretaryPatientsTableProps) {
   const router = useRouter();
   const [patientsData, setPatientsData] = useState<SecretaryPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,60 +75,154 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
   const [editModal, setEditModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
   const [appointmentModal, setAppointmentModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
+  const [assignDoctorModal, setAssignDoctorModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
+  
+  // Estados para asignación de doctor
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
 
   useEffect(() => {
-    const loadPatientsData = () => {
-      // Simular datos expandidos para secretaria
-      const secretaryPatientsData: SecretaryPatient[] = patients.map((patient, index) => {
-        const estados = ['activo', 'inactivo', 'pendiente', 'seguimiento'] as const;
-        const fechasConsulta = [
-          '2025-10-19', '2025-10-15', '2025-10-10', '2025-09-28', 
-          '2025-09-15', '2025-08-20', null
-        ];
-        const proximasCitas = [
-          '2025-10-25', '2025-10-30', '2025-11-05', null
-        ];
+    const loadPatientsData = async () => {
+      try {
+        setLoading(true);
+        const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
         
-        return {
-          ...patient,
+        const response = await patientsService.getPatients(clinicId, {
+          page: currentPage,
+          limit: itemsPerPage
+        });
+        
+        // Transformar datos del backend al formato de la tabla
+        const secretaryPatientsData: SecretaryPatient[] = response.data.map((patient: Patient) => ({
+          id: patient.id,
+          nombres: patient.nombres,
+          apellidos: patient.apellidos,
+          tipoDocumento: patient.tipoDocumento,
+          numeroDocumento: patient.numeroDocumento,
+          fechaNacimiento: patient.fechaNacimiento,
+          genero: patient.genero,
+          telefono: patient.telefono,
+          email: patient.email || '',
           ciudad: patient.direccion?.ciudad || 'No especificada',
-          estado: estados[index % estados.length],
-          fechaRegistro: '2025-' + String(Math.floor(Math.random() * 12) + 1).padStart(2, '0') + '-' + String(Math.floor(Math.random() * 28) + 1).padStart(2, '0'),
-          ultimaConsulta: fechasConsulta[index % fechasConsulta.length] || undefined,
-          proximaCita: proximasCitas[index % proximasCitas.length] || undefined,
-          requiereSeguimiento: Math.random() > 0.8,
-          observaciones: Math.random() > 0.7 ? 'Paciente requiere atención especial' : undefined
-        };
-      });
+          tipoSangre: patient.tipoSangre || '',
+          ultimaConsulta: undefined,
+          proximaCita: undefined,
+          estado: patient.estado as 'activo' | 'inactivo',
+          fechaRegistro: patient.createdAt,
+          requiereSeguimiento: false,
+          observaciones: undefined,
+          doctorAsignado: patient.doctorAsignado
+        }));
 
-      setPatientsData(secretaryPatientsData);
-      setLoading(false);
+        setPatientsData(secretaryPatientsData);
+      } catch (error) {
+        console.error('Error loading patients:', error);
+        setPatientsData([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // Simular carga
-    setTimeout(loadPatientsData, 800);
+    loadPatientsData();
+  }, [currentPage, itemsPerPage]);
+
+  // Cargar doctores
+  useEffect(() => {
+    const loadDoctors = async () => {
+      try {
+        const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
+        const { usersService } = await import('@/services/api/users.service');
+        const response = await usersService.getUsers(clinicId, { role: 'doctor' });
+        if (response.success) {
+          setDoctors(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading doctors:', error);
+      }
+    };
+    loadDoctors();
   }, []);
+
+  // Función para asignar doctor
+  const handleAssignDoctor = async () => {
+    if (!assignDoctorModal.patient || !selectedDoctorId) {
+      alert('Por favor seleccione un doctor');
+      return;
+    }
+
+    try {
+      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
+      const userId = localStorage.getItem('userId') || 'system';
+      
+      const response = await patientsService.assignDoctor(
+        assignDoctorModal.patient.id,
+        selectedDoctorId,
+        clinicId,
+        userId
+      );
+
+      if (response.success) {
+        setPatientsData(prev => prev.map(p =>
+          p.id === assignDoctorModal.patient!.id
+            ? { ...p, doctorAsignado: selectedDoctorId }
+            : p
+        ));
+        setAssignDoctorModal({ open: false });
+        setSelectedDoctorId('');
+        alert('Doctor asignado exitosamente');
+      }
+    } catch (error: any) {
+      console.error('Error asignando doctor:', error);
+      alert(error.message || 'Error al asignar doctor');
+    }
+  };
+
+  // Función para desasignar doctor
+  const handleUnassignDoctor = async (patientId: string) => {
+    if (!confirm('¿Está seguro de desasignar el doctor de este paciente?')) return;
+
+    try {
+      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
+      const userId = localStorage.getItem('userId') || 'system';
+      
+      const response = await patientsService.unassignDoctor(patientId, clinicId, userId);
+
+      if (response.success) {
+        setPatientsData(prev => prev.map(p =>
+          p.id === patientId ? { ...p, doctorAsignado: undefined } : p
+        ));
+        alert('Doctor desasignado exitosamente');
+      }
+    } catch (error: any) {
+      console.error('Error desasignando doctor:', error);
+      alert(error.message || 'Error al desasignar doctor');
+    }
+  };
 
   // Filtrado
   const filteredPatients = useMemo(() => {
-    if (!filters) return patientsData;
+    let patients = patientsData;
 
-    return patientsData.filter(patient => {
-      // Búsqueda general
+    // Filtro por pacientes asignados
+    if (showOnlyAssigned) {
+      patients = patients.filter(patient => patient.doctorAsignado);
+    }
+
+    if (!filters) return patients;
+
+    return patients.filter(patient => {
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();
         const searchableText = `${patient.nombres} ${patient.apellidos} ${patient.numeroDocumento} ${patient.telefono} ${patient.email}`.toLowerCase();
         if (!searchableText.includes(searchTerm)) return false;
       }
 
-      // Filtros específicos
       if (filters.numeroDocumento && !patient.numeroDocumento.includes(filters.numeroDocumento)) return false;
       if (filters.genero && patient.genero !== filters.genero) return false;
       if (filters.tipoSangre && patient.tipoSangre !== filters.tipoSangre) return false;
       if (filters.ciudad && patient.ciudad !== filters.ciudad) return false;
       if (filters.estado && patient.estado !== filters.estado) return false;
 
-      // Filtro por edad
       if (filters.edadMin || filters.edadMax) {
         const birthDate = new Date(patient.fechaNacimiento);
         const today = new Date();
@@ -135,31 +232,9 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
         if (filters.edadMax && age > parseInt(filters.edadMax)) return false;
       }
 
-      // Filtro por última consulta
-      if (filters.ultimaConsulta) {
-        const today = new Date('2025-10-20');
-        
-        switch (filters.ultimaConsulta) {
-          case 'hoy':
-            if (patient.ultimaConsulta !== '2025-10-20') return false;
-            break;
-          case 'esta-semana':
-            if (!patient.ultimaConsulta) return false;
-            const consultaDate = new Date(patient.ultimaConsulta);
-            const weekAgo = new Date(today);
-            weekAgo.setDate(today.getDate() - 7);
-            if (consultaDate < weekAgo) return false;
-            break;
-          case 'nunca':
-            if (patient.ultimaConsulta) return false;
-            break;
-          // Agregar más casos según necesidad
-        }
-      }
-
       return true;
     });
-  }, [patientsData, filters]);
+  }, [patientsData, filters, showOnlyAssigned]);
 
   // Ordenado
   const sortedPatients = useMemo(() => {
@@ -167,14 +242,15 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
       let valueA = a[sortField];
       let valueB = b[sortField];
 
-      // Manejar valores null/undefined
       if (valueA == null && valueB == null) return 0;
       if (valueA == null) return sortOrder === 'asc' ? 1 : -1;
       if (valueB == null) return sortOrder === 'asc' ? -1 : 1;
 
-      // Convertir a string para comparación
-      valueA = String(valueA).toLowerCase();
-      valueB = String(valueB).toLowerCase();
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return sortOrder === 'asc' 
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      }
 
       if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
       if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
@@ -182,7 +258,7 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
     });
   }, [filteredPatients, sortField, sortOrder]);
 
-  // Paginado
+  // Paginación
   const totalPages = Math.ceil(sortedPatients.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -205,15 +281,15 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
   const getEstadoConfig = (estado: string) => {
     switch (estado) {
       case 'activo':
-        return { color: 'bg-green-100 text-green-800 border-green-200', text: 'Activo' };
+        return { text: 'Activo', color: 'bg-green-100 text-green-800 border-green-200' };
       case 'inactivo':
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: 'Inactivo' };
+        return { text: 'Inactivo', color: 'bg-gray-100 text-gray-800 border-gray-200' };
       case 'pendiente':
-        return { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', text: 'Pendiente' };
+        return { text: 'Pendiente', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
       case 'seguimiento':
-        return { color: 'bg-red-100 text-red-800 border-red-200', text: 'Seguimiento' };
+        return { text: 'Seguimiento', color: 'bg-blue-100 text-blue-800 border-blue-200' };
       default:
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: estado };
+        return { text: estado, color: 'bg-gray-100 text-gray-800 border-gray-200' };
     }
   };
 
@@ -273,10 +349,10 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">
-              Lista de Pacientes
+              {showOnlyAssigned ? 'Pacientes Asignados' : 'Lista de Pacientes'}
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              {filteredPatients.length} pacientes encontrados
+              {filteredPatients.length} paciente{filteredPatients.length !== 1 ? 's' : ''} encontrado{filteredPatients.length !== 1 ? 's' : ''}
             </p>
           </div>
           
@@ -356,14 +432,8 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
                   {getSortIcon('estado')}
                 </div>
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('ultimaConsulta')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Última Consulta</span>
-                  {getSortIcon('ultimaConsulta')}
-                </div>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Doctor Asignado
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
@@ -421,10 +491,12 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
                           <Phone className="w-4 h-4 text-gray-400" />
                           <span>{patient.telefono}</span>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Mail className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-600">{patient.email}</span>
-                        </div>
+                        {patient.email && (
+                          <div className="flex items-center gap-1">
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-600">{patient.email}</span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -432,7 +504,7 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
                         <div className="font-medium">{age} años</div>
                         <div className="text-gray-500 flex items-center gap-1">
                           <Droplets className="w-4 h-4" />
-                          {patient.tipoSangre}
+                          {patient.tipoSangre || 'N/A'}
                         </div>
                       </div>
                     </td>
@@ -440,23 +512,35 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${estadoConfig.color}`}>
                         {estadoConfig.text}
                       </span>
-                      {patient.proximaCita && (
-                        <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          Próxima: {formatDate(patient.proximaCita)}
-                        </div>
-                      )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {patient.ultimaConsulta ? (
-                        <div>
-                          <div className="font-medium">{formatDate(patient.ultimaConsulta)}</div>
-                          <div className="text-gray-500 text-xs">
-                            {Math.floor((new Date('2025-10-20').getTime() - new Date(patient.ultimaConsulta).getTime()) / (1000 * 60 * 60 * 24))} días
+                    <td className="px-6 py-4">
+                      {patient.doctorAsignado ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-4 h-4 text-green-600" />
+                            <span className="text-sm text-gray-900">
+                              {doctors.find(d => d.id === patient.doctorAsignado)?.nombres || 'Doctor asignado'}
+                            </span>
                           </div>
+                          <button
+                            onClick={() => handleUnassignDoctor(patient.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Desasignar doctor"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       ) : (
-                        <span className="text-gray-400">Sin consultas</span>
+                        <button
+                          onClick={() => {
+                            setAssignDoctorModal({ open: true, patient });
+                            setSelectedDoctorId('');
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-purple-200"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          <span>Asignar Doctor</span>
+                        </button>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -499,14 +583,17 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center">
+                <td colSpan={9} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center">
                     <Search className="w-12 h-12 text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
                       No se encontraron pacientes
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      Intenta ajustar los filtros de búsqueda o agregar un nuevo paciente
+                      {showOnlyAssigned 
+                        ? 'No hay pacientes asignados a doctores'
+                        : 'Intenta ajustar los filtros de búsqueda o agregar un nuevo paciente'
+                      }
                     </p>
                     <button
                       onClick={() => router.push('/secretary/patients/new')}
@@ -566,6 +653,71 @@ export default function SecretaryPatientsTable({ filters }: SecretaryPatientsTab
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Asignación de Doctor */}
+      {assignDoctorModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Asignar Doctor
+                </h3>
+                <button
+                  onClick={() => setAssignDoctorModal({ open: false })}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Seleccione el doctor que desea asignar a{' '}
+                  <span className="font-medium">
+                    {assignDoctorModal.patient?.nombres} {assignDoctorModal.patient?.apellidos}
+                  </span>
+                </p>
+
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Doctor
+                </label>
+                <select
+                  value={selectedDoctorId}
+                  onChange={(e) => setSelectedDoctorId(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="">Seleccione un doctor...</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.nombres} {doctor.apellidos}
+                      {doctor.especialidades && doctor.especialidades.length > 0 && 
+                        ` - ${doctor.especialidades[0]}`
+                      }
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setAssignDoctorModal({ open: false })}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAssignDoctor}
+                  disabled={!selectedDoctorId}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Asignar Doctor
+                </button>
+              </div>
             </div>
           </div>
         </div>

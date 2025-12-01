@@ -4,7 +4,7 @@ import "./globals.css";
 import SidebarLayout from "@/components/SidebarLayout";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import { AuthProvider } from "@/hooks/useAuth";
-import { RoleSwitcher } from "@/components/testing/RoleSwitcher";
+// import { RoleSwitcher } from "@/components/testing/RoleSwitcher"; // Desactivado - usar roles reales del login
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,8 +36,8 @@ export default function RootLayout({
             <SidebarLayout>
               {children}
             </SidebarLayout>
-            {/* Testing component - remove in production */}
-            <RoleSwitcher />
+            {/* Testing component - desactivado para usar roles reales del login */}
+            {/* <RoleSwitcher /> */}
           </ToastProvider>
         </AuthProvider>
       </body>

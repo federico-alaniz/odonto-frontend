@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Users, 
   Calendar, 
@@ -19,11 +20,14 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
-// Importar datos fake
-import { patients } from '../../../utils/fake-patients';
-import { appointments } from '../../../utils/fake-appointments';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
+import { dateHelper } from '@/utils/date-helper';
+import { DebugDateControl } from '@/components/DebugDateControl';
 
 export default function DoctorDashboard() {
+  const router = useRouter();
+  
   const [stats, setStats] = useState([
     { label: 'Mis Pacientes Hoy', value: '0', icon: Users, color: 'blue' },
     { label: 'Pacientes Esperando', value: '0', icon: UserCheck, color: 'yellow' },
@@ -61,186 +65,174 @@ export default function DoctorDashboard() {
   }>>([]);
 
   useEffect(() => {
-    // Simular doctor ID actual (en real vendrá del contexto de auth)
-    const currentDoctorId = 'user_doc_001'; // Corregido para que coincida con fake-appointments
-    const today = '2025-10-20';
+    loadDashboardData();
+  }, []);
 
-    // Calcular estadísticas específicas del doctor
-    const calculateDoctorStats = () => {
-      // 1. Pacientes asignados al doctor hoy
-      const doctorAppointmentsToday = appointments.filter(apt => 
-        apt.fecha === today && apt.doctorId === currentDoctorId
+  const loadDashboardData = async () => {
+    try {
+      // TODO: Obtener doctor ID del contexto de autenticación
+      const currentDoctorId = 'usr_419812';
+      const today = dateHelper.today();
+      const clinicId = 'clinic_001';
+
+      console.log('🔍 Dashboard Debug:', { currentDoctorId, today, clinicId });
+
+      // Cargar citas y pacientes (solicitar más citas para cubrir todo el mes)
+      const [appointmentsResponse, patientsResponse] = await Promise.all([
+        appointmentsService.getAppointments(clinicId, { 
+          doctorId: currentDoctorId,
+          limit: 200  // Aumentar límite para obtener todas las citas del mes
+        }),
+        patientsService.getPatients(clinicId)
+      ]);
+
+      const appointmentsData = appointmentsResponse.data;
+      const patientsData = patientsResponse.data;
+
+      console.log('📊 Datos cargados:', {
+        totalAppointments: appointmentsData.length,
+        totalPatients: patientsData.length,
+        appointments: appointmentsData
+      });
+
+      // Filtrar citas del doctor
+      const doctorAppointments = appointmentsData.filter((apt: any) => 
+        apt.doctorId === currentDoctorId && !apt.deletedAt
       );
 
-      // 2. Pacientes esperando (confirmados)
-      const waitingPatientsCount = appointments.filter(apt => 
-        apt.doctorId === currentDoctorId &&
-        apt.estado === 'confirmada'
+      // Citas de hoy
+      const todayAppointments = doctorAppointments.filter((apt: any) => 
+        apt.fecha === today
       );
 
-      // 3. Resultados de laboratorio pendientes (simulado)
-      const pendingLabResults = Math.floor(Math.random() * 8) + 2; // 2-10 resultados
+      console.log('📅 Filtrado:', {
+        doctorAppointmentsCount: doctorAppointments.length,
+        todayAppointmentsCount: todayAppointments.length,
+        today,
+        doctorAppointmentsDates: doctorAppointments.map((a: any) => a.fecha)
+      });
 
-      // 4. Prescripciones activas (simulado) 
-      const activePrescriptions = Math.floor(Math.random() * 15) + 5; // 5-20 prescripciones
+      // Pacientes esperando (confirmadas o en espera)
+      const waitingCount = doctorAppointments.filter((apt: any) => 
+        apt.estado === 'confirmada' || apt.estado === 'esperando'
+      ).length;
 
+      // Actualizar stats
       setStats([
         { 
           label: 'Mis Pacientes Hoy', 
-          value: doctorAppointmentsToday.length.toString(), 
+          value: todayAppointments.length.toString(), 
           icon: Users, 
           color: 'blue' 
         },
         { 
           label: 'Pacientes Esperando', 
-          value: waitingPatientsCount.length.toString(), 
+          value: waitingCount.toString(), 
           icon: UserCheck, 
           color: 'yellow' 
         },
         { 
           label: 'Resultados Lab', 
-          value: pendingLabResults.toString(), 
+          value: '0', 
           icon: TestTube, 
           color: 'purple' 
         },
         { 
           label: 'Prescripciones', 
-          value: activePrescriptions.toString(), 
+          value: '0', 
           icon: FileText, 
           color: 'green' 
         }
       ]);
-    };
 
-    // Calcular pacientes esperando del doctor
-    const calculateWaitingPatients = () => {
-      const doctorWaitingAppointments = appointments
-        .filter(apt => apt.doctorId === currentDoctorId && apt.estado === 'confirmada')
-        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-        .map(apt => {
-          const patient = patients.find(p => p.id === apt.patientId);
-          const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
-          
-          // Calcular tiempo de espera simulado
-          const appointmentTime = new Date(`2025-10-20 ${apt.horaInicio}`);
-          const currentTime = new Date(`2025-10-20 15:30`); // Tiempo actual simulado
-          const waitingMinutes = Math.max(0, Math.floor((currentTime.getTime() - appointmentTime.getTime()) / (1000 * 60)));
-          
-          const specialties: Record<string, string> = {
-            'clinica-medica': 'Clínica Médica',
-            'cardiologia': 'Cardiología',
-            'pediatria': 'Pediatría',
-            'dermatologia': 'Dermatología'
-          };
+      // Calcular pacientes esperando
+      calculateWaitingPatients(doctorAppointments, patientsData);
 
-          return {
-            id: apt.id,
-            patient: patientName,
-            patientId: apt.patientId,
-            time: apt.horaInicio,
-            specialty: specialties[apt.especialidad] || apt.especialidad,
-            reason: apt.motivo,
-            waitingTime: waitingMinutes > 0 ? `${waitingMinutes} min` : 'Recién llegó',
-            priority: waitingMinutes > 30 ? 'urgent' as const : 'normal' as const,
-            consultorio: apt.consultorio
-          };
-        });
+      // Calcular pacientes de hoy
+      calculateMyPatientsToday(todayAppointments, patientsData);
 
-      setWaitingPatients(doctorWaitingAppointments);
-    };
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+    }
+  };
 
-    // Calcular pacientes de hoy del doctor
-    const calculateMyPatientsToday = () => {
-      const doctorAppointmentsToday = appointments
-        .filter(apt => apt.fecha === today && apt.doctorId === currentDoctorId)
-        .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-        .slice(0, 6) // Mostrar máximo 6
-        .map(apt => {
-          const patient = patients.find(p => p.id === apt.patientId);
-          const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
-          
-          let type, status, icon, urgency: 'low' | 'medium' | 'high';
-          
-          switch (apt.estado) {
-            case 'completada':
-              type = 'success';
-              status = 'Completada';
-              icon = CheckCircle;
-              urgency = 'low';
-              break;
-            case 'en-curso':
-              type = 'info';
-              status = 'En consulta';
-              icon = Activity;
-              urgency = 'high';
-              break;
-            case 'confirmada':
-              type = 'warning';
-              status = 'Confirmada';
-              icon = ClipboardCheck;
-              urgency = 'medium';
-              break;
-            case 'programada':
-              type = 'info';
-              status = 'Programada';
-              icon = Calendar;
-              urgency = 'low';
-              break;
-            default:
-              type = 'info';
-              status = 'Pendiente';
-              icon = Clock;
-              urgency = 'medium';
-          }
-
-          return {
-            patient: patientName,
-            time: apt.horaInicio,
-            type,
-            status,
-            icon,
-            urgency
-          };
-        });
-
-      setMyPatients(doctorAppointmentsToday);
-    };
-
-    // Simular resultados de laboratorio pendientes
-    const generatePendingLabResults = () => {
-      const labTests = [
-        'Hemograma Completo',
-        'Glucemia en Ayunas',
-        'Perfil Lipídico',
-        'Función Renal',
-        'Perfil Tiroideo',
-        'Electrocardiograma',
-        'Radiografía de Tórax',
-        'Ecografía Abdominal'
-      ];
-
-      const mockResults = labTests.slice(0, 4).map((test, index) => {
-        const patient = patients[index % patients.length];
+  const calculateWaitingPatients = (appointments: any[], patients: any[]) => {
+    const waiting = appointments
+      .filter((apt: any) => apt.estado === 'confirmada' || apt.estado === 'esperando')
+      .sort((a: any, b: any) => a.horaInicio.localeCompare(b.horaInicio))
+      .map((apt: any) => {
+        const patient = patients.find((p: any) => p.id === apt.patientId);
+        const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
+        
         return {
-          patient: `${patient.nombres} ${patient.apellidos}`,
-          test,
-          requestDate: '2025-10-18',
-          priority: Math.random() > 0.7 ? 'urgent' as const : 'normal' as const,
-          icon: TestTube
+          id: apt.id,
+          patient: patientName,
+          patientId: apt.patientId,
+          time: apt.horaInicio,
+          specialty: apt.tipo || 'Consulta',
+          reason: apt.motivo,
+          waitingTime: '0 min',
+          priority: 'normal' as const,
+          consultorio: apt.consultorio || 'Consultorio 1'
         };
       });
 
-      setPendingResults(mockResults);
-    };
+    setWaitingPatients(waiting);
+  };
 
-    calculateDoctorStats();
-    calculateWaitingPatients();
-    generatePendingLabResults();
-  }, []);
+  const calculateMyPatientsToday = (appointments: any[], patients: any[]) => {
+    const myPatientsData = appointments
+      .sort((a: any, b: any) => a.horaInicio.localeCompare(b.horaInicio))
+      .slice(0, 6)
+      .map((apt: any) => {
+        const patient = patients.find((p: any) => p.id === apt.patientId);
+        const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
+        
+        let status, icon, urgency: 'low' | 'medium' | 'high';
+        
+        switch (apt.estado) {
+          case 'completada':
+            status = 'Completada';
+            icon = CheckCircle;
+            urgency = 'low';
+            break;
+          case 'en-curso':
+            status = 'En consulta';
+            icon = Activity;
+            urgency = 'high';
+            break;
+          case 'confirmada':
+            status = 'Confirmada';
+            icon = ClipboardCheck;
+            urgency = 'medium';
+            break;
+          case 'esperando':
+            status = 'Esperando';
+            icon = UserCheck;
+            urgency = 'high';
+            break;
+          default:
+            status = 'Programada';
+            icon = Calendar;
+            urgency = 'low';
+        }
+
+        return {
+          patient: `${patientName} - ${apt.horaInicio}`,
+          time: apt.horaInicio,
+          type: apt.tipo || 'Consulta',
+          status,
+          icon,
+          urgency
+        };
+      });
+
+    setMyPatients(myPatientsData);
+  };
 
   const handleStartConsultation = (appointmentId: string, patientId: string) => {
-    // Navegar a la nueva consulta con los datos del paciente
-    window.location.href = `/doctor/consultations/new?appointmentId=${appointmentId}&patientId=${patientId}`;
+    // Navegar a la historia clínica del paciente
+    router.push(`/doctor/patients/${patientId}/medical-record?appointmentId=${appointmentId}`);
   };
 
   const getColorClasses = (color: string) => {
@@ -367,56 +359,41 @@ export default function DoctorDashboard() {
               <div className="space-y-4">
                 {waitingPatients.length > 0 ? (
                   waitingPatients.map((patient) => (
-                    <div key={patient.id} className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                      patient.priority === 'urgent' 
-                        ? 'border-red-200 bg-red-50' 
-                        : 'border-gray-200 bg-gray-50'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className={`p-3 rounded-full ${
-                            patient.priority === 'urgent' 
-                              ? 'bg-red-100' 
-                              : 'bg-blue-100'
-                          }`}>
-                            <Users className={`w-6 h-6 ${
-                              patient.priority === 'urgent' 
-                                ? 'text-red-600' 
-                                : 'text-blue-600'
-                            }`} />
+                    <div key={patient.id} className="p-5 rounded-xl border border-gray-200 bg-white hover:shadow-lg transition-all">
+                      <div className="flex items-center justify-between gap-4">
+                        {/* Información del paciente */}
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="p-3 rounded-full bg-blue-100">
+                            <Users className="w-7 h-7 text-blue-600" />
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-gray-900">
-                                {patient.patient}
-                              </p>
-                              {patient.priority === 'urgent' && (
-                                <AlertCircle className="w-4 h-4 text-red-500" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <span className="flex items-center gap-1">
+                            <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                              {patient.patient}
+                            </h3>
+                            <div className="flex items-center gap-6 text-sm">
+                              <span className="flex items-center gap-1.5 text-gray-600">
                                 <Clock className="w-4 h-4" />
-                                Turno: {patient.time}
+                                <span className="font-medium">Turno:</span> {patient.time}
                               </span>
-                              <span>Esperando: {patient.waitingTime}</span>
-                              <span>Consultorio: {patient.consultorio}</span>
+                              <span className="flex items-center gap-1.5 text-orange-600">
+                                <Clock className="w-4 h-4" />
+                                <span className="font-medium">Esperando:</span> {patient.waitingTime}
+                              </span>
                             </div>
-                            <p className="text-sm text-gray-700 mt-1">
-                              <span className="font-medium">Motivo:</span> {patient.reason}
+                            <p className="text-sm text-gray-600 mt-2">
+                              <span className="font-medium text-gray-700">Motivo:</span> {patient.reason}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleStartConsultation(patient.id, patient.patientId)}
-                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                          >
-                            <PlayCircle className="w-4 h-4" />
-                            Iniciar Consulta
-                          </button>
-                        </div>
+                        {/* Botón de acción */}
+                        <button
+                          onClick={() => handleStartConsultation(patient.id, patient.patientId)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Iniciar Consulta
+                        </button>
                       </div>
                     </div>
                   ))
@@ -425,6 +402,74 @@ export default function DoctorDashboard() {
                     <UserCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500 font-medium text-lg">No hay pacientes esperando</p>
                     <p className="text-sm text-gray-400 mt-2">Los pacientes confirmados aparecerán aquí cuando lleguen</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mis Pacientes Hoy */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Calendar className="w-5 h-5 text-blue-700" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Mis Pacientes Hoy</h2>
+                    <p className="text-sm text-gray-600 mt-1">Citas programadas para hoy</p>
+                  </div>
+                </div>
+                {myPatients.length > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
+                    <Users className="w-4 h-4" />
+                    <span>{myPatients.length} pacientes</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {myPatients.length > 0 ? (
+                  myPatients.map((patient, index) => {
+                    const IconComponent = patient.icon;
+                    return (
+                      <div key={index} className={`p-4 rounded-lg border transition-all hover:shadow-md ${getUrgencyClasses(patient.urgency)}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 rounded-full bg-blue-100">
+                              <IconComponent className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900">
+                                {patient.patient}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {patient.type}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                              patient.status === 'Completada' ? 'bg-green-100 text-green-800' :
+                              patient.status === 'En consulta' ? 'bg-blue-100 text-blue-800' :
+                              patient.status === 'Confirmada' ? 'bg-yellow-100 text-yellow-800' :
+                              patient.status === 'Esperando' ? 'bg-orange-100 text-orange-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {patient.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium text-lg">No hay pacientes para hoy</p>
+                    <p className="text-sm text-gray-400 mt-2">Las citas programadas aparecerán aquí</p>
                   </div>
                 )}
               </div>
@@ -549,6 +594,9 @@ export default function DoctorDashboard() {
         </div>
 
       </div>
+      
+      {/* Control de fecha debug */}
+      <DebugDateControl />
     </div>
   );
 }

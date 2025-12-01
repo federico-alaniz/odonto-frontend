@@ -18,10 +18,10 @@ import {
 import { 
   getProvincias, 
   getDepartamentosPorProvincia, 
-  getCiudadesPorProvincia,
-  addNewPatient
+  getCiudadesPorProvincia
 } from '../../../../utils';
 import { useToast } from '@/components/ui/ToastProvider';
+import { patientsService, CreatePatientData } from '@/services/api/patients.service';
 
 interface SecretaryPatientFormData {
   // Información Personal
@@ -299,24 +299,49 @@ export default function SecretaryNewPatientForm() {
         `.trim()
       };
       
-      // Agregar el paciente
-      const createdPatient = addNewPatient(newPatientData);
-      console.log('Paciente creado por secretaria:', createdPatient);
+      // TODO: Obtener estos valores del contexto de autenticación
+      const clinicId = 'clinic_001';
+      const userId = 'usr_000001';
+      
+      // Preparar datos para el servicio
+      const patientData: CreatePatientData = {
+        nombres: newPatientData.nombres,
+        apellidos: newPatientData.apellidos,
+        tipoDocumento: newPatientData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero',
+        numeroDocumento: newPatientData.numeroDocumento,
+        fechaNacimiento: newPatientData.fechaNacimiento,
+        genero: newPatientData.genero as 'masculino' | 'femenino' | 'otro',
+        telefono: newPatientData.telefono,
+        email: newPatientData.email || undefined,
+        direccion: newPatientData.direccion,
+        tipoSangre: newPatientData.tipoSangre || undefined,
+        contactoEmergencia: newPatientData.contactoEmergencia,
+        seguroMedico: newPatientData.seguroMedico,
+        alergias: newPatientData.alergias,
+        medicamentosActuales: newPatientData.medicamentosActuales,
+        antecedentesPersonales: newPatientData.antecedentesPersonales,
+      };
+      
+      // Llamar al servicio para crear el paciente
+      const response = await patientsService.createPatient(clinicId, userId, patientData);
+      
+      console.log('✅ Paciente creado por secretaria:', response.data);
+      console.log('📋 Historia clínica:', response.historiaClinica);
       
       // Mostrar mensaje de éxito
       showSuccess(
         'Paciente registrado exitosamente',
-        `${formData.nombres} ${formData.apellidos} ha sido agregado al sistema`
+        `Se ha creado la historia clínica N° ${response.data.numeroHistoriaClinica}`
       );
       
       // Navegar de vuelta a la lista de pacientes
       router.push('/secretary/patients');
       
-    } catch (error) {
-      console.error('Error al registrar paciente:', error);
+    } catch (error: any) {
+      console.error('❌ Error al registrar paciente:', error);
       showError(
         'Error al registrar el paciente',
-        'Por favor, verifique los datos e intente nuevamente'
+        error.message || 'Por favor, verifique los datos e intente nuevamente'
       );
     } finally {
       setIsSubmitting(false);

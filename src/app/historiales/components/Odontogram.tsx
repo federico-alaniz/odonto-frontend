@@ -8,7 +8,7 @@ interface ToothSector {
 }
 
 export interface ToothCondition {
-  id: number;
+  number: number;
   status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
   sectors?: ToothSector[];
   hasCrown?: boolean;
@@ -20,9 +20,10 @@ interface OdontogramProps {
   initialConditions?: ToothCondition[];
   onUpdate: (conditions: ToothCondition[]) => void;
   readOnly?: boolean;
+  showLegend?: boolean;
 }
 
-export default function Odontogram({ initialConditions = [], onUpdate, readOnly = false }: OdontogramProps) {
+export default function Odontogram({ initialConditions = [], onUpdate, readOnly = false, showLegend = true }: OdontogramProps) {
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
     // Inicializar todos los dientes como sanos si no hay condiciones previas
     const defaultConditions: ToothCondition[] = [];
@@ -40,8 +41,8 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     ];
 
     toothNumbers.forEach(num => {
-      const existing = initialConditions.find(c => c.id === num);
-      defaultConditions.push(existing || { id: num, status: 'healthy' });
+      const existing = initialConditions.find(c => c.number === num);
+      defaultConditions.push(existing || { number: num, status: 'healthy' });
     });
 
     return defaultConditions;
@@ -113,7 +114,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     
     setSelectedTooth(toothId);
     const newConditions = toothConditions.map(tooth => 
-      tooth.id === toothId 
+      tooth.number === toothId 
         ? { ...tooth, status: selectedStatus }
         : tooth
     );
@@ -125,14 +126,14 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     if (readOnly || !sectorMode) return;
     
     // No permitir sectores en dientes ausentes
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     if (tooth?.status === 'missing') return;
     
     event.preventDefault();
     event.stopPropagation();
     
     const newConditions = toothConditions.map(tooth => {
-      if (tooth.id === toothId) {
+      if (tooth.number === toothId) {
         const currentSectors = tooth.sectors || [];
         const existingSectorIndex = currentSectors.findIndex(s => s.sector === sector);
         
@@ -159,7 +160,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   const getSectorRestoration = (toothId: number, sector: ToothSector['sector']): boolean => {
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     const sectorData = tooth?.sectors?.find(s => s.sector === sector);
     return sectorData?.hasRestoration || false;
   };
@@ -168,14 +169,14 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     if (readOnly || !crownMode) return;
     
     // No permitir coronas en dientes ausentes
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     if (tooth?.status === 'missing') return;
     
     event.preventDefault();
     event.stopPropagation();
     
     const newConditions = toothConditions.map(tooth => 
-      tooth.id === toothId 
+      tooth.number === toothId 
         ? { ...tooth, hasCrown: !tooth.hasCrown }
         : tooth
     );
@@ -184,7 +185,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   const getToothCrown = (toothId: number): boolean => {
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     return tooth?.hasCrown || false;
   };
 
@@ -192,14 +193,14 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     if (readOnly || !prosthesisMode) return;
     
     // No permitir prótesis en dientes ausentes
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     if (tooth?.status === 'missing') return;
     
     event.preventDefault();
     event.stopPropagation();
     
     const newConditions = toothConditions.map(tooth => 
-      tooth.id === toothId 
+      tooth.number === toothId 
         ? { ...tooth, hasProsthesis: !tooth.hasProsthesis }
         : tooth
     );
@@ -208,7 +209,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   const getToothProsthesis = (toothId: number): boolean => {
-    const tooth = toothConditions.find(t => t.id === toothId);
+    const tooth = toothConditions.find(t => t.number === toothId);
     return tooth?.hasProsthesis || false;
   };
 
@@ -219,7 +220,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     event.stopPropagation();
     
     const newConditions = toothConditions.map(tooth => 
-      tooth.id === toothId 
+      tooth.number === toothId 
         ? { ...tooth, status: tooth.status === 'extraction' ? 'healthy' as const : 'extraction' as const }
         : tooth
     );
@@ -228,7 +229,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   const getToothCondition = (toothId: number) => {
-    return toothConditions.find(t => t.id === toothId)?.status || 'healthy';
+    return toothConditions.find(t => t.number === toothId)?.status || 'healthy';
   };
 
   // Componente de diente
@@ -472,55 +473,49 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
     <div>
       <div className="mb-6">
         
+        {/* Referencias de Simbología (Read-only) */}
+        {readOnly && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-4">
+            <h4 className="text-sm font-semibold text-gray-800 mb-3">Referencias</h4>
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <div className="w-5 h-5 border-2 border-gray-700 bg-red-500 rounded"></div>
+                <span className="text-sm text-gray-700 font-medium">Restauraciones</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <div className="w-5 h-5 border-2 border-blue-600 rounded-full"></div>
+                <span className="text-sm text-gray-700 font-medium">Coronas</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <div className="w-5 h-5 border-2 border-gray-700 relative">
+                  <div className="absolute top-1 left-0 right-0 h-0.5 bg-green-600"></div>
+                  <div className="absolute bottom-1 left-0 right-0 h-0.5 bg-green-600"></div>
+                </div>
+                <span className="text-sm text-gray-700 font-medium">Prótesis</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <div className="w-5 h-5 border-2 border-gray-700 relative flex items-center justify-center">
+                  <span className="text-red-600 text-lg font-bold leading-none">✕</span>
+                </div>
+                <span className="text-sm text-gray-700 font-medium">Extracciones</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <div className="w-5 h-5 border-2 border-gray-600 bg-gray-400 rounded"></div>
+                <span className="text-sm text-gray-700 font-medium">Ausente</span>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Simbología y Controles */}
         {!readOnly && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
             <h4 className="text-sm font-semibold text-gray-800 mb-3">Simbología y Controles</h4>
             
-            {/* Estados Básicos */}
-            <div className="mb-4">
-              <h5 className="text-xs font-medium text-gray-600 mb-2">Estados Básicos del Diente:</h5>
-              <div className="flex flex-wrap items-center gap-2">
-                {!sectorMode && !crownMode && !prosthesisMode && !extractionMode && (
-                  <>
-                    <span className="text-xs text-gray-600">Estado:</span>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedStatus(e.target.value as ToothCondition['status']);
-                      }}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="healthy">Sano</option>
-                      <option value="caries">Con Problemas</option>
-                      <option value="missing">Ausente</option>
-                    </select>
-                  </>
-                )}
-                
-                {/* Símbolos de estados básicos */}
-                <div className="flex items-center space-x-4 ml-4">
-                  <div className="flex items-center space-x-1">
-                    <div className="w-4 h-4 border-2 border-gray-800 bg-white"></div>
-                    <span className="text-xs text-gray-600">Sano</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-4 h-4 border-2 border-gray-800 bg-red-500"></div>
-                    <span className="text-xs text-gray-600">Con Problemas</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-4 h-4 border-2 border-gray-800 bg-gray-400"></div>
-                    <span className="text-xs text-gray-600">Ausente</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Tratamientos Especiales */}
             <div>
-              <h5 className="text-xs font-medium text-gray-600 mb-2">Tratamientos Especiales:</h5>
-              <div className="flex flex-wrap gap-2">
+              <h5 className="text-sm font-semibold text-gray-900 mb-3">Tratamientos</h5>
+              <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -531,14 +526,15 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
                     setExtractionMode(false);
                     setSectorMode(!sectorMode);
                   }}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
                     sectorMode 
-                      ? 'bg-red-500 text-white' 
-                      : 'bg-white border border-red-300 text-red-600 hover:bg-red-50'
+                      ? 'bg-red-500 text-white shadow-md scale-105' 
+                      : 'bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300'
                   }`}
                 >
-                  <div className="w-4 h-4 border border-gray-600 bg-red-500 rounded-sm"></div>
-                  <span>{sectorMode ? '✓ Restauraciones' : 'Restauraciones'}</span>
+                  <div className="w-5 h-5 border-2 border-current bg-red-500 rounded"></div>
+                  <span>Restauraciones</span>
+                  {sectorMode && <span className="text-xs">✓</span>}
                 </button>
                 
                 <button
@@ -551,16 +547,15 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
                     setExtractionMode(false);
                     setCrownMode(!crownMode);
                   }}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
                     crownMode 
-                      ? 'bg-blue-500 text-white' 
-                      : 'bg-white border border-blue-300 text-blue-600 hover:bg-blue-50'
+                      ? 'bg-blue-500 text-white shadow-md scale-105' 
+                      : 'bg-white border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300'
                   }`}
                 >
-                  <div className="w-4 h-4 border border-gray-600 bg-white rounded-full relative">
-                    <div className="absolute inset-0.5 border border-blue-600 rounded-full"></div>
-                  </div>
-                  <span>{crownMode ? '✓ Coronas' : 'Coronas'}</span>
+                  <div className="w-5 h-5 border-2 border-current rounded-full"></div>
+                  <span>Coronas</span>
+                  {crownMode && <span className="text-xs">✓</span>}
                 </button>
                 
                 <button
@@ -573,17 +568,18 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
                     setExtractionMode(false);
                     setProsthesisMode(!prosthesisMode);
                   }}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
                     prosthesisMode 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-white border border-green-300 text-green-600 hover:bg-green-50'
+                      ? 'bg-green-500 text-white shadow-md scale-105' 
+                      : 'bg-white border-2 border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300'
                   }`}
                 >
-                  <div className="w-4 h-4 border border-gray-600 bg-white relative">
-                    <div className="absolute top-1 left-0.5 right-0.5 h-0.5 bg-green-600"></div>
-                    <div className="absolute bottom-1 left-0.5 right-0.5 h-0.5 bg-green-600"></div>
+                  <div className="w-5 h-5 border-2 border-current relative">
+                    <div className="absolute top-1 left-0 right-0 h-0.5 bg-current"></div>
+                    <div className="absolute bottom-1 left-0 right-0 h-0.5 bg-current"></div>
                   </div>
-                  <span>{prosthesisMode ? '✓ Prótesis' : 'Prótesis'}</span>
+                  <span>Prótesis</span>
+                  {prosthesisMode && <span className="text-xs">✓</span>}
                 </button>
                 
                 <button
@@ -596,16 +592,17 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
                     setProsthesisMode(false);
                     setExtractionMode(!extractionMode);
                   }}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-sm ${
                     extractionMode 
-                      ? 'bg-red-600 text-white' 
-                      : 'bg-white border border-red-400 text-red-700 hover:bg-red-50'
+                      ? 'bg-red-600 text-white shadow-md scale-105' 
+                      : 'bg-white border-2 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400'
                   }`}
                 >
-                  <div className="w-4 h-4 border-2 border-gray-800 bg-white relative">
-                    <span className="absolute inset-0 flex items-center justify-center text-red-600 text-xs font-bold">✕</span>
+                  <div className="w-5 h-5 border-2 border-current relative flex items-center justify-center">
+                    <span className="text-lg font-bold leading-none">✕</span>
                   </div>
-                  <span>{extractionMode ? '✓ Extracciones' : 'Extracciones'}</span>
+                  <span>Extracciones</span>
+                  {extractionMode && <span className="text-xs">✓</span>}
                 </button>
               </div>
             </div>
@@ -695,23 +692,60 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
         </svg>
       </div>
 
-      {/* Información sobre el odontograma */}
-      <div className="text-xs text-gray-600 bg-blue-50 p-3 rounded-lg">
-        <p>
-          <strong>Numeración FDI:</strong> Sistema internacional de numeración dental.
-        </p>
-        <div className="mt-2 space-y-1">
-          <p><strong>Estados básicos:</strong> Seleccione el estado y haga clic en el diente (Sano, Con Problemas, Ausente).</p>
-          <p><strong>Tratamientos especiales:</strong> Active el modo correspondiente y haga clic en el diente:</p>
-          <ul className="ml-4 space-y-0.5">
-            <li>• <strong>Restauraciones:</strong> Marque sectores específicos del diente con caries o restauraciones</li>
-            <li>• <strong>Coronas:</strong> Círculo azul superpuesto al diente</li>
-            <li>• <strong>Prótesis:</strong> Líneas verdes paralelas superpuestas al diente</li>
-            <li>• <strong>Extracciones:</strong> Cruz roja sobre fondo blanco</li>
-          </ul>
-          <p className="mt-1"><strong>Nota:</strong> Los dientes ausentes (grises) no pueden ser editados.</p>
+      {/* Referencias del odontograma */}
+      {showLegend && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+          <button
+            onClick={() => {
+              const element = document.getElementById('odontogram-instructions');
+              if (element) {
+                element.classList.toggle('hidden');
+              }
+            }}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200"
+          >
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              </svg>
+              <span className="text-sm font-semibold text-gray-900">Referencias</span>
+            </div>
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          <div id="odontogram-instructions" className="p-4">
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="w-5 h-5 border-2 border-gray-700 bg-red-500 rounded"></div>
+                <span className="text-sm font-medium text-gray-700">Restauraciones</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="w-5 h-5 border-2 border-blue-600 rounded-full"></div>
+                <span className="text-sm font-medium text-gray-700">Coronas</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="w-5 h-5 border-2 border-gray-700 relative">
+                  <div className="absolute top-1 left-0 right-0 h-0.5 bg-green-600"></div>
+                  <div className="absolute bottom-1 left-0 right-0 h-0.5 bg-green-600"></div>
+                </div>
+                <span className="text-sm font-medium text-gray-700">Prótesis</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="w-5 h-5 border-2 border-gray-700 relative flex items-center justify-center">
+                  <span className="text-red-600 text-lg font-bold leading-none">✕</span>
+                </div>
+                <span className="text-sm font-medium text-gray-700">Extracciones</span>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="w-5 h-5 border-2 border-gray-600 bg-gray-400 rounded"></div>
+                <span className="text-sm font-medium text-gray-700">Ausente</span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Resumen de condiciones */}
       {!readOnly && (

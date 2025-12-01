@@ -16,43 +16,91 @@ import {
   Edit3,
   UserPlus
 } from 'lucide-react';
-import { appointments } from '@/utils/fake-appointments';
-import { users } from '@/utils/fake-users';
-import { patients } from '@/utils/fake-patients';
+import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { usersService } from '@/services/api/users.service';
+import { patientsService, Patient } from '@/services/api/patients.service';
+import { User as UserType } from '@/types/roles';
+import { dateHelper } from '@/utils/date-helper';
+import { DebugDateControl } from '@/components/DebugDateControl';
 
 type ViewMode = 'calendar' | 'agenda';
 
 export default function SecretaryAppointmentsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [filteredAppointments, setFilteredAppointments] = useState(appointments);
+  const [selectedDate, setSelectedDate] = useState(dateHelper.now());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<UserType[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [filterDoctor, setFilterDoctor] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [showTodayOnly, setShowTodayOnly] = useState(true); // Por defecto mostrar solo hoy
-  const [agendaDate, setAgendaDate] = useState(new Date()); // Fecha para la agenda
+  const [showTodayOnly, setShowTodayOnly] = useState(false); // Cambiado a false para mostrar todas las citas
+  const [agendaDate, setAgendaDate] = useState(dateHelper.now());
+  const [loading, setLoading] = useState(true);
 
-  // Obtener lista de doctores únicos
-  const doctors = users.filter(user => user.role === 'doctor');
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const clinicId = 'clinic_001'; // TODO: obtener del contexto
+
+      console.log('📊 Cargando datos para el calendario...');
+
+      // Cargar citas, doctores y pacientes en paralelo
+      const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
+        appointmentsService.getAppointments(clinicId, { limit: 1000 }),
+        usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo', limit: 100 }),
+        patientsService.getPatients(clinicId, { limit: 1000 })
+      ]);
+
+      console.log('✅ Datos cargados:');
+      console.log('  - Citas:', appointmentsRes.data.length);
+      console.log('  - Doctores:', doctorsRes.data.length);
+      console.log('  - Pacientes:', patientsRes.data.length);
+
+      setAppointments(appointmentsRes.data);
+      setDoctors(doctorsRes.data);
+      setPatients(patientsRes.data);
+
+      console.log('✅ Estados actualizados');
+    } catch (error) {
+      console.error('❌ Error loading data:', error);
+    } finally {
+      setLoading(false);
+      console.log('✅ Loading = false');
+    }
+  };
 
   // Filtrar appointments
   useEffect(() => {
+    console.log('🔍 Filtrando citas...');
+    console.log('  - Total citas:', appointments.length);
+    
     let filtered = appointments;
 
     if (filterDoctor) {
       filtered = filtered.filter(apt => apt.doctorId === filterDoctor);
+      console.log('  - Filtradas por doctor:', filtered.length);
     }
 
     if (filterStatus) {
       filtered = filtered.filter(apt => apt.estado === filterStatus);
+      console.log('  - Filtradas por estado:', filtered.length);
     }
 
     if (showTodayOnly) {
       const selectedDay = formatDateForComparison(agendaDate);
       filtered = filtered.filter(apt => apt.fecha === selectedDay);
+      console.log('  - Filtradas por fecha', selectedDay, ':', filtered.length);
     }
 
+    console.log('✅ Citas filtradas:', filtered.length);
     setFilteredAppointments(filtered);
-  }, [filterDoctor, filterStatus, showTodayOnly, agendaDate]);
+  }, [filterDoctor, filterStatus, showTodayOnly, agendaDate, appointments]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-AR', {
@@ -69,6 +117,11 @@ export default function SecretaryAppointmentsPage() {
   const getDoctorName = (doctorId: string) => {
     const doctor = doctors.find(d => d.id === doctorId);
     return doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Doctor no encontrado';
+  };
+
+  const getDoctorConsultorio = (doctorId: string) => {
+    const doctor = doctors.find(d => d.id === doctorId);
+    return doctor?.consultorio || 'Sin consultorio';
   };
 
   const getPatientName = (patientId: string) => {
@@ -111,7 +164,7 @@ export default function SecretaryAppointmentsPage() {
   };
 
   const goToToday = () => {
-    setSelectedDate(new Date());
+    setSelectedDate(dateHelper.now());
   };
 
   // Navegación de agenda por días
@@ -128,7 +181,7 @@ export default function SecretaryAppointmentsPage() {
   };
 
   const goToAgendaToday = () => {
-    setAgendaDate(new Date());
+    setAgendaDate(dateHelper.now());
   };
 
   // Generar días del calendario
@@ -145,7 +198,7 @@ export default function SecretaryAppointmentsPage() {
       currentDate.setDate(startDate.getDate() + i);
       
       const isCurrentMonth = currentDate.getMonth() === month;
-      const isToday = formatDateForComparison(currentDate) === formatDateForComparison(new Date());
+      const isToday = formatDateForComparison(currentDate) === formatDateForComparison(dateHelper.now());
       const isSelected = formatDateForComparison(currentDate) === formatDateForComparison(selectedDate);
       const dayAppointments = getAppointmentsForDate(currentDate);
 
@@ -163,6 +216,17 @@ export default function SecretaryAppointmentsPage() {
   };
 
   const calendarDays = generateCalendarDays();
+
+  if (loading) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando citas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
@@ -446,7 +510,7 @@ export default function SecretaryAppointmentsPage() {
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="w-4 h-4" />
-                                  {appointment.consultorio}
+                                  {getDoctorConsultorio(appointment.doctorId)}
                                 </span>
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
@@ -572,7 +636,7 @@ export default function SecretaryAppointmentsPage() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               <div className="flex items-center">
                                 <MapPin className="w-4 h-4 text-gray-400 mr-1" />
-                                {appointment.consultorio}
+                                {getDoctorConsultorio(appointment.doctorId)}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -625,6 +689,9 @@ export default function SecretaryAppointmentsPage() {
           </div>
         </div>
       )}
+      
+      {/* Control de fecha debug */}
+      <DebugDateControl />
     </div>
   );
 }

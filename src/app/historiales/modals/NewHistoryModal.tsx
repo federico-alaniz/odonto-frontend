@@ -5,7 +5,11 @@ import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
-import { patients } from '@/utils/fake-patients';
+// TODO: Reemplazar con llamadas al backend
+// import { patients } from '@/utils/fake-patients';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
 
 type MedicalSpecialty = 'clinica-medica' | 'pediatria' | 'cardiologia' | 'traumatologia' | 'ginecologia' | 'dermatologia' | 'neurologia' | 'psiquiatria' | 'odontologia' | 'oftalmologia' | 'otorrinolaringologia' | 'urologia' | 'endocrinologia' | 'gastroenterologia' | 'nefrologia' | 'neumologia';
 

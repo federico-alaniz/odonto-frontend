@@ -1,19 +1,120 @@
 // src/types/roles.ts
 export type UserRole = 'admin' | 'doctor' | 'secretary';
 
+// Interfaz para horarios de atención (doctores)
+export interface HorarioAtencion {
+  dia: number; // 1-6 (Lun-Sáb)
+  activo: boolean;
+  horaInicio: string; // Formato: 'HH:mm'
+  horaFin: string; // Formato: 'HH:mm'
+}
+
+// Interfaz completa de Usuario
 export interface User {
+  // Identificación
   id: string;
-  role: UserRole;
-  name: string;
-  email: string;
+  clinicId: string; // ID de la clínica (multi-tenancy)
+  
+  // Datos personales
+  nombres: string;
+  apellidos: string;
+  name?: string; // Nombre completo (computed: nombres + apellidos)
+  tipoDocumento: 'DNI' | 'Pasaporte' | 'CI' | 'Otro';
+  numeroDocumento: string;
+  fechaNacimiento: string; // Formato: 'YYYY-MM-DD'
+  genero: 'masculino' | 'femenino' | 'otro';
   avatar?: string;
-  department?: string;
-  specialization?: string; // Para doctores
-  permissions: Permission[];
+  
+  // Contacto
+  email: string;
+  telefono: string;
+  direccion: string;
+  ciudad: string;
+  provincia: string;
+  codigoPostal: string;
+  
+  // Sistema
+  role: UserRole;
+  estado: 'activo' | 'inactivo' | 'suspendido';
   isActive: boolean;
+  permissions: Permission[];
   lastLogin?: Date;
+  
+  // Auditoría
   createdAt: Date;
+  createdBy: string; // ID del usuario que creó este registro
   updatedAt: Date;
+  updatedBy: string; // ID del usuario que modificó por última vez
+  deletedAt?: Date; // Para soft delete
+  deletedBy?: string; // ID del usuario que eliminó (soft delete)
+  
+  // Campos específicos para DOCTOR
+  especialidades?: string[]; // Array de IDs de especialidades
+  consultorio?: string; // ID del consultorio asignado
+  matricula?: string; // Número de matrícula profesional
+  horariosAtencion?: HorarioAtencion[];
+  notificacionesConfig?: {
+    nuevaCita?: boolean;
+    pacienteLlego?: boolean;
+    cancelacion?: boolean;
+    recordatorio1h?: boolean;
+    recordatorio30m?: boolean;
+    resumenDiario?: boolean;
+    resumenFinDia?: boolean;
+  };
+  department?: string;
+  specialization?: string; // Especialidad principal (deprecated, usar especialidades)
+  
+  // Campos específicos para SECRETARIA
+  turno?: 'mañana' | 'tarde' | 'noche' | 'completo';
+  area?: string; // 'recepción', 'administración', etc.
+}
+
+// Interfaz para crear/actualizar usuario (sin campos autogenerados)
+export interface UserFormData {
+  // Multi-tenancy
+  clinicId?: string; // Opcional en el form, se puede asignar automáticamente desde el usuario autenticado
+  
+  // Datos personales
+  nombres: string;
+  apellidos: string;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  fechaNacimiento: string;
+  genero: string;
+  
+  // Contacto
+  email: string;
+  telefono: string;
+  direccion: string;
+  ciudad: string;
+  provincia: string;
+  codigoPostal: string;
+  
+  // Sistema
+  role: string;
+  password?: string; // Solo para creación
+  confirmPassword?: string; // Solo para validación en frontend
+  estado: string;
+  
+  // Campos para doctor
+  especialidades?: string[];
+  consultorio?: string;
+  matricula?: string;
+  horariosAtencion?: HorarioAtencion[];
+  notificacionesConfig?: {
+    nuevaCita?: boolean;
+    pacienteLlego?: boolean;
+    cancelacion?: boolean;
+    recordatorio1h?: boolean;
+    recordatorio30m?: boolean;
+    resumenDiario?: boolean;
+    resumenFinDia?: boolean;
+  };
+  
+  // Campos para secretaria
+  turno?: string;
+  area?: string;
 }
 
 export interface Permission {

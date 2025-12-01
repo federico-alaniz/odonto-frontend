@@ -25,7 +25,11 @@ import NewAppointmentModal from './modals/NewAppointmentModal';
 import DeletePatientModal from './modals/DeletePatientModal';
 import EditPatientModal from './modals/EditPatientModal';
 import { PatientFilters } from './PatientsFilters';
-import { patients, type Patient as FakePatient } from '@/utils/fake-data';
+// TODO: Reemplazar con llamadas al backend
+// import { patients, type Patient as FakePatient } from '@/utils/fake-data';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
 
 // Interface adaptada para el componente (compatible con modales existentes)
 interface Patient {
@@ -48,11 +52,11 @@ interface PatientsTableProps {
   filters?: PatientFilters;
 }
 
-// Función para adaptar datos fake al formato de la tabla
-const adaptPatientsForTable = (fakePatients: FakePatient[]): Patient[] => {
-  return fakePatients.map(patient => ({
+// TODO: Función para adaptar datos del backend al formato de la tabla
+const adaptPatientsForTable = (backendPatients: any[]): Patient[] => {
+  return backendPatients.map(patient => ({
     ...patient,
-    ciudad: patient.direccion.ciudad
+    ciudad: patient.direccion?.ciudad || ''
   }));
 };
 

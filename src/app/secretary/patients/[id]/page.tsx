@@ -25,9 +25,16 @@ import {
   Pill
 } from 'lucide-react';
 import Link from 'next/link';
-import { patients } from '../../../../utils/fake-patients';
-import { appointments } from '../../../../utils/fake-appointments';
-import { bills } from '../../../../utils/fake-billing';
+
+// TODO: Reemplazar con llamadas al backend
+// import { patients } from '../../../../utils/fake-patients';
+// import { appointments } from '../../../../utils/fake-appointments';
+// import { bills } from '../../../../utils/fake-billing';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
+const appointments: any[] = [];
+const bills: any[] = [];
 
 interface PatientDetails {
   id: string;

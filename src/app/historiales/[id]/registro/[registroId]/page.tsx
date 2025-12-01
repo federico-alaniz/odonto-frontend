@@ -3,19 +3,30 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Info, Edit3, User, Calendar, Stethoscope, Activity, Pill, ClipboardList } from 'lucide-react';
-import { MedicalHistory, getMedicalHistoryById } from '../../../adapter';
+import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, Pill, ClipboardList, FileText } from 'lucide-react';
+import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
+import { patientsService } from '@/services/api/patients.service';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
 
+/**
+ * Página de detalle de registro médico (Solo lectura)
+ * 
+ * IMPORTANTE: Los registros médicos NO deben ser editables para mantener
+ * la integridad y trazabilidad de la historia clínica del paciente.
+ * 
+ * Si se necesita corregir información, se debe implementar un sistema de
+ * rectificaciones que mantenga el registro original y agregue una nota
+ * de corrección con fecha, usuario y motivo.
+ */
 export default function RegistroDetailPage() {
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
   const registroId = params.registroId as string;
   
-  const [registro, setRegistro] = useState<MedicalHistory | null>(null);
-  const [patientName, setPatientName] = useState<string>('');
+  const [registro, setRegistro] = useState<MedicalRecord | null>(null);
+  const [patient, setPatient] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   // Estados para el visor de imágenes
@@ -23,23 +34,34 @@ export default function RegistroDetailPage() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
-    // Buscar el registro médico específico usando el adaptador
-    const foundRegistro = getMedicalHistoryById(registroId);
-    
-    if (foundRegistro) {
-      setPatientName(`${foundRegistro.patient.firstName} ${foundRegistro.patient.lastName}`);
-      setRegistro(foundRegistro);
-    }
-    
-    setLoading(false);
-  }, [registroId]);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+        
+        // Load patient data
+        const patientResponse = await patientsService.getPatientById(patientId, clinicId);
+        if (patientResponse.success) {
+          setPatient(patientResponse.data);
+        }
+        
+        // Load medical record
+        const recordResponse = await medicalRecordsService.getById(registroId);
+        if (recordResponse.success && recordResponse.data) {
+          setRegistro(recordResponse.data);
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [registroId, patientId]);
 
   const handleBack = () => {
     router.push(`/historiales/${patientId}`);
-  };
-
-  const handleEdit = () => {
-    router.push(`/historiales/${patientId}/registro/${registroId}/editar`);
   };
 
   const openImageViewer = (index: number) => {
@@ -48,6 +70,17 @@ export default function RegistroDetailPage() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-ES', {
       year: 'numeric',
@@ -58,29 +91,10 @@ export default function RegistroDetailPage() {
     }).format(date);
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusStyles = {
-      active: 'bg-green-100 text-green-800',
-      closed: 'bg-gray-100 text-gray-800',
-      follow_up: 'bg-blue-100 text-blue-800'
-    };
-
-    const statusLabels = {
-      active: 'Activo',
-      closed: 'Cerrado',
-      follow_up: 'Seguimiento'
-    };
-
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800'}`}>
-        {statusLabels[status as keyof typeof statusLabels] || status}
-      </span>
-    );
-  };
-
-  const getSpecialtyLabel = (specialty: string) => {
-    const specialties: { [key: string]: string } = {
-      'clinica-medica': 'Clínica Médica',
+  const getConsultaTypeLabel = (type: string) => {
+    const types: { [key: string]: string } = {
+      'general': 'Consulta General',
+      'odontologia': 'Odontología',
       'pediatria': 'Pediatría',
       'cardiologia': 'Cardiología',
       'traumatologia': 'Traumatología',
@@ -88,26 +102,7 @@ export default function RegistroDetailPage() {
       'dermatologia': 'Dermatología',
       'neurologia': 'Neurología',
       'psiquiatria': 'Psiquiatría',
-      'odontologia': 'Odontología',
-      'oftalmologia': 'Oftalmología',
-      'otorrinolaringologia': 'Otorrinolaringología',
-      'urologia': 'Urología',
-      'endocrinologia': 'Endocrinología',
-      'gastroenterologia': 'Gastroenterología',
-      'nefrologia': 'Nefrología',
-      'neumologia': 'Neumología'
-    };
-    return specialties[specialty] || specialty;
-  };
-
-  const getTypeLabel = (type: string) => {
-    const types: { [key: string]: string } = {
-      'consultation': 'Consulta',
-      'followup': 'Seguimiento',
-      'emergency': 'Urgencia',
-      'checkup': 'Control',
-      'surgery': 'Cirugía',
-      'therapy': 'Terapia'
+      'oftalmologia': 'Oftalmología'
     };
     return types[type] || type;
   };
@@ -141,12 +136,12 @@ export default function RegistroDetailPage() {
   }
 
   return (
-    <div className="flex flex-col bg-gray-50 -m-6 min-h-[calc(100vh-3rem)]">
+    <div className="flex flex-col bg-gray-50 min-h-screen w-full overflow-x-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-wrap">
               <button
                 onClick={handleBack}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -157,23 +152,19 @@ export default function RegistroDetailPage() {
                 <Stethoscope className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Registro Médico</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Registro Médico</h1>
                 <p className="text-gray-600 mt-1 flex items-center gap-2">
                   <Info className="w-4 h-4" />
-                  {patientName} • {formatDate(registro.consultationDate)}
+                  {patient?.nombreCompleto || 'Paciente'} • {formatDate(registro.fecha)}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
-              {getStatusBadge(registro.status)}
-              <button
-                onClick={handleEdit}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md flex items-center space-x-2"
-              >
-                <Edit3 className="w-5 h-5" />
-                <span>Editar Registro</span>
-              </button>
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <Info className="w-4 h-4 text-amber-600" />
+                <span className="text-sm text-amber-800 font-medium">Registro de solo lectura</span>
+              </div>
             </div>
           </div>
         </div>
@@ -185,13 +176,13 @@ export default function RegistroDetailPage() {
             <span>•</span>
             <span className="text-blue-600 font-medium">Historiales Clínicos</span>
             <span>•</span>
-            <span>{patientName}</span>
+            <span>{patient?.nombreCompleto || 'Paciente'}</span>
           </div>
         </div>
       </div>
 
       {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 w-full">
           
         {/* Información General */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -206,124 +197,97 @@ export default function RegistroDetailPage() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-500">Fecha y Hora</label>
+                <label className="block text-sm font-medium text-gray-500">Fecha</label>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
-                  <div>
-                    <p className="text-lg font-semibold text-gray-900">{formatDate(registro.consultationDate)}</p>
-                    <p className="text-sm text-gray-600">{registro.consultationTime}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-500">Doctor</label>
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <p className="text-lg font-semibold text-gray-900">{registro.doctor}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-500">Especialidad</label>
-                <div className="flex items-center gap-2">
-                  <Stethoscope className="w-4 h-4 text-gray-400" />
-                  <p className="text-lg font-semibold text-gray-900">{getSpecialtyLabel(registro.specialty)}</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatDate(registro.fecha)}</p>
                 </div>
               </div>
               
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-500">Tipo de Consulta</label>
-                <p className="text-lg font-semibold text-gray-900">{getTypeLabel(registro.type)}</p>
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-gray-400" />
+                  <p className="text-lg font-semibold text-gray-900">{getConsultaTypeLabel(registro.tipoConsulta)}</p>
+                </div>
               </div>
               
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-500">Estado</label>
-                <div className="pt-1">
-                  {getStatusBadge(registro.status)}
-                </div>
+                <label className="block text-sm font-medium text-gray-500">Creado</label>
+                <p className="text-sm text-gray-600">{formatDateTime(registro.createdAt)}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Síntomas y Diagnóstico */}
+        {/* Motivo de Consulta y Anamnesis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-orange-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Síntomas</h3>
+          {registro.motivoConsulta && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-orange-600" />
+                  <h3 className="text-xl font-semibold text-gray-900">Motivo de Consulta</h3>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Razón de la visita</p>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Síntomas reportados por el paciente</p>
+              <div className="p-6">
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.motivoConsulta}</p>
+              </div>
             </div>
-            <div className="p-6">
-              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.symptoms}</p>
-            </div>
-          </div>
+          )}
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Diagnóstico</h3>
+          {registro.anamnesis && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-xl font-semibold text-gray-900">Anamnesis</h3>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Historia clínica del paciente</p>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Diagnóstico médico establecido</p>
+              <div className="p-6">
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.anamnesis}</p>
+              </div>
             </div>
-            <div className="p-6">
-              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.diagnosis}</p>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Tratamiento */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-green-600" />
-              <h3 className="text-xl font-semibold text-gray-900">Tratamiento</h3>
+        {/* Diagnóstico y Tratamiento */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {registro.diagnostico && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-xl font-semibold text-gray-900">Diagnóstico</h3>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Diagnóstico médico establecido</p>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.diagnostico}</p>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mt-1">Plan de tratamiento recomendado</p>
-          </div>
-          <div className="p-6">
-            <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.treatment}</p>
-          </div>
+          )}
+          
+          {registro.tratamiento && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-green-600" />
+                  <h3 className="text-xl font-semibold text-gray-900">Tratamiento</h3>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">Plan de tratamiento recomendado</p>
+              </div>
+              <div className="p-6">
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.tratamiento}</p>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Medicamentos */}
-        {registro.medications && registro.medications.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <Pill className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Medicamentos Recetados</h3>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Medicamentos prescritos y dosificación</p>
-            </div>
-            <div className="p-6">
-              <div className="grid gap-4">
-                {registro.medications.map((medication, index) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-900">{medication.name}</h4>
-                      <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded border">
-                        {medication.dosage}
-                      </span>
-                    </div>
-                    <p className="text-gray-700 text-sm mb-2">{medication.instructions}</p>
-                    <p className="text-gray-600 text-xs">
-                      <strong>Frecuencia:</strong> {medication.frequency} | 
-                      <strong> Duración:</strong> {medication.duration}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Signos Vitales */}
-        {registro.vitalSigns && (
+        {registro.signosVitales && registro.signosVitales.presionArterial && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <div className="flex items-center gap-2">
@@ -334,179 +298,181 @@ export default function RegistroDetailPage() {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="text-2xl font-bold text-red-600">{registro.vitalSigns.bloodPressure}</div>
-                  <div className="text-sm text-gray-600">Presión Arterial</div>
-                  <div className="text-xs text-gray-500">mmHg</div>
-                </div>
-                <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="text-2xl font-bold text-blue-600">{registro.vitalSigns.heartRate}</div>
-                  <div className="text-sm text-gray-600">Frecuencia Cardíaca</div>
-                  <div className="text-xs text-gray-500">bpm</div>
-                </div>
-                <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="text-2xl font-bold text-green-600">{registro.vitalSigns.temperature}</div>
-                  <div className="text-sm text-gray-600">Temperatura</div>
-                  <div className="text-xs text-gray-500">°C</div>
-                </div>
-                <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="text-2xl font-bold text-purple-600">{registro.vitalSigns.weight || 'N/A'}</div>
-                  <div className="text-sm text-gray-600">Peso</div>
-                  <div className="text-xs text-gray-500">kg</div>
-                </div>
+                {registro.signosVitales.presionArterial && (
+                  <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="text-2xl font-bold text-red-600">{registro.signosVitales.presionArterial}</div>
+                    <div className="text-sm text-gray-600">Presión Arterial</div>
+                    <div className="text-xs text-gray-500">mmHg</div>
+                  </div>
+                )}
+                {registro.signosVitales.frecuenciaCardiaca && (
+                  <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="text-2xl font-bold text-blue-600">{registro.signosVitales.frecuenciaCardiaca}</div>
+                    <div className="text-sm text-gray-600">Frecuencia Cardíaca</div>
+                    <div className="text-xs text-gray-500">bpm</div>
+                  </div>
+                )}
+                {registro.signosVitales.temperatura && (
+                  <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="text-2xl font-bold text-green-600">{registro.signosVitales.temperatura}</div>
+                    <div className="text-sm text-gray-600">Temperatura</div>
+                    <div className="text-xs text-gray-500">°C</div>
+                  </div>
+                )}
+                {registro.signosVitales.peso && (
+                  <div className="text-center p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="text-2xl font-bold text-purple-600">{registro.signosVitales.peso}</div>
+                    <div className="text-sm text-gray-600">Peso</div>
+                    <div className="text-xs text-gray-500">kg</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Notas y Próxima Cita */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Notas Adicionales */}
-          {registro.notes && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-yellow-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Notas Adicionales</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Observaciones del médico</p>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.notes}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Próxima Cita */}
+        {/* Examen Físico */}
+        {registro.examenFisico && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="border-b border-gray-200 px-6 py-4">
               <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Próxima Cita</h3>
+                <Activity className="w-5 h-5 text-purple-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Examen Físico</h3>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Seguimiento programado</p>
+              <p className="text-sm text-gray-600 mt-1">Hallazgos del examen físico</p>
             </div>
             <div className="p-6">
-              {registro.nextAppointment ? (
-                <div className="flex items-center gap-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-blue-900">
-                      {formatDate(registro.nextAppointment)}
-                    </p>
-                    <p className="text-sm text-blue-700">Cita programada</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-6 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="w-16 h-16 bg-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Calendar className="w-8 h-8 text-white" />
-                  </div>
-                  <p className="text-gray-600 font-medium">No hay próxima cita programada</p>
-                </div>
-              )}
+              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.examenFisico}</p>
             </div>
+          </div>
+        )}
+
+        {/* Medicamentos */}
+        {registro.medicamentos && registro.medicamentos.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <Pill className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Medicamentos Recetados</h3>
+      </div>
+      <p className="text-sm text-gray-600 mt-1">Medicamentos prescritos y dosificación</p>
+    </div>
+    <div className="p-6">
+      <div className="grid gap-4">
+        {registro.medicamentos.map((medication: any, index: number) => (
+          <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-semibold text-gray-900">{medication.nombre}</h4>
+              <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded border">
+                {medication.dosis}
+              </span>
+            </div>
+            <p className="text-gray-700 text-sm mb-2">{medication.instrucciones}</p>
+            <p className="text-gray-600 text-xs">
+              <strong>Frecuencia:</strong> {medication.frecuencia} | 
+              <strong> Duración:</strong> {medication.duracion}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Observaciones y Próxima Cita */}
+<div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+  {/* Observaciones */}
+  {registro.observaciones && (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <Info className="w-5 h-5 text-yellow-600" />
+          <h3 className="text-xl font-semibold text-gray-900">Observaciones</h3>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">Notas adicionales del médico</p>
+      </div>
+      <div className="p-6">
+        <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.observaciones}</p>
+      </div>
+    </div>
+  )}
+
+  {/* Próxima Cita */}
+  {registro.proximaCita && (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <h3 className="text-xl font-semibold text-gray-900">Próxima Cita</h3>
+        </div>
+        <p className="text-sm text-gray-600 mt-1">Seguimiento programado</p>
+      </div>
+      <div className="p-6">
+        <div className="flex items-center gap-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+            <Calendar className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <p className="text-lg font-semibold text-blue-900">
+              {formatDate(registro.proximaCita)}
+            </p>
+            <p className="text-sm text-blue-700">Cita programada</p>
           </div>
         </div>
-
-        {/* Odontograma - Solo para especialidad odontología */}
-        {registro.specialty === 'odontologia' && registro.odontogram && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-teal-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Odontograma</h3>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Estado dental del paciente</p>
-            </div>
-            <div className="p-6">
-              <Odontogram
-                initialConditions={registro.odontogram}
-                onUpdate={() => {}} // Solo lectura
-                readOnly={true}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Imágenes Diagnósticas */}
-        {registro.diagnosticImages && registro.diagnosticImages.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-purple-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Imágenes Diagnósticas</h3>
-                </div>
-                <span className="bg-purple-100 text-purple-800 text-sm font-semibold px-3 py-1 rounded-full">
-                  {registro.diagnosticImages.length} {registro.diagnosticImages.length === 1 ? 'imagen' : 'imágenes'}
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Estudios e imágenes médicas</p>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {registro.diagnosticImages.map((image, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-gray-50">
-                    <div 
-                      className="cursor-pointer relative"
-                      onClick={() => openImageViewer(index)}
-                    >
-                      <Image
-                        src={image.url || ''}
-                        alt={image.description || `Imagen diagnóstica ${index + 1}`}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
-                        <div className="bg-white bg-opacity-90 rounded-full p-2 opacity-0 hover:opacity-100 transition-opacity">
-                          <Activity className="w-6 h-6 text-purple-600" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                          {image.type || 'Imagen'}
-                        </span>
-                        <button
-                          onClick={() => openImageViewer(index)}
-                          className="text-purple-600 hover:text-purple-800 text-sm font-medium hover:underline transition-colors"
-                        >
-                          Ver completa
-                        </button>
-                      </div>
-                      {image.description && (
-                        <p className="text-sm text-gray-700 leading-relaxed">{image.description}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+    </div>
+  )}
+</div>
 
-      {/* Modal visor de imágenes */}
-      {imageViewerOpen && registro.diagnosticImages && (
-        <ImageViewerModal
-          images={registro.diagnosticImages as Array<{
-            id: string;
-            name: string;
-            description?: string;
-            type: 'radiografia' | 'ecografia' | 'tomografia' | 'resonancia' | 'endoscopia' | 'laboratorio' | 'otro';
-            url: string;
-            uploadDate: string;
-          }>}
-          initialIndex={selectedImageIndex}
-          isOpen={imageViewerOpen}
-          onClose={() => setImageViewerOpen(false)}
-        />
-      )}
+{/* Odontograma - Solo para especialidad odontología */}
+{registro.tipoConsulta === 'odontologia' && registro.odontogramas && (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center gap-2">
+        <User className="w-5 h-5 text-teal-600" />
+        <h3 className="text-xl font-semibold text-gray-900">Odontograma Actual</h3>
+      </div>
+      <p className="text-sm text-gray-600 mt-1">Estado dental del paciente</p>
+    </div>
+    <div className="p-6">
+      <Odontogram
+        initialConditions={registro.odontogramas.actual || []}
+        onUpdate={() => {}} // Solo lectura
+        readOnly={true}
+      />
+    </div>
+  </div>
+)}
+
+{/* Imágenes */}
+{registro.imagenes && registro.imagenes.length > 0 && (
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="border-b border-gray-200 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="w-5 h-5 text-purple-600" />
+          <h3 className="text-xl font-semibold text-gray-900">Imágenes</h3>
+        </div>
+        <span className="bg-purple-100 text-purple-800 text-sm font-semibold px-3 py-1 rounded-full">
+          {registro.imagenes.length} {registro.imagenes.length === 1 ? 'imagen' : 'imágenes'}
+        </span>
+      </div>
+      <p className="text-sm text-gray-600 mt-1">Imágenes adjuntas al registro</p>
+    </div>
+    <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {registro.imagenes.map((image: any, index: number) => (
+          <div key={index} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-gray-50">
+            <div className="p-4">
+              <p className="text-sm text-gray-700 leading-relaxed">{image.nombre || `Imagen ${index + 1}`}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+      </div>
     </div>
   );
 }
