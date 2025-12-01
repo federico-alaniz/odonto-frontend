@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SidebarLayout from "@/components/SidebarLayout";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import { AuthProvider } from "@/hooks/useAuth";
+// import { RoleSwitcher } from "@/components/testing/RoleSwitcher"; // Desactivado - usar roles reales del login
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,11 +31,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ToastProvider>
-          <SidebarLayout>
-            {children}
-          </SidebarLayout>
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <SidebarLayout>
+              {children}
+            </SidebarLayout>
+            {/* Testing component - desactivado para usar roles reales del login */}
+            {/* <RoleSwitcher /> */}
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -19,8 +19,41 @@ import {
   Bell,
   Shield,
   HelpCircle,
-  FileText
+  FileText,
+  Stethoscope,
+  TestTube,
+  Crown,
+  UserCog,
+  TrendingUp,
+  CalendarPlus,
+  DoorOpen,
+  Receipt
 } from 'lucide-react';
+
+// Importar hooks de autenticación y roles
+import { useCurrentRole, useAuth } from '../hooks/useAuth';
+
+// Mapeo de iconos por nombre de string
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  BarChart3,
+  Calendar,
+  Users,
+  ClipboardList,
+  Settings,
+  Stethoscope,
+  FileText,
+  TestTube,
+  Crown,
+  User,
+  Bell,
+  Shield,
+  HelpCircle,
+  UserCog,
+  TrendingUp,
+  CalendarPlus,
+  DoorOpen,
+  Receipt
+};
 
 interface SidebarItem {
   label: string;
@@ -99,12 +132,31 @@ const sidebarSections: SidebarSection[] = [
         icon: ClipboardList,
         description: 'Historias clínicas completas',
         color: {
-          bg: 'hover:bg-purple-50',
-          text: 'hover:text-purple-700',
-          hover: 'hover:text-purple-700',
-          active: 'bg-purple-600 text-white border-l-purple-400',
-          iconBg: 'bg-purple-100',
-          iconText: 'hover:text-purple-600'
+          bg: 'hover:bg-blue-50',
+          text: 'hover:text-blue-700',
+          hover: 'hover:text-blue-700',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-blue-100',
+          iconText: 'hover:text-blue-600'
+        }
+      }
+    ]
+  },
+  {
+    title: 'Área Médica',
+    items: [
+      {
+        label: 'Dashboard Doctor',
+        href: '/doctor/dashboard',
+        icon: BarChart3,
+        description: 'Panel médico especializado',
+        color: {
+          bg: 'hover:bg-indigo-50',
+          text: 'hover:text-indigo-700',
+          hover: 'hover:text-indigo-700',
+          active: 'bg-indigo-600 text-white border-l-indigo-400',
+          iconBg: 'bg-indigo-100',
+          iconText: 'hover:text-indigo-600'
         }
       }
     ]
@@ -118,12 +170,12 @@ const sidebarSections: SidebarSection[] = [
         icon: FileText,
         description: 'Consultas y registros médicos',
         color: {
-          bg: 'hover:bg-emerald-50',
-          text: 'hover:text-emerald-700',
-          hover: 'hover:text-emerald-700',
-          active: 'bg-emerald-600 text-white border-l-emerald-400',
-          iconBg: 'bg-emerald-100',
-          iconText: 'hover:text-emerald-600'
+          bg: 'hover:bg-cyan-50',
+          text: 'hover:text-cyan-700',
+          hover: 'hover:text-cyan-700',
+          active: 'bg-cyan-600 text-white border-l-cyan-400',
+          iconBg: 'bg-cyan-100',
+          iconText: 'hover:text-cyan-600'
         }
       },
       {
@@ -150,14 +202,57 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
+  const currentRole = useCurrentRole();
+  const { currentUser, logout } = useAuth();
   const pathname = usePathname();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Obtener secciones del sidebar basadas en el rol actual
+  const getSidebarSections = (): SidebarSection[] => {
+    if (!currentRole) {
+      // Fallback a secciones básicas si no hay rol definido
+      return [
+        {
+          title: 'Panel Principal',
+          items: [
+            {
+              label: 'Dashboard',
+              href: '/',
+              icon: BarChart3,
+              description: 'Vista general del sistema',
+              color: {
+                bg: 'hover:bg-blue-50',
+                text: 'hover:text-blue-700',
+                hover: 'hover:text-blue-700',
+                active: 'bg-blue-600 text-white border-l-blue-400',
+                iconBg: 'bg-blue-100',
+                iconText: 'hover:text-blue-600'
+              }
+            }
+          ]
+        }
+      ];
+    }
+    
+    return currentRole.sidebarSections.map(section => ({
+      title: section.title,
+      items: section.items.map(item => ({
+        label: item.label,
+        href: item.href,
+        icon: iconMap[item.icon] || User,
+        description: item.description,
+        color: item.color
+      }))
+    }));
+  };
+
+  const dynamicSidebarSections = getSidebarSections();
+
   // Helper function para obtener las clases CSS correctas basadas en el color
   const getItemClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
     const baseClasses = 'flex items-center rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2';
-    const paddingClasses = isCollapsed ? 'p-3 justify-center' : 'p-3';
+    const paddingClasses = isCollapsed ? 'p-2 justify-center' : 'px-3 py-2';
     
     if (isActive) {
       if (isCollapsed) {
@@ -211,7 +306,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       flex flex-col
     `}>
       {/* Header */}
-      <div className={`border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100 ${isCollapsed ? 'p-2' : 'p-4'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center space-y-3">
             <button
@@ -252,11 +347,11 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 space-y-6 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-        {sidebarSections.map((section, sectionIndex) => (
+      <nav className={`flex-1 space-y-4 ${isCollapsed ? 'p-2' : 'p-3'}`}>
+        {dynamicSidebarSections.map((section, sectionIndex) => (
           <div key={sectionIndex}>
             {!isCollapsed && (
-              <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3 px-3">
+              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
                 {section.title}
               </h2>
             )}
@@ -273,22 +368,11 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                     >
                       <IconComponent className={getIconClasses(item, isActive, isCollapsed)} />
                       {!isCollapsed && (
-                        <div className="flex-1 min-w-0">
-                          <span className={`block font-medium transition-colors ${
-                            isActive ? 'text-white' : item.color.text
-                          }`}>
-                            {item.label}
-                          </span>
-                          {item.description && (
-                            <span className={`block text-xs mt-0.5 transition-colors ${
-                              isActive 
-                                ? 'text-white opacity-75'
-                                : `text-gray-500 ${item.color.text}`
-                            }`}>
-                              {item.description}
-                            </span>
-                          )}
-                        </div>
+                        <span className={`block font-medium transition-colors ${
+                          isActive ? 'text-white' : item.color.text
+                        }`}>
+                          {item.label}
+                        </span>
                       )}
                       {isActive && !isCollapsed && (
                         <div className="w-2 h-2 bg-white rounded-full ml-auto flex-shrink-0 shadow-sm" />
@@ -310,15 +394,27 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
               className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-md">
-                <CircleUser className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+                {currentUser?.avatar ? (
+                  <img 
+                    src={currentUser.avatar} 
+                    alt={currentUser.name || 'Usuario'} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm font-bold">
+                    {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                )}
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-gray-900">
-                  Dr. Usuario
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {currentUser?.name || 'Usuario'}
                 </p>
-                <p className="text-xs text-gray-600">
-                  Médico General
+                <p className="text-xs text-blue-600 font-medium truncate">
+                  {currentUser?.role === 'admin' ? 'Administrador' : 
+                   currentUser?.role === 'doctor' ? 'Doctor' : 
+                   currentUser?.role === 'secretary' ? 'Secretaria' : 'Usuario'}
                 </p>
               </div>
               <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${
@@ -330,13 +426,13 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             {isUserDropdownOpen && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-300 py-2 z-50">
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <p className="text-sm font-semibold text-gray-900">Dr. Usuario</p>
-                  <p className="text-xs text-gray-700 font-medium">usuario@clinica.com</p>
+                  <p className="text-sm font-semibold text-gray-900">{currentUser?.name || 'Usuario'}</p>
+                  <p className="text-xs text-gray-700 font-medium">{currentUser?.email || 'Sin email'}</p>
                 </div>
                 
                 <Link
-                  href="/perfil"
-                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  href="/profile"
+                  className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
                   <User className="w-4 h-4" />
@@ -383,8 +479,9 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                   <button
                     onClick={() => {
                       setIsUserDropdownOpen(false);
-                      // Aquí iría la lógica de logout
-                      console.log('Cerrando sesión...');
+                      logout();
+                      // Redirigir al login después del logout
+                      window.location.href = '/login';
                     }}
                     className="flex items-center space-x-3 px-4 py-3 text-sm text-red-700 font-semibold hover:bg-red-50 hover:text-red-800 transition-colors duration-200 w-full text-left"
                   >
@@ -401,10 +498,20 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               // Al hacer clic en el avatar cuando está colapsado, expandir el sidebar
               onToggle?.();
             }}
-            className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mx-auto shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 overflow-hidden"
             title="Ver perfil"
           >
-            <CircleUser className="w-5 h-5 text-white" />
+            {currentUser?.avatar ? (
+              <img 
+                src={currentUser.avatar} 
+                alt={currentUser.name || 'Usuario'} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-white text-sm font-bold">
+                {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+              </span>
+            )}
           </button>
         )}
       </div>

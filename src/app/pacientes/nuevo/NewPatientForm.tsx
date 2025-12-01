@@ -14,10 +14,10 @@ import {
 import { 
   getProvincias, 
   getDepartamentosPorProvincia, 
-  getCiudadesPorProvincia,
-  addNewPatient
+  getCiudadesPorProvincia
 } from '../../../utils';
 import { useToast } from '@/components/ui/ToastProvider';
+import { patientsService, CreatePatientData } from '@/services/api/patients.service';
 
 interface PatientFormData {
   // Información Personal
@@ -218,11 +218,12 @@ export default function NewPatientForm() {
     setIsSubmitting(true);
     
     try {
-      // Simular un pequeño delay para UX
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // TODO: Obtener estos valores del contexto de autenticación
+      const clinicId = 'clinic_001';
+      const userId = 'usr_000001';
       
       // Crear el objeto del paciente con el formato correcto
-      const newPatientData = {
+      const newPatientData: CreatePatientData = {
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         tipoDocumento: formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero',
@@ -230,50 +231,50 @@ export default function NewPatientForm() {
         fechaNacimiento: formData.fechaNacimiento,
         genero: formData.genero as 'masculino' | 'femenino' | 'otro',
         telefono: formData.telefono,
-        email: formData.email,
-        direccion: {
+        email: formData.email || undefined,
+        direccion: formData.domicilio || formData.ciudad || formData.provincia ? {
           calle: formData.domicilio,
           numero: '',
           ciudad: formData.ciudad,
           provincia: formData.provincia,
           codigoPostal: ''
-        },
-        tipoSangre: formData.tipoSangre,
-        contactoEmergencia: {
+        } : undefined,
+        tipoSangre: formData.tipoSangre || undefined,
+        contactoEmergencia: formData.contactoEmergenciaNombre ? {
           nombre: formData.contactoEmergenciaNombre,
           telefono: formData.contactoEmergenciaTelefono,
           relacion: formData.contactoEmergenciaParentesco
-        },
-        seguroMedico: formData.tieneSeguro === 'si' ? {
+        } : undefined,
+        seguroMedico: formData.tieneSeguro === 'si' && formData.nombreSeguro ? {
           empresa: formData.nombreSeguro,
           numeroPoliza: formData.numeroPoliza,
           vigencia: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 año desde hoy
         } : undefined,
-        alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()) : [],
-        medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()) : [],
-        antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()) : [],
-        antecedentesFamiliares: [],
-        doctorAsignado: undefined
+        alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()).filter(a => a) : undefined,
+        medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()).filter(m => m) : undefined,
+        antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()).filter(e => e) : undefined,
       };
       
-      // Agregar el paciente y crear su historia clínica vacía
-      const createdPatient = addNewPatient(newPatientData);
-      console.log('Paciente creado:', createdPatient);
+      // Llamar al servicio para crear el paciente
+      const response = await patientsService.createPatient(clinicId, userId, newPatientData);
+      
+      console.log('Paciente creado:', response.data);
+      console.log('Historia clínica creada:', response.historiaClinica);
       
       // Mostrar mensaje de éxito
       showSuccess(
         'Paciente registrado exitosamente',
-        'Se ha creado la historia clínica inicial del paciente'
+        `Se ha creado la historia clínica N° ${response.data.numeroHistoriaClinica}`
       );
       
       // Navegar de vuelta a la lista de pacientes
       router.push('/pacientes');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al registrar paciente:', error);
       showError(
         'Error al registrar el paciente',
-        'Por favor, verifique los datos e intente nuevamente'
+        error.message || 'Por favor, verifique los datos e intente nuevamente'
       );
     } finally {
       setIsSubmitting(false);

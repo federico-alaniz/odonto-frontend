@@ -1,13 +1,24 @@
-// Adaptador para convertir datos fake a formato de historiales médicos
-import { 
-  patients, 
-  medicalRecords, 
-  users, 
-  calculateAge,
-  type MedicalRecord as FakeMedicalRecord,
-  type Patient as FakePatient
-} from '@/utils/fake-data';
+// Adaptador para convertir datos del backend a formato de historiales médicos
+// TODO: Reemplazar con llamadas al backend
+
 import { MedicalEntry } from './types';
+
+// Datos temporales vacíos hasta integrar con backend
+const patients: any[] = [];
+const medicalRecords: any[] = [];
+const users: any[] = [];
+
+// Función helper para calcular edad
+const calculateAge = (birthDate: string): number => {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 // Adaptador temporal para mantener compatibilidad con componentes existentes
 // Esta interfaz mantiene la estructura antigua para los modales y componentes
@@ -69,8 +80,8 @@ export interface MedicalHistory {
   createdAt: string;
 }
 
-// Función para convertir FakeMedicalRecord a MedicalHistory (para compatibilidad)
-export function convertFakeToHistory(fakeRecord: FakeMedicalRecord, fakePatient: FakePatient): MedicalHistory {
+// Función para convertir datos del backend a MedicalHistory (para compatibilidad)
+export function convertFakeToHistory(fakeRecord: any, fakePatient: any): MedicalHistory {
   // Buscar información del doctor
   const doctor = users.find(u => u.id === fakeRecord.doctorId);
   
@@ -106,7 +117,7 @@ export function convertFakeToHistory(fakeRecord: FakeMedicalRecord, fakePatient:
     diagnosis: fakeRecord.diagnostico,
     symptoms: fakeRecord.sintomas,
     treatment: fakeRecord.tratamiento,
-    medications: fakeRecord.medicamentos?.map(med => ({
+    medications: fakeRecord.medicamentos?.map((med: any) => ({
       name: med.nombre,
       dosage: med.dosis,
       frequency: med.frecuencia,
