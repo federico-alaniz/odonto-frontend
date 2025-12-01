@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { DoctorPatientFilters } from './DoctorPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
+import { useToast } from '@/components/ui/ToastProvider';
 
 // Interface para pacientes del doctor con información adicional
 interface DoctorPatient {
@@ -63,6 +64,7 @@ type SortOrder = 'asc' | 'desc';
 
 export default function DoctorPatientsTable({ filters, showOnlyAssigned = false }: DoctorPatientsTableProps) {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -86,11 +88,11 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
         setDoctorPatients(prev => prev.map(p => 
           p.id === patientId ? { ...p, doctorAsignado: currentDoctorId } : p
         ));
-        alert('Te has asignado como doctor de este paciente');
+        showSuccess('Doctor asignado', 'Te has asignado como doctor de este paciente');
       }
     } catch (error: any) {
       console.error('Error asignando doctor:', error);
-      alert(error.message || 'Error al asignarte como doctor');
+      showError('Error al asignar', error.message || 'Error al asignarte como doctor');
     }
   };
 
@@ -107,11 +109,11 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
         setDoctorPatients(prev => prev.map(p => 
           p.id === patientId ? { ...p, doctorAsignado: undefined } : p
         ));
-        alert('Te has desasignado de este paciente');
+        showSuccess('Doctor desasignado', 'Te has desasignado de este paciente');
       }
     } catch (error: any) {
       console.error('Error desasignando doctor:', error);
-      alert(error.message || 'Error al desasignarte');
+      showError('Error al desasignar', error.message || 'Error al desasignarte');
     }
   };
 

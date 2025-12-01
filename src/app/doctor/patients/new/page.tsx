@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Heart, AlertCircle, Users as UsersIcon, Shield } from 'lucide-react';
 import { patientsService, CreatePatientData } from '@/services/api/patients.service';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function NewPatientPage() {
   const router = useRouter();
+  const { showSuccess, showError, showWarning } = useToast();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<CreatePatientData>({
     nombres: '',
@@ -83,7 +85,7 @@ export default function NewPatientPage() {
     try {
       // Validaciones básicas
       if (!formData.nombres || !formData.apellidos || !formData.numeroDocumento || !formData.fechaNacimiento || !formData.telefono) {
-        alert('Por favor complete todos los campos requeridos (*)');
+        showWarning('Campos requeridos', 'Por favor complete todos los campos requeridos (*)');
         return;
       }
 
@@ -94,14 +96,14 @@ export default function NewPatientPage() {
       const response = await patientsService.createPatient(clinicId, userId, formData);
 
       if (response.success) {
-        alert('Paciente creado exitosamente');
+        showSuccess('Paciente creado', 'El paciente se creó exitosamente');
         router.push('/doctor/patients');
       } else {
         throw new Error('Error al crear el paciente');
       }
     } catch (error: any) {
       console.error('Error creando paciente:', error);
-      alert(error.message || 'Error al crear el paciente');
+      showError('Error al crear paciente', error.message || 'Error al crear el paciente');
     } finally {
       setSaving(false);
     }

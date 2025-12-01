@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { SecretaryPatientFilters } from './SecretaryPatientsFilters';
 import { patientsService, Patient } from '@/services/api/patients.service';
+import { useToast } from '@/components/ui/ToastProvider';
 
 // Interface adaptada para secretaria
 interface SecretaryPatient {
@@ -62,6 +63,7 @@ type SortOrder = 'asc' | 'desc';
 
 export default function SecretaryPatientsTable({ filters, showOnlyAssigned = false }: SecretaryPatientsTableProps) {
   const router = useRouter();
+  const { showSuccess, showError, showWarning } = useToast();
   const [patientsData, setPatientsData] = useState<SecretaryPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -146,7 +148,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
   // Función para asignar doctor
   const handleAssignDoctor = async () => {
     if (!assignDoctorModal.patient || !selectedDoctorId) {
-      alert('Por favor seleccione un doctor');
+      showWarning('Selección requerida', 'Por favor seleccione un doctor');
       return;
     }
 
@@ -169,17 +171,17 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
         ));
         setAssignDoctorModal({ open: false });
         setSelectedDoctorId('');
-        alert('Doctor asignado exitosamente');
+        showSuccess('Doctor asignado', 'El doctor se asignó exitosamente al paciente');
       }
     } catch (error: any) {
       console.error('Error asignando doctor:', error);
-      alert(error.message || 'Error al asignar doctor');
+      showError('Error al asignar', error.message || 'Error al asignar doctor');
     }
   };
 
   // Función para desasignar doctor
   const handleUnassignDoctor = async (patientId: string) => {
-    if (!confirm('¿Está seguro de desasignar el doctor de este paciente?')) return;
+    // TODO: Implementar modal de confirmación en lugar de confirm()
 
     try {
       const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
@@ -191,11 +193,11 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
         setPatientsData(prev => prev.map(p =>
           p.id === patientId ? { ...p, doctorAsignado: undefined } : p
         ));
-        alert('Doctor desasignado exitosamente');
+        showSuccess('Doctor desasignado', 'El doctor se desasignó exitosamente');
       }
     } catch (error: any) {
       console.error('Error desasignando doctor:', error);
-      alert(error.message || 'Error al desasignar doctor');
+      showError('Error al desasignar', error.message || 'Error al desasignar doctor');
     }
   };
 

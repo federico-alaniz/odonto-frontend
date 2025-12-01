@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/components/ui/ToastProvider';
 import { 
   Settings,
   Building2,
@@ -28,7 +29,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
-import { useToast } from '@/components/ui/ToastProvider';
 
 type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations' | 'appearance';
 
@@ -60,11 +60,11 @@ interface OperatingRoom {
 }
 
 export default function AdminSettingsPage() {
+  const { showWarning, showSuccess: showSuccessToast, showError } = useToast();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
-  const { showSuccess: showSuccessToast, showError } = useToast();
 
   // TODO: Obtener del contexto
   const clinicId = 'clinic_001';
@@ -137,13 +137,13 @@ export default function AdminSettingsPage() {
     if (file) {
       // Validar que sea una imagen
       if (!file.type.startsWith('image/')) {
-        alert('Por favor selecciona un archivo de imagen válido');
+        showWarning('Archivo inválido', 'Por favor selecciona un archivo de imagen válido');
         return;
       }
       
       // Validar tamaño (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. Máximo 5MB');
+        showWarning('Archivo muy grande', 'El archivo es demasiado grande. Máximo 5MB');
         return;
       }
 
