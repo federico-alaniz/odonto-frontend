@@ -27,11 +27,13 @@ import { DebugDateControl } from '@/components/DebugDateControl';
 
 export default function DoctorDashboard() {
   const router = useRouter();
+  const [doctorName, setDoctorName] = useState('Doctor');
+  const [doctorSpecialty, setDoctorSpecialty] = useState('');
   
   const [stats, setStats] = useState([
     { label: 'Mis Pacientes Hoy', value: '0', icon: Users, color: 'blue' },
     { label: 'Pacientes Esperando', value: '0', icon: UserCheck, color: 'yellow' },
-    { label: 'Resultados Lab', value: '0', icon: TestTube, color: 'purple' },
+    { label: 'Resultados Lab', value: '0', icon: TestTube, color: 'blue' },
     { label: 'Prescripciones', value: '0', icon: FileText, color: 'green' }
   ]);
 
@@ -65,13 +67,19 @@ export default function DoctorDashboard() {
   }>>([]);
 
   useEffect(() => {
+    // Cargar datos del usuario logueado
+    const userName = localStorage.getItem('userName') || 'Doctor';
+    const userSpecialty = localStorage.getItem('userSpecialty') || '';
+    setDoctorName(userName);
+    setDoctorSpecialty(userSpecialty);
+    
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
       // TODO: Obtener doctor ID del contexto de autenticación
-      const currentDoctorId = 'usr_419812';
+      const currentDoctorId = localStorage.getItem('userId') || 'usr_419812';
       const today = dateHelper.today();
       const clinicId = 'clinic_001';
 
@@ -237,10 +245,10 @@ export default function DoctorDashboard() {
 
   const getColorClasses = (color: string) => {
     const colors = {
-      blue: 'bg-blue-50 text-blue-700 border border-blue-200',
+      blue: 'bg-gray-50 text-blue-700 border border-gray-200',
       green: 'bg-green-50 text-green-700 border border-green-200',
       yellow: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-      purple: 'bg-purple-50 text-purple-700 border border-purple-200'
+      purple: 'bg-gray-50 text-blue-700 border border-gray-200'
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -258,18 +266,18 @@ export default function DoctorDashboard() {
   const getUrgencyClasses = (urgency: 'low' | 'medium' | 'high') => {
     switch (urgency) {
       case 'high':
-        return 'border-l-4 border-l-red-500 bg-red-50';
+        return 'border-l-4 border-l-blue-600 bg-blue-50';
       case 'medium':
-        return 'border-l-4 border-l-yellow-500 bg-yellow-50';
+        return 'border-l-4 border-l-blue-400 bg-gray-50';
       default:
-        return 'border-l-4 border-l-green-500 bg-green-50';
+        return 'border-l-4 border-l-gray-300 bg-white';
     }
   };
 
   const getPriorityClasses = (priority: 'normal' | 'urgent') => {
     return priority === 'urgent' 
       ? 'border-l-4 border-l-red-500 bg-red-50'
-      : 'border-l-4 border-l-blue-500 bg-blue-50';
+      : 'border-l-4 border-l-gray-500 bg-gray-50';
   };
 
   return (
@@ -279,7 +287,7 @@ export default function DoctorDashboard() {
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md">
+              <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md">
                 <Stethoscope className="w-7 h-7 text-white" />
               </div>
               <div>
@@ -292,9 +300,13 @@ export default function DoctorDashboard() {
             </div>
             <div className="hidden md:block">
               <div className="flex items-center gap-2 text-sm text-gray-700">
-                <span>Dr. Juan Pérez</span>
-                <span>•</span>
-                <span className="text-green-600 font-medium">Cardiología</span>
+                <span>{doctorName}</span>
+                {doctorSpecialty && (
+                  <>
+                    <span>•</span>
+                    <span className="text-blue-600 font-medium">{doctorSpecialty}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -336,11 +348,11 @@ export default function DoctorDashboard() {
           
           {/* Pacientes Esperando */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b border-gray-200 px-6 py-5">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <UserCheck className="w-5 h-5 text-yellow-700" />
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <UserCheck className="w-5 h-5 text-blue-700" />
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">Pacientes Esperando</h2>
@@ -348,7 +360,7 @@ export default function DoctorDashboard() {
                   </div>
                 </div>
                 {waitingPatients.length > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-yellow-700 bg-yellow-100 px-3 py-1 rounded-full">
+                  <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
                     <Clock className="w-4 h-4" />
                     <span>{waitingPatients.length} esperando</span>
                   </div>
@@ -410,7 +422,7 @@ export default function DoctorDashboard() {
 
           {/* Mis Pacientes Hoy */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 px-6 py-5">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -435,7 +447,7 @@ export default function DoctorDashboard() {
                   myPatients.map((patient, index) => {
                     const IconComponent = patient.icon;
                     return (
-                      <div key={index} className={`p-4 rounded-lg border transition-all hover:shadow-md ${getUrgencyClasses(patient.urgency)}`}>
+                      <div key={index} className="p-5 rounded-xl border border-gray-200 bg-white hover:shadow-lg transition-all">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 rounded-full bg-blue-100">
@@ -451,12 +463,12 @@ export default function DoctorDashboard() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                              patient.status === 'Completada' ? 'bg-green-100 text-green-800' :
-                              patient.status === 'En consulta' ? 'bg-blue-100 text-blue-800' :
-                              patient.status === 'Confirmada' ? 'bg-yellow-100 text-yellow-800' :
-                              patient.status === 'Esperando' ? 'bg-orange-100 text-orange-800' :
-                              'bg-gray-100 text-gray-800'
+                            <span className={`px-3 py-1 text-sm font-semibold rounded-full ${
+                              patient.status === 'Completada' ? 'bg-green-100 text-green-800 border border-green-200' :
+                              patient.status === 'En consulta' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                              patient.status === 'Confirmada' ? 'bg-yellow-100 text-yellow-900 border border-yellow-200' :
+                              patient.status === 'Esperando' ? 'bg-orange-100 text-orange-900 border border-orange-200' :
+                              'bg-gray-100 text-gray-800 border border-gray-200'
                             }`}>
                               {patient.status}
                             </span>
@@ -478,10 +490,10 @@ export default function DoctorDashboard() {
 
           {/* Resultados de Laboratorio */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-5">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 px-6 py-5">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TestTube className="w-5 h-5 text-purple-700" />
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <TestTube className="w-5 h-5 text-blue-700" />
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">Resultados de Laboratorio</h2>
@@ -533,10 +545,10 @@ export default function DoctorDashboard() {
 
         {/* Acciones Rápidas */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-5">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 px-6 py-5">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Activity className="w-5 h-5 text-green-700" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Activity className="w-5 h-5 text-blue-700" />
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">Acciones Rápidas</h2>
@@ -562,10 +574,10 @@ export default function DoctorDashboard() {
               </Link>
 
               <Link href="/doctor/consultations" className="group block">
-                <div className="p-4 text-left rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                <div className="p-4 text-left rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                      <Stethoscope className="w-5 h-5 text-green-600" />
+                    <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                      <Stethoscope className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <div className="font-semibold text-gray-900">Nueva Consulta</div>
@@ -576,10 +588,10 @@ export default function DoctorDashboard() {
               </Link>
 
               <Link href="/doctor/prescriptions" className="group block">
-                <div className="p-4 text-left rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                <div className="p-4 text-left rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                      <FileText className="w-5 h-5 text-purple-600" />
+                    <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                      <FileText className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <div className="font-semibold text-gray-900">Prescripciones</div>

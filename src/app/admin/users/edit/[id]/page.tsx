@@ -428,13 +428,13 @@ export default function EditUserPage() {
                         {formData.especialidades.map((espName) => (
                           <span
                             key={espName}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-800 rounded-lg text-sm font-medium"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium border border-blue-200"
                           >
                             {espName}
                             <button
                               type="button"
                               onClick={() => removeEspecialidad(espName)}
-                              className="hover:bg-green-200 rounded-full p-0.5 transition-colors"
+                              className="hover:bg-blue-200 rounded-full p-0.5 transition-colors"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -484,10 +484,10 @@ export default function EditUserPage() {
                                     type="button"
                                     onClick={() => toggleEspecialidad(esp.label)}
                                     className={`w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                                      isSelected ? 'bg-green-50' : ''
+                                      isSelected ? 'bg-blue-50' : ''
                                     }`}
                                   >
-                                    <span className={`text-sm ${isSelected ? 'font-medium text-green-800' : 'text-gray-700'}`}>
+                                    <span className={`text-sm ${isSelected ? 'font-medium text-blue-800' : 'text-gray-700'}`}>
                                       {esp.label}
                                     </span>
                                     {isSelected && <Check className="w-4 h-4 text-green-600" />}

@@ -192,7 +192,7 @@ export default function ViewPatientModal({
           </div>
 
           {/* Información de Contacto */}
-          <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl shadow-sm border border-emerald-200 p-6">
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-white shadow-sm rounded-lg border border-green-200">
                 <Phone className="w-5 h-5 text-green-600" />
@@ -267,12 +267,12 @@ export default function ViewPatientModal({
           </div>
 
           {/* Acciones Rápidas */}
-          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl shadow-sm border border-purple-200 p-6">
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-white shadow-sm rounded-lg border border-purple-200">
-                <ClipboardList className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-gray-200">
+                <ClipboardList className="w-5 h-5 text-blue-600" />
               </div>
-              <h4 className="text-lg font-semibold text-purple-800">
+              <h4 className="text-lg font-semibold text-gray-800">
                 Acciones Rápidas
               </h4>
             </div>
@@ -280,10 +280,10 @@ export default function ViewPatientModal({
             <div className="space-y-3">
               <button 
                 onClick={handleNewAppointment}
-                className="w-full p-4 text-left rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 hover:border-emerald-300 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-blue-200 bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-white shadow-sm rounded-lg border border-emerald-200">
+                  <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-200">
                     <Calendar className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
@@ -295,7 +295,7 @@ export default function ViewPatientModal({
               
               <button 
                 onClick={handleEditPatient}
-                className="w-full p-4 text-left rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-blue-200 bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-200">
@@ -310,15 +310,15 @@ export default function ViewPatientModal({
               
               <button 
                 onClick={handleViewHistory}
-                className="w-full p-4 text-left rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 hover:border-purple-300 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                className="w-full p-4 text-left rounded-xl border border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-white shadow-sm rounded-lg border border-purple-200">
-                    <ClipboardList className="w-5 h-5 text-purple-600" />
+                  <div className="p-2 bg-white shadow-sm rounded-lg border border-gray-200">
+                    <ClipboardList className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-purple-800">Ver Historial</div>
-                    <div className="text-sm text-purple-600">Consultas anteriores</div>
+                    <div className="font-medium text-blue-800">Ver Historial</div>
+                    <div className="text-sm text-blue-600">Consultas anteriores</div>
                   </div>
                 </div>
               </button>

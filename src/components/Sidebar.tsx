@@ -85,11 +85,11 @@ const sidebarSections: SidebarSection[] = [
         icon: BarChart3,
         description: 'Vista general del sistema',
         color: {
-          bg: 'hover:bg-blue-50',
+          bg: 'hover:bg-gray-100',
           text: 'hover:text-blue-700',
           hover: 'hover:text-blue-700',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-blue-100',
+          iconBg: 'bg-gray-100',
           iconText: 'hover:text-blue-600'
         }
       },
@@ -99,11 +99,11 @@ const sidebarSections: SidebarSection[] = [
         icon: Calendar,
         description: 'Gestión de citas y horarios',
         color: {
-          bg: 'hover:bg-blue-50',
+          bg: 'hover:bg-gray-100',
           text: 'hover:text-blue-700',
           hover: 'hover:text-blue-700',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-blue-100',
+          iconBg: 'bg-gray-100',
           iconText: 'hover:text-blue-600'
         }
       }
@@ -118,11 +118,11 @@ const sidebarSections: SidebarSection[] = [
         icon: Users,
         description: 'Gestionar información de pacientes',
         color: {
-          bg: 'hover:bg-blue-50',
+          bg: 'hover:bg-gray-100',
           text: 'hover:text-blue-700',
           hover: 'hover:text-blue-700',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-blue-100',
+          iconBg: 'bg-gray-100',
           iconText: 'hover:text-blue-600'
         }
       },
@@ -132,11 +132,11 @@ const sidebarSections: SidebarSection[] = [
         icon: ClipboardList,
         description: 'Historias clínicas completas',
         color: {
-          bg: 'hover:bg-blue-50',
+          bg: 'hover:bg-gray-100',
           text: 'hover:text-blue-700',
           hover: 'hover:text-blue-700',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-blue-100',
+          iconBg: 'bg-gray-100',
           iconText: 'hover:text-blue-600'
         }
       }
@@ -222,11 +222,11 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               icon: BarChart3,
               description: 'Vista general del sistema',
               color: {
-                bg: 'hover:bg-blue-50',
+                bg: 'hover:bg-gray-100',
                 text: 'hover:text-blue-700',
                 hover: 'hover:text-blue-700',
                 active: 'bg-blue-600 text-white border-l-blue-400',
-                iconBg: 'bg-blue-100',
+                iconBg: 'bg-gray-100',
                 iconText: 'hover:text-blue-600'
               }
             }
@@ -306,24 +306,24 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       flex flex-col
     `}>
       {/* Header */}
-      <div className={`border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 ${isCollapsed ? 'p-2' : 'p-4'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center space-y-3">
             <button
               onClick={onToggle}
-              className="w-10 h-10 rounded-lg bg-white shadow-sm hover:shadow-md hover:bg-blue-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 flex items-center justify-center border border-blue-100"
+              className="w-10 h-10 rounded-lg bg-white shadow-sm hover:shadow-md hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 flex items-center justify-center border border-gray-200"
               aria-label="Expandir sidebar"
             >
               <Menu className="w-5 h-5 text-blue-600" />
             </button>
-            <div className="p-1.5 bg-white shadow-sm rounded-lg border border-blue-100">
+            <div className="p-1.5 bg-white shadow-sm rounded-lg border border-gray-200">
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white shadow-sm rounded-lg border border-blue-100">
+              <div className="p-2 bg-white shadow-sm rounded-lg border border-gray-200">
                 <Building2 className="w-6 h-6 text-blue-600" />
               </div>
               <div>

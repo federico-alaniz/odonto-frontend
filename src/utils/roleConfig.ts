@@ -46,10 +46,10 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
     defaultHomePage: '/admin/dashboard',
     theme: {
       primaryColor: 'blue',
-      secondaryColor: 'indigo',
-      accentColor: 'purple',
-      gradientFrom: 'from-blue-500',
-      gradientTo: 'to-indigo-600'
+      secondaryColor: 'gray',
+      accentColor: 'blue',
+      gradientFrom: 'from-blue-600',
+      gradientTo: 'to-blue-700'
     },
     features: [
       'user-management',
@@ -72,11 +72,11 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Vista general administrativa',
             roles: ['admin'],
             color: {
-              bg: 'hover:bg-blue-50',
+              bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
               hover: 'hover:text-blue-700',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-blue-100',
+              iconBg: 'bg-gray-100',
               iconText: 'hover:text-blue-600'
             }
           }
@@ -92,12 +92,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Gestión de usuarios del sistema',
             roles: ['admin'],
             color: {
-              bg: 'hover:bg-purple-50',
-              text: 'hover:text-purple-700',
-              hover: 'hover:text-purple-700',
-              active: 'bg-purple-600 text-white border-l-purple-400',
-              iconBg: 'bg-purple-100',
-              iconText: 'hover:text-purple-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           },
           {
@@ -107,12 +107,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Informes y analíticas',
             roles: ['admin'],
             color: {
-              bg: 'hover:bg-indigo-50',
-              text: 'hover:text-indigo-700',
-              hover: 'hover:text-indigo-700',
-              active: 'bg-indigo-600 text-white border-l-indigo-400',
-              iconBg: 'bg-indigo-100',
-              iconText: 'hover:text-indigo-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           },
           {
@@ -122,12 +122,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Configuración del sistema',
             roles: ['admin'],
             color: {
-              bg: 'hover:bg-gray-50',
-              text: 'hover:text-gray-700',
-              hover: 'hover:text-gray-700',
-              active: 'bg-gray-600 text-white border-l-gray-400',
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
               iconBg: 'bg-gray-100',
-              iconText: 'hover:text-gray-600'
+              iconText: 'hover:text-blue-600'
             }
           }
         ]
@@ -141,11 +141,11 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
     description: 'Funciones clínicas, diagnósticos y tratamientos',
     defaultHomePage: '/doctor/dashboard',
     theme: {
-      primaryColor: 'green',
-      secondaryColor: 'emerald',
-      accentColor: 'teal',
-      gradientFrom: 'from-green-500',
-      gradientTo: 'to-emerald-600'
+      primaryColor: 'blue',
+      secondaryColor: 'gray',
+      accentColor: 'blue',
+      gradientFrom: 'from-blue-600',
+      gradientTo: 'to-blue-700'
     },
     features: [
       'patient-care',
@@ -168,12 +168,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Panel de control médico',
             roles: ['doctor'],
             color: {
-              bg: 'hover:bg-green-50',
-              text: 'hover:text-green-700',
-              hover: 'hover:text-green-700',
-              active: 'bg-green-600 text-white border-l-green-400',
-              iconBg: 'bg-green-100',
-              iconText: 'hover:text-green-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           }
         ]
@@ -188,11 +188,11 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Pacientes asignados',
             roles: ['doctor'],
             color: {
-              bg: 'hover:bg-blue-50',
+              bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
               hover: 'hover:text-blue-700',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-blue-100',
+              iconBg: 'bg-gray-100',
               iconText: 'hover:text-blue-600'
             }
           },
@@ -203,12 +203,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Consultas médicas',
             roles: ['doctor'],
             color: {
-              bg: 'hover:bg-emerald-50',
-              text: 'hover:text-emerald-700',
-              hover: 'hover:text-emerald-700',
-              active: 'bg-emerald-600 text-white border-l-emerald-400',
-              iconBg: 'bg-emerald-100',
-              iconText: 'hover:text-emerald-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           },
           {
@@ -218,12 +218,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Recetas y medicamentos',
             roles: ['doctor'],
             color: {
-              bg: 'hover:bg-teal-50',
-              text: 'hover:text-teal-700',
-              hover: 'hover:text-teal-700',
-              active: 'bg-teal-600 text-white border-l-teal-400',
-              iconBg: 'bg-teal-100',
-              iconText: 'hover:text-teal-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           },
           {
@@ -233,12 +233,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Resultados de laboratorio',
             roles: ['doctor'],
             color: {
-              bg: 'hover:bg-purple-50',
-              text: 'hover:text-purple-700',
-              hover: 'hover:text-purple-700',
-              active: 'bg-purple-600 text-white border-l-purple-400',
-              iconBg: 'bg-purple-100',
-              iconText: 'hover:text-purple-600'
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
             }
           }
         ]

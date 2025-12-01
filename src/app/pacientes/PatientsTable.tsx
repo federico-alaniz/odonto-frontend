@@ -451,7 +451,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                     </button>
                     <button 
                       onClick={() => handleNewAppointment(patient)}
-                      className="p-1.5 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2" 
+                      className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2" 
                       title="Programar nueva cita"
                     >
                       <Calendar className="w-4 h-4" />
