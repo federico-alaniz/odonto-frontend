@@ -9,7 +9,6 @@ import {
   Shield,
   Database,
   DollarSign,
-  Palette,
   Save,
   CheckCircle,
   Info,
@@ -25,14 +24,12 @@ import {
   Edit2,
   X,
   Upload,
-  Download,
-  FileText,
   Image as ImageIcon,
   Loader2
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 
-type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations' | 'appearance';
+type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations';
 
 interface MedicalSpecialty {
   id: string;
@@ -177,8 +174,7 @@ export default function AdminSettingsPage() {
     { id: 'notifications' as SettingsTab, label: 'Notificaciones', icon: Bell, color: 'yellow' },
     { id: 'security' as SettingsTab, label: 'Seguridad', icon: Shield, color: 'red' },
     { id: 'billing' as SettingsTab, label: 'Facturación', icon: DollarSign, color: 'green' },
-    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' },
-    { id: 'appearance' as SettingsTab, label: 'Apariencia', icon: Palette, color: 'pink' }
+    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' }
   ];
 
   const handleSaveSettings = async () => {
@@ -959,202 +955,6 @@ export default function AdminSettingsPage() {
                       <p className="text-sm text-gray-400 mt-2">
                         Esta sección incluirá: integraciones con laboratorios, sistemas de pago, servicios de SMS/Email, almacenamiento en la nube
                       </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Appearance Settings */}
-              {activeTab === 'appearance' && (
-                <div>
-                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Palette className="w-5 h-5 text-blue-700" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Apariencia</h2>
-                        <p className="text-sm text-gray-600 mt-1">Personaliza la apariencia visual del sistema</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-8">
-                    {/* Logo de la Clínica */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Logo de la Clínica</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <label className="block text-sm font-medium text-gray-700">Logo Principal</label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
-                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 mb-1">Arrastra tu logo aquí o haz clic para seleccionar</p>
-                            <p className="text-xs text-gray-500">PNG, JPG o SVG (máx. 2MB)</p>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <label className="block text-sm font-medium text-gray-700">Logo Pequeño (Favicon)</label>
-                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
-                            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-sm text-gray-600 mb-1">Icono para navegador</p>
-                            <p className="text-xs text-gray-500">PNG o ICO (32x32px)</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tema de Color */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Palette className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Esquema de Colores</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Color Primario */}
-                        <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                          <label className="block text-sm font-medium text-gray-700 mb-3">Color Primario</label>
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 rounded-lg bg-blue-600 border-2 border-gray-300 shadow-sm"></div>
-                            <div className="flex-1">
-                              <input 
-                                type="color" 
-                                defaultValue="#2563eb"
-                                className="w-full h-10 rounded cursor-pointer"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">#2563eb</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Color Secundario */}
-                        <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                          <label className="block text-sm font-medium text-gray-700 mb-3">Color Secundario</label>
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 rounded-lg bg-gray-600 border-2 border-gray-300 shadow-sm"></div>
-                            <div className="flex-1">
-                              <input 
-                                type="color" 
-                                defaultValue="#4b5563"
-                                className="w-full h-10 rounded cursor-pointer"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">#4b5563</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Color de Acento */}
-                        <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                          <label className="block text-sm font-medium text-gray-700 mb-3">Color de Acento</label>
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 rounded-lg bg-blue-500 border-2 border-gray-300 shadow-sm"></div>
-                            <div className="flex-1">
-                              <input 
-                                type="color" 
-                                defaultValue="#3b82f6"
-                                className="w-full h-10 rounded cursor-pointer"
-                              />
-                              <p className="text-xs text-gray-500 mt-1">#3b82f6</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Vista Previa */}
-                      <div className="mt-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm font-medium text-gray-700 mb-4">Vista Previa</p>
-                        <div className="flex gap-3">
-                          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">
-                            Botón Primario
-                          </button>
-                          <button className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium">
-                            Botón Secundario
-                          </button>
-                          <button className="px-4 py-2 border-2 border-blue-500 text-blue-600 rounded-lg text-sm font-medium">
-                            Botón Acento
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tipografía */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
-                      <div className="flex items-center gap-2 mb-4">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Tipografía</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Fuente Principal</label>
-                          <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option>Inter (Actual)</option>
-                            <option>Roboto</option>
-                            <option>Open Sans</option>
-                            <option>Lato</option>
-                            <option>Montserrat</option>
-                          </select>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Tamaño Base</label>
-                          <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option>14px (Pequeño)</option>
-                            <option>16px (Recomendado)</option>
-                            <option>18px (Grande)</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Modo Oscuro */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Settings className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Modo Oscuro</h3>
-                            <p className="text-sm text-gray-600">Permite a los usuarios cambiar entre tema claro y oscuro</p>
-                          </div>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" />
-                          <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Personalización de Reportes */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Download className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Reportes y Documentos</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Encabezado de Reportes</label>
-                          <textarea 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            rows={3}
-                            placeholder="Texto que aparecerá en el encabezado de los reportes..."
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Pie de Página</label>
-                          <textarea 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            rows={3}
-                            placeholder="Texto que aparecerá en el pie de página..."
-                          />
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>

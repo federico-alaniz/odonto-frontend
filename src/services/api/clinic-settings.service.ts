@@ -55,7 +55,6 @@ export interface SecuritySettings {
 export interface AppearanceSettings {
   primaryColor: string;
   secondaryColor: string;
-  theme: 'light' | 'dark';
 }
 
 export interface ClinicSettings {
