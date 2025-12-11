@@ -446,9 +446,9 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
 
         {/* Información de Seguro */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+          <div className="flex items-center space-x-3 p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
             <div className="flex-shrink-0">
-              <Shield className="w-6 h-6 text-purple-600" />
+              <Shield className="w-6 h-6 text-blue-600" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900">Información de Seguro Médico</h3>
           </div>

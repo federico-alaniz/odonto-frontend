@@ -294,7 +294,7 @@ export default function NewMedicalRecordPage() {
         <div className="space-y-6">
 
           {/* 1. Datos del Paciente */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-200 p-6">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-blue-600 rounded-lg">
                 <User className="w-5 h-5 text-white" />
@@ -827,7 +827,7 @@ export default function NewMedicalRecordPage() {
               {consultationType === 'odontologia' && (
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center gap-2 px-6 py-3 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors font-medium"
+                  className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
                   <Printer className="w-5 h-5" />
                   Imprimir Ficha Dental

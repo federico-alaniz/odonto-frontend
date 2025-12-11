@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Settings, Bell, Shield, Palette, Globe, Info } from 'lucide-react';
+import { Settings, Bell, Shield, Info } from 'lucide-react';
 import MedicalFormContainer from '@/components/forms/MedicalFormContainer';
 import MedicalFormSection from '@/components/forms/MedicalFormSection';
 import MedicalSelectField from '@/components/forms/MedicalSelectField';
@@ -12,9 +12,6 @@ export default function ConfiguracionPage() {
   const [saving, setSaving] = useState(false);
   
   const [settings, setSettings] = useState({
-    tema: 'light',
-    idioma: 'es',
-    timezone: 'America/Bogota',
     notificacionesEmail: true,
     notificacionesPush: true,
     notificacionesCitas: true,
@@ -83,60 +80,6 @@ export default function ConfiguracionPage() {
       <div className="max-w-5xl mx-auto px-6 py-8">
         <MedicalFormContainer>
           
-          {/* Apariencia */}
-          <MedicalFormSection
-            title="Apariencia"
-            description="Personaliza la apariencia visual de la aplicación"
-            icon={Palette}
-            iconColor="text-purple-600"
-          >
-            <MedicalFieldGroup>
-              <MedicalSelectField
-                label="Tema"
-                value={settings.tema}
-                onChange={(value) => handleSettingChange('tema', value)}
-                options={[
-                  { value: 'light', label: 'Claro' },
-                  { value: 'dark', label: 'Oscuro' },
-                  { value: 'auto', label: 'Automático (según sistema)' }
-                ]}
-              />
-              <MedicalSelectField
-                label="Idioma"
-                value={settings.idioma}
-                onChange={(value) => handleSettingChange('idioma', value)}
-                options={[
-                  { value: 'es', label: 'Español' },
-                  { value: 'en', label: 'English' },
-                  { value: 'pt', label: 'Português' }
-                ]}
-              />
-            </MedicalFieldGroup>
-          </MedicalFormSection>
-
-          {/* Región y Tiempo */}
-          <MedicalFormSection
-            title="Región y Tiempo"
-            description="Configuración de zona horaria y formato"
-            icon={Globe}
-            iconColor="text-blue-600"
-          >
-            <MedicalFieldGroup>
-              <MedicalSelectField
-                label="Zona Horaria"
-                value={settings.timezone}
-                onChange={(value) => handleSettingChange('timezone', value)}
-                options={[
-                  { value: 'America/Bogota', label: 'Bogotá (GMT-5)' },
-                  { value: 'America/Mexico_City', label: 'Ciudad de México (GMT-6)' },
-                  { value: 'America/Lima', label: 'Lima (GMT-5)' },
-                  { value: 'America/Buenos_Aires', label: 'Buenos Aires (GMT-3)' },
-                  { value: 'America/Santiago', label: 'Santiago (GMT-4)' }
-                ]}
-              />
-            </MedicalFieldGroup>
-          </MedicalFormSection>
-
           {/* Notificaciones */}
           <MedicalFormSection
             title="Notificaciones"

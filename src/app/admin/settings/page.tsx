@@ -9,7 +9,6 @@ import {
   Shield,
   Database,
   DollarSign,
-  Palette,
   Save,
   CheckCircle,
   Info,
@@ -30,7 +29,7 @@ import {
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 
-type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations' | 'appearance';
+type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations';
 
 interface MedicalSpecialty {
   id: string;
@@ -175,8 +174,7 @@ export default function AdminSettingsPage() {
     { id: 'notifications' as SettingsTab, label: 'Notificaciones', icon: Bell, color: 'yellow' },
     { id: 'security' as SettingsTab, label: 'Seguridad', icon: Shield, color: 'red' },
     { id: 'billing' as SettingsTab, label: 'Facturación', icon: DollarSign, color: 'green' },
-    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' },
-    { id: 'appearance' as SettingsTab, label: 'Apariencia', icon: Palette, color: 'pink' }
+    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' }
   ];
 
   const handleSaveSettings = async () => {
@@ -219,12 +217,12 @@ export default function AdminSettingsPage() {
   const getTabColor = (color: string) => {
     const colors = {
       blue: 'text-blue-600 bg-blue-50 border-blue-200',
-      teal: 'text-teal-600 bg-teal-50 border-teal-200',
+      teal: 'text-blue-600 bg-blue-50 border-blue-200',
       yellow: 'text-yellow-600 bg-yellow-50 border-yellow-200',
       red: 'text-red-600 bg-red-50 border-red-200',
-      green: 'text-green-600 bg-green-50 border-green-200',
-      purple: 'text-purple-600 bg-purple-50 border-purple-200',
-      pink: 'text-pink-600 bg-pink-50 border-pink-200'
+      green: 'text-blue-600 bg-blue-50 border-blue-200',
+      purple: 'text-blue-600 bg-blue-50 border-blue-200',
+      pink: 'text-gray-600 bg-gray-50 border-gray-200'
     };
     return colors[color as keyof typeof colors] || colors.blue;
   };
@@ -281,7 +279,7 @@ export default function AdminSettingsPage() {
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-md">
+              <div className="p-3 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md">
                 <Settings className="w-7 h-7 text-white" />
               </div>
               <div>
@@ -296,7 +294,7 @@ export default function AdminSettingsPage() {
             {showSuccess && (
               <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
                 <CheckCircle className="w-5 h-5 text-green-600" />
-                <span className="text-green-700 font-medium">Cambios guardados exitosamente</span>
+                <span className="text-green-800 font-semibold">Cambios guardados exitosamente</span>
               </div>
             )}
           </div>
@@ -305,37 +303,33 @@ export default function AdminSettingsPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
-          {/* Sidebar Tabs */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-8">
-              <nav className="space-y-2">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                        isActive 
-                          ? `${getTabColor(tab.color)} border font-medium shadow-sm` 
-                          : 'text-gray-600 hover:bg-gray-50 border border-transparent'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
+        {/* Horizontal Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-x-auto">
+          <nav className="flex items-center gap-2 p-2">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all whitespace-nowrap ${
+                    isActive 
+                      ? `${getTabColor(tab.color)} border font-medium shadow-sm` 
+                      : 'text-gray-600 hover:bg-gray-50 border border-transparent'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-sm">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
+        {/* Main Content */}
+        <div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               
               {/* General Settings */}
@@ -649,10 +643,10 @@ export default function AdminSettingsPage() {
               {/* Resources Settings */}
               {activeTab === 'resources' && (
                 <div>
-                  <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200 px-6 py-5">
+                  <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-teal-100 rounded-lg">
-                        <Stethoscope className="w-5 h-5 text-teal-700" />
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Stethoscope className="w-5 h-5 text-blue-700" />
                       </div>
                       <div>
                         <h2 className="text-xl font-semibold text-gray-900">Recursos Clínicos</h2>
@@ -666,12 +660,12 @@ export default function AdminSettingsPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Activity className="w-5 h-5 text-teal-600" />
+                          <Activity className="w-5 h-5 text-blue-600" />
                           <h3 className="text-lg font-semibold text-gray-900">Especialidades Médicas</h3>
                         </div>
                         <button
                           onClick={() => setShowSpecialtyModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Plus className="w-4 h-4" />
                           Agregar Especialidad
@@ -680,12 +674,12 @@ export default function AdminSettingsPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {specialties.map((specialty) => (
-                          <div key={specialty.id} className="p-4 border border-gray-200 rounded-lg hover:border-teal-300 transition-colors">
+                          <div key={specialty.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                   <h4 className="font-semibold text-gray-900">{specialty.name}</h4>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${specialty.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  <span className={`px-2 py-0.5 text-xs rounded-full ${specialty.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
                                     {specialty.active ? 'Activa' : 'Inactiva'}
                                   </span>
                                 </div>
@@ -724,12 +718,12 @@ export default function AdminSettingsPage() {
                     <div className="space-y-4 pt-6 border-t border-gray-200">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <DoorOpen className="w-5 h-5 text-teal-600" />
+                          <DoorOpen className="w-5 h-5 text-blue-600" />
                           <h3 className="text-lg font-semibold text-gray-900">Consultorios</h3>
                         </div>
                         <button
                           onClick={() => setShowRoomModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Plus className="w-4 h-4" />
                           Agregar Consultorio
@@ -738,12 +732,12 @@ export default function AdminSettingsPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {consultingRooms.map((room) => (
-                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-teal-300 transition-colors">
+                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
                             <div className="flex items-start justify-between mb-3">
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-semibold text-gray-900">{room.name}</span>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
                                     {room.active ? 'Activo' : 'Inactivo'}
                                   </span>
                                 </div>
@@ -765,7 +759,7 @@ export default function AdminSettingsPage() {
                                 <p className="font-medium text-gray-700 mb-1">Equipamiento:</p>
                                 <div className="flex flex-wrap gap-1">
                                   {room.equipment.map((eq, idx) => (
-                                    <span key={idx} className="px-2 py-0.5 bg-teal-50 text-teal-700 text-xs rounded">
+                                    <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
                                       {eq}
                                     </span>
                                   ))}
@@ -788,12 +782,12 @@ export default function AdminSettingsPage() {
                     <div className="space-y-4 pt-6 border-t border-gray-200">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                          <Activity className="w-5 h-5 text-teal-600" />
+                          <Activity className="w-5 h-5 text-blue-600" />
                           <h3 className="text-lg font-semibold text-gray-900">Quirófanos</h3>
                         </div>
                         <button
                           onClick={() => setShowOperatingRoomModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Plus className="w-4 h-4" />
                           Agregar Quirófano
@@ -802,12 +796,12 @@ export default function AdminSettingsPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {operatingRooms.map((room) => (
-                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-teal-300 transition-colors">
+                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
                             <div className="flex items-start justify-between mb-3">
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-semibold text-gray-900">{room.name}</span>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
                                     {room.active ? 'Activo' : 'Inactivo'}
                                   </span>
                                 </div>
@@ -966,33 +960,6 @@ export default function AdminSettingsPage() {
                 </div>
               )}
 
-              {/* Appearance Settings */}
-              {activeTab === 'appearance' && (
-                <div>
-                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-pink-100 rounded-lg">
-                        <Palette className="w-5 h-5 text-pink-700" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Apariencia</h2>
-                        <p className="text-sm text-gray-600 mt-1">Personaliza la apariencia del sistema</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="text-center py-12">
-                      <Palette className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium text-lg">Sección en desarrollo</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        Esta sección incluirá: tema claro/oscuro, colores personalizados, logo de la clínica, fuentes, personalización de reportes
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
             </div>
 
             {/* Save Button */}
@@ -1000,7 +967,7 @@ export default function AdminSettingsPage() {
               <button
                 onClick={handleSaveSettings}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
@@ -1015,19 +982,17 @@ export default function AdminSettingsPage() {
                 )}
               </button>
             </div>
-          </div>
-
         </div>
+
+        {/* Modal para Agregar Especialidad */}
+        {showSpecialtyModal && <SpecialtyModal onClose={() => setShowSpecialtyModal(false)} onSave={handleAddSpecialty} />}
+
+        {/* Modal para Agregar Consultorio */}
+        {showRoomModal && <ConsultingRoomModal onClose={() => setShowRoomModal(false)} onSave={handleAddRoom} />}
+
+        {/* Modal para Agregar Quirófano */}
+        {showOperatingRoomModal && <OperatingRoomModal onClose={() => setShowOperatingRoomModal(false)} onSave={handleAddOperatingRoom} />}
       </div>
-
-      {/* Modal para Agregar Especialidad */}
-      {showSpecialtyModal && <SpecialtyModal onClose={() => setShowSpecialtyModal(false)} onSave={handleAddSpecialty} />}
-
-      {/* Modal para Agregar Consultorio */}
-      {showRoomModal && <ConsultingRoomModal onClose={() => setShowRoomModal(false)} onSave={handleAddRoom} />}
-
-      {/* Modal para Agregar Quirófano */}
-      {showOperatingRoomModal && <OperatingRoomModal onClose={() => setShowOperatingRoomModal(false)} onSave={handleAddOperatingRoom} />}
     </div>
   );
 }

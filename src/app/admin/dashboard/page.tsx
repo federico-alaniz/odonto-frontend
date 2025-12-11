@@ -19,16 +19,9 @@ import {
   Download
 } from 'lucide-react';
 import Link from 'next/link';
-
-// TODO: Reemplazar con llamadas al backend
-// import { users } from '../../../utils/fake-users';
-// import { patients } from '../../../utils/fake-patients';
-// import { appointments } from '../../../utils/fake-appointments';
-
-// Datos temporales vacíos hasta integrar con backend
-const users: any[] = [];
-const patients: any[] = [];
-const appointments: any[] = [];
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
+import { usersService } from '@/services/api/users.service';
 
 interface StatCard {
   title: string;
@@ -54,14 +47,52 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<StatCard[]>([]);
   const [appointmentsBySpecialty, setAppointmentsBySpecialty] = useState<AppointmentBySpecialty[]>([]);
   const [dailyAppointments, setDailyAppointments] = useState<DailyAppointment[]>([]);
-  const [recentAppointments, setRecentAppointments] = useState<typeof appointments>([]);
+  const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    calculateStats();
-    calculateAppointmentsBySpecialty();
-    calculateDailyAppointments();
-    loadRecentAppointments();
+    loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (appointments.length > 0) {
+      calculateStats();
+      calculateAppointmentsBySpecialty();
+      calculateDailyAppointments();
+      loadRecentAppointments();
+    }
+  }, [appointments, users, patients]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
+      
+      // Cargar datos en paralelo
+      const [appointmentsRes, usersRes, patientsRes] = await Promise.all([
+        appointmentsService.getAppointments(clinicId, { limit: 500 }),
+        usersService.getUsers(clinicId),
+        patientsService.getPatients(clinicId, { limit: 500 })
+      ]);
+
+      if (appointmentsRes.success && appointmentsRes.data) {
+        setAppointments(appointmentsRes.data);
+      }
+      if (usersRes.success && usersRes.data) {
+        setUsers(usersRes.data);
+      }
+      if (patientsRes.success && patientsRes.data) {
+        setPatients(patientsRes.data);
+      }
+    } catch (error) {
+      console.error('Error cargando datos del dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const calculateStats = () => {
     // Total de pacientes
@@ -104,7 +135,7 @@ export default function AdminDashboard() {
         change: 5,
         changeType: 'increase',
         icon: <Stethoscope className="w-6 h-6" />,
-        color: 'from-purple-500 to-purple-600'
+        color: 'from-blue-500 to-blue-600'
       },
       {
         title: 'Turnos del Mes',
@@ -112,7 +143,7 @@ export default function AdminDashboard() {
         change: 18,
         changeType: 'increase',
         icon: <Calendar className="w-6 h-6" />,
-        color: 'from-green-500 to-green-600'
+        color: 'from-blue-400 to-blue-500'
       },
       {
         title: 'Turnos Pendientes',
@@ -120,7 +151,7 @@ export default function AdminDashboard() {
         change: 3,
         changeType: 'decrease',
         icon: <Clock className="w-6 h-6" />,
-        color: 'from-orange-500 to-orange-600'
+        color: 'from-gray-400 to-gray-500'
       },
       {
         title: 'Tasa de Ocupación',
@@ -128,7 +159,7 @@ export default function AdminDashboard() {
         change: 8,
         changeType: 'increase',
         icon: <Activity className="w-6 h-6" />,
-        color: 'from-pink-500 to-pink-600'
+        color: 'from-gray-500 to-gray-600'
       },
       {
         title: 'Ingresos del Mes',
@@ -136,7 +167,7 @@ export default function AdminDashboard() {
         change: 15,
         changeType: 'increase',
         icon: <DollarSign className="w-6 h-6" />,
-        color: 'from-emerald-500 to-emerald-600'
+        color: 'from-blue-600 to-blue-700'
       }
     ];
 
@@ -223,17 +254,19 @@ export default function AdminDashboard() {
 
   const getPatientName = (patientId: string): string => {
     const patient = patients.find(p => p.id === patientId);
-    return patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente';
+    if (!patient) return 'Paciente';
+    return `${patient.nombres || ''} ${patient.apellidos || ''}`.trim() || 'Paciente';
   };
 
   const getDoctorName = (doctorId: string): string => {
     const doctor = users.find(u => u.id === doctorId);
-    return doctor ? `${doctor.nombres} ${doctor.apellidos}` : 'Doctor';
+    if (!doctor) return 'Doctor';
+    return `${doctor.nombres || ''} ${doctor.apellidos || ''}`.trim() || 'Doctor';
   };
 
   const getStatusColor = (status: string): string => {
     const colors: Record<string, string> = {
-      'confirmado': 'bg-green-100 text-green-800',
+      'confirmado': 'bg-blue-100 text-blue-800',
       'pendiente': 'bg-yellow-100 text-yellow-800',
       'cancelado': 'bg-red-100 text-red-800',
       'completado': 'bg-blue-100 text-blue-800'
@@ -278,8 +311,8 @@ export default function AdminDashboard() {
                   </div>
                   <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${
                     stat.changeType === 'increase' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-gray-100 text-gray-700'
                   }`}>
                     {stat.changeType === 'increase' ? (
                       <ArrowUp className="w-4 h-4" />
@@ -303,18 +336,21 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold text-gray-900">Turnos de los Últimos 7 Días</h2>
               <BarChart3 className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-4">
+            <div className="flex items-end justify-between gap-3 h-64">
               {dailyAppointments.map((day, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">{day.day}</span>
-                    <span className="text-sm font-bold text-gray-900">{day.count} turnos</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div key={index} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="relative w-full flex flex-col items-center justify-end flex-1">
                     <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${(day.count / maxDailyCount) * 100}%` }}
-                    />
+                      className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg transition-all duration-500 hover:from-blue-700 hover:to-blue-500 cursor-pointer group relative"
+                      style={{ height: `${(day.count / maxDailyCount) * 100}%` }}
+                    >
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                        {day.count} turnos
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs font-medium text-gray-600">{day.day}</span>
                   </div>
                 </div>
               ))}
@@ -327,29 +363,43 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold text-gray-900">Turnos por Especialidad</h2>
               <PieChart className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               {appointmentsBySpecialty.map((item, index) => {
                 const colors = [
-                  'from-blue-500 to-blue-600',
-                  'from-purple-500 to-purple-600',
-                  'from-pink-500 to-pink-600',
-                  'from-orange-500 to-orange-600',
-                  'from-green-500 to-green-600',
-                  'from-teal-500 to-teal-600'
+                  { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
+                  { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
+                  { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
+                  { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-300' },
+                  { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100' },
+                  { bg: 'bg-blue-300', text: 'text-blue-900', border: 'border-blue-400' }
                 ];
+                const colorScheme = colors[index % colors.length];
                 return (
-                  <div key={index} className="flex items-center gap-4">
-                    <div className={`w-12 h-12 bg-gradient-to-br ${colors[index % colors.length]} rounded-lg flex items-center justify-center text-white font-bold shadow-md`}>
-                      {item.percentage}%
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-900">{item.specialty}</span>
-                        <span className="text-sm text-gray-600">{item.count} turnos</span>
+                  <div 
+                    key={index} 
+                    className={`${colorScheme.bg} border-2 ${colorScheme.border} rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group`}
+                  >
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-semibold ${colorScheme.text} uppercase tracking-wide`}>
+                          {item.specialty}
+                        </span>
+                        <Stethoscope className={`w-4 h-4 ${colorScheme.text} opacity-60`} />
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className={`text-3xl font-bold ${colorScheme.text}`}>
+                            {item.count}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">turnos</div>
+                        </div>
+                        <div className={`text-2xl font-bold ${colorScheme.text} opacity-75`}>
+                          {item.percentage}%
+                        </div>
+                      </div>
+                      <div className="w-full bg-white/50 rounded-full h-1.5 overflow-hidden">
                         <div 
-                          className={`bg-gradient-to-r ${colors[index % colors.length]} h-2 rounded-full`}
+                          className={`${colorScheme.bg.replace('bg-', 'bg-gradient-to-r from-')} to-${colorScheme.text.replace('text-', '')} h-1.5 rounded-full transition-all duration-500 group-hover:h-2`}
                           style={{ width: `${item.percentage}%` }}
                         />
                       </div>
@@ -434,11 +484,11 @@ export default function AdminDashboard() {
 
           <Link 
             href="/admin/reports" 
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-purple-300 group"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-blue-300 group"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                <FileText className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                <FileText className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Reportes</h3>
@@ -449,11 +499,11 @@ export default function AdminDashboard() {
 
           <Link 
             href="/admin/settings" 
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-green-300 group"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all hover:border-blue-300 group"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                <Activity className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                <Activity className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Configuración</h3>
@@ -462,7 +512,7 @@ export default function AdminDashboard() {
             </div>
           </Link>
 
-          <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl shadow-md p-6 text-white">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-md p-6 text-white">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
                 <AlertCircle className="w-6 h-6" />

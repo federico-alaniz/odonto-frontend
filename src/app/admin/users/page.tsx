@@ -177,18 +177,18 @@ export default function AdminUsersPage() {
 
   const getRoleBadge = (role: string) => {
     const badges = {
-      admin: { label: 'Administrador', color: 'bg-blue-100 text-blue-800', icon: Shield },
-      doctor: { label: 'Doctor', color: 'bg-green-100 text-green-800', icon: Stethoscope },
-      secretary: { label: 'Secretaria', color: 'bg-purple-100 text-purple-800', icon: UserCog }
+      admin: { label: 'Administrador', color: 'bg-blue-100 text-blue-800 border border-blue-200', icon: Shield },
+      doctor: { label: 'Doctor', color: 'bg-blue-50 text-blue-700 border border-blue-100', icon: Stethoscope },
+      secretary: { label: 'Secretaria', color: 'bg-gray-100 text-gray-800 border border-gray-200', icon: UserCog }
     };
     return badges[role as keyof typeof badges] || badges.admin;
   };
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      activo: { label: 'Activo', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      inactivo: { label: 'Inactivo', color: 'bg-gray-100 text-gray-800', icon: XCircle },
-      suspendido: { label: 'Suspendido', color: 'bg-red-100 text-red-800', icon: AlertCircle }
+      activo: { label: 'Activo', color: 'bg-green-100 text-green-800 border border-green-200', icon: CheckCircle },
+      inactivo: { label: 'Inactivo', color: 'bg-gray-100 text-gray-800 border border-gray-200', icon: XCircle },
+      suspendido: { label: 'Suspendido', color: 'bg-red-100 text-red-800 border border-red-200', icon: AlertCircle }
     };
     return badges[status as keyof typeof badges] || badges.activo;
   };
@@ -334,10 +334,10 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">Activos</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{stats.active}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.active}</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <UserCheck className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <UserCheck className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -346,10 +346,10 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">Doctores</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{stats.doctors}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.doctors}</p>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Stethoscope className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Stethoscope className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -358,10 +358,10 @@ export default function AdminUsersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">Secretarias</p>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{stats.secretaries}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.secretaries}</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <UserCog className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <UserCog className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -901,7 +901,7 @@ export default function AdminUsersPage() {
                         <label className="text-sm font-medium text-gray-600">Especialidades</label>
                         <div className="flex flex-wrap gap-2 mt-2">
                           {selectedUserForView.especialidades?.map((esp, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                            <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm border border-blue-200">
                               {esp}
                             </span>
                           ))}
@@ -915,7 +915,7 @@ export default function AdminUsersPage() {
                 {selectedUserForView.role === 'secretary' && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <UserCog className="w-5 h-5 text-purple-600" />
+                      <UserCog className="w-5 h-5 text-blue-600" />
                       Información Laboral
                     </h3>
                     <div className="grid grid-cols-2 gap-4">

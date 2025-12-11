@@ -305,8 +305,8 @@ export default function NewUserForm() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-blue-600';
-      case 'doctor': return 'bg-indigo-600';
-      case 'secretary': return 'bg-cyan-600';
+      case 'doctor': return 'bg-blue-500';
+      case 'secretary': return 'bg-gray-600';
       default: return 'bg-blue-500';
     }
   };
@@ -826,8 +826,8 @@ export default function NewUserForm() {
 
                 {/* Campos específicos para Secretaria */}
                 {formData.role === 'secretary' && (
-                  <div className="space-y-4 p-6 bg-purple-50 rounded-lg border border-purple-200">
-                    <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                  <div className="space-y-4 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Briefcase className="w-5 h-5" />
                       Información Operativa
                     </h3>

@@ -120,12 +120,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Card Principal */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header con Logo */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-center">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-8 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-lg mb-4">
               <Building2 className="w-8 h-8 text-blue-600" />
             </div>
@@ -229,7 +229,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <>
@@ -314,19 +314,19 @@ export default function LoginPage() {
             Usuarios Demo Disponibles
           </h3>
           <div className="space-y-3">
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-3 rounded-lg border border-purple-200">
-              <p className="text-xs font-semibold text-purple-900 mb-1">👑 Administrador</p>
-              <p className="text-xs text-purple-700 font-mono">admin@mediclinic.com</p>
-              <p className="text-xs text-purple-600 mt-1">→ Redirige a /admin</p>
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-xs font-semibold text-gray-900 mb-1">👑 Administrador</p>
+              <p className="text-xs text-gray-700 font-mono">admin@mediclinic.com</p>
+              <p className="text-xs text-blue-600 mt-1">→ Redirige a /admin</p>
             </div>
-            <div className="bg-gradient-to-r from-green-50 to-green-100 p-3 rounded-lg border border-green-200">
-              <p className="text-xs font-semibold text-green-900 mb-1">👨‍⚕️ Doctor</p>
-              <p className="text-xs text-green-700 font-mono">juan.perez@mediclinic.com</p>
-              <p className="text-xs text-green-600 mt-1">→ Redirige a /doctor</p>
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-xs font-semibold text-gray-900 mb-1">👨‍⚕️ Doctor</p>
+              <p className="text-xs text-gray-700 font-mono">juan.perez@mediclinic.com</p>
+              <p className="text-xs text-blue-600 mt-1">→ Redirige a /doctor</p>
             </div>
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-3 rounded-lg border border-blue-200">
-              <p className="text-xs font-semibold text-blue-900 mb-1">👩‍💼 Secretaria</p>
-              <p className="text-xs text-blue-700 font-mono">ana.martinez@mediclinic.com</p>
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-xs font-semibold text-gray-900 mb-1">👩‍💼 Secretaria</p>
+              <p className="text-xs text-gray-700 font-mono">ana.martinez@mediclinic.com</p>
               <p className="text-xs text-blue-600 mt-1">→ Redirige a /secretary</p>
             </div>
           </div>

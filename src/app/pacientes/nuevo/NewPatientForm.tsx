@@ -590,10 +590,10 @@ export default function NewPatientForm() {
 
       {/* Información Médica */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-5">
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Stethoscope className="w-5 h-5 text-purple-700" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Stethoscope className="w-5 h-5 text-blue-700" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Información Médica</h2>

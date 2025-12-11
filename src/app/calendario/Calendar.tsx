@@ -377,13 +377,7 @@ export default function Calendar() {
                           👁️
                         </button>
                         <button
-                          className="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-lg transition-all focus-ring"
-                          title="Editar cita"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-lg transition-all focus-ring"
+                          className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all focus-ring"
                           title="Cancelar cita"
                         >
                           ❌

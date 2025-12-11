@@ -353,13 +353,13 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       
       {/* Header de la tabla */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {showOnlyAssigned ? (
-              <Stethoscope className="w-5 h-5 text-green-600" />
+              <Stethoscope className="w-5 h-5 text-blue-600" />
             ) : (
-              <Users className="w-5 h-5 text-green-600" />
+              <Users className="w-5 h-5 text-blue-600" />
             )}
             <h3 className="text-lg font-semibold text-gray-900">
               {showOnlyAssigned ? 'Mis Pacientes Asignados' : 'Todos los Pacientes'}
@@ -376,10 +376,10 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
         <>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center gap-1">
@@ -388,7 +388,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('document')}
                   >
                     <div className="flex items-center gap-1">
@@ -397,7 +397,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('age')}
                   >
                     <div className="flex items-center gap-1">
@@ -406,7 +406,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('bloodType')}
                   >
                     <div className="flex items-center gap-1">
@@ -415,7 +415,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('urgency')}
                   >
                     <div className="flex items-center gap-1">
@@ -424,7 +424,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     </div>
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('lastVisit')}
                   >
                     <div className="flex items-center gap-1">
@@ -432,10 +432,10 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                       {getSortIcon('lastVisit')}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Contacto
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -537,7 +537,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                         ) : !patient.doctorAsignado ? (
                           <button
                             onClick={() => handleAssignDoctor(patient.id)}
-                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Asignarme este paciente"
                           >
                             <UserPlus className="w-4 h-4" />
@@ -560,7 +560,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                         </button>
                         <button
                           onClick={() => router.push(`/historiales/${patient.id}/registro/new`)}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Nuevo registro médico"
                         >
                           <FileText className="w-4 h-4" />
