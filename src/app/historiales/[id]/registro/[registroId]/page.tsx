@@ -117,22 +117,32 @@ export default function RegistroDetailPage() {
           
           // Formatear dirección
           const direccion = patient?.direccion 
-            ? (`${patient.direccion.calle || ''} ${patient.direccion.numero || ''}, `).trim()
+            ? (`${patient.direccion.calle || ''} ${patient.direccion.numero || ''} `).trim()
             : 'N/A';
-          const ciudad = (`${patient.direccion.ciudad || ''}, ${patient.direccion.provincia || ''}`).trim();
+          const ciudad = (`${patient.direccion.ciudad || ''}`).trim();
           
-          // Formatear fecha de nacimiento
-          const fechaNacimiento = patient?.fechaNacimiento 
-            ? new Date(patient.fechaNacimiento).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-            : 'N/A';
+          // Formatear fecha de nacimiento separada en día, mes y año
+          let dia = '';
+          let mes = '';
+          let anio = '';
+          
+          if (patient?.fechaNacimiento) {
+            const fecha = new Date(patient.fechaNacimiento);
+            dia = fecha.getDate().toString().padStart(2, '0');
+            mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+            anio = fecha.getFullYear().toString();
+          }
           
           // Información del paciente con coordenadas ajustadas al SVG (viewBox: 0 0 595 453)
           // Solo los valores, sin etiquetas
           const patientInfo = [
             { value: patient?.nombreCompleto || '', x: 180, y: 68 },  // Apellido y Nombre
+            { value: patient?.seguroMedico?.empresa || 'Sin O.S.', x: 450, y: 68 },  // Obra Social
             { value: direccion, x: 110, y: 105 },  // Domicilio
             { value: ciudad, x: 420, y: 105 },
-            { value: fechaNacimiento, x: 510, y: 65 }  // Fecha de Nac
+            { value: dia, x: 470, y: 85 },   // Día
+            { value: mes, x: 495, y: 85 },   // Mes
+            { value: anio, x: 520, y: 85 }   // Año
           ];
           
           // Agregar solo los valores al SVG
@@ -142,6 +152,7 @@ export default function RegistroDetailPage() {
             textElement.setAttribute('y', info.y.toString());
             textElement.setAttribute('font-family', 'Arial, sans-serif');
             textElement.setAttribute('font-size', '9');
+            textElement.setAttribute('font-weight', 'bold');
             textElement.setAttribute('fill', '#000000');
             textElement.textContent = info.value;
             textGroup.appendChild(textElement);
@@ -334,11 +345,11 @@ export default function RegistroDetailPage() {
                     if (match) {
                       const baseX = parseInt(match[1]);
                       const baseY = parseInt(match[2]);
-                      const width = 13;
+                      const width = 20;
                       
                       // Primera línea horizontal (superior)
                       const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                      line1.setAttribute('x1', (baseX + 2).toString());
+                      line1.setAttribute('x1', (baseX).toString());
                       line1.setAttribute('y1', (baseY + 5).toString());
                       line1.setAttribute('x2', (baseX + width - 2).toString());
                       line1.setAttribute('y2', (baseY + 5).toString());
@@ -348,7 +359,7 @@ export default function RegistroDetailPage() {
                       
                       // Segunda línea horizontal (inferior)
                       const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                      line2.setAttribute('x1', (baseX + 2).toString());
+                      line2.setAttribute('x1', (baseX).toString());
                       line2.setAttribute('y1', (baseY + 8).toString());
                       line2.setAttribute('x2', (baseX + width - 2).toString());
                       line2.setAttribute('y2', (baseY + 8).toString());
@@ -374,14 +385,19 @@ export default function RegistroDetailPage() {
           
           await new Promise((resolve, reject) => {
             img.onload = () => {
-              canvas.width = svgClone.viewBox.baseVal.width || 800;
-              canvas.height = svgClone.viewBox.baseVal.height || 600;
+              // Aumentar la resolución 3x para mejor calidad
+              const scale = 3;
+              const svgWidth = svgClone.viewBox.baseVal.width || 595;
+              const svgHeight = svgClone.viewBox.baseVal.height || 453;
+              canvas.width = svgWidth * scale;
+              canvas.height = svgHeight * scale;
+              ctx?.scale(scale, scale);
               ctx?.drawImage(img, 0, 0);
               
               // Agregar la imagen al PDF
               const imgData = canvas.toDataURL('image/png');
               const imgWidth = contentWidth;
-              const imgHeight = (canvas.height * imgWidth) / canvas.width;
+              const imgHeight = (svgHeight * imgWidth) / svgWidth;
               
               pdf.addImage(imgData, 'PNG', margin, yPosition, imgWidth, imgHeight);
               resolve(null);
@@ -397,10 +413,6 @@ export default function RegistroDetailPage() {
         pdf.addPage();
         yPosition = margin + 10;
         
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Vista Posterior', pageWidth / 2, yPosition, { align: 'center' });
-        yPosition += 15;
         
         // Cargar SVG posterior
         const backSvgResponse = await fetch('/odontologia/fichadental_back.svg');
@@ -421,13 +433,18 @@ export default function RegistroDetailPage() {
           
           await new Promise((resolve, reject) => {
             img2.onload = () => {
-              canvas2.width = svgElement2.viewBox.baseVal.width || 800;
-              canvas2.height = svgElement2.viewBox.baseVal.height || 600;
+              // Aumentar la resolución 3x para mejor calidad
+              const scale = 3;
+              const svgWidth = svgElement2.viewBox.baseVal.width || 800;
+              const svgHeight = svgElement2.viewBox.baseVal.height || 600;
+              canvas2.width = svgWidth * scale;
+              canvas2.height = svgHeight * scale;
+              ctx2?.scale(scale, scale);
               ctx2?.drawImage(img2, 0, 0);
               
               const imgData2 = canvas2.toDataURL('image/png');
               const imgWidth2 = contentWidth;
-              const imgHeight2 = (canvas2.height * imgWidth2) / canvas2.width;
+              const imgHeight2 = (svgHeight * imgWidth2) / svgWidth;
               
               pdf.addImage(imgData2, 'PNG', margin, yPosition, imgWidth2, imgHeight2);
               resolve(null);
