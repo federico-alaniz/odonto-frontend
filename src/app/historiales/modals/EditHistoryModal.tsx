@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
+import { ToothCondition } from '@/services/medicalRecords';
 
 interface EditHistoryModalProps {
   history: MedicalHistory | null;
@@ -21,11 +22,16 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
     type: 'radiografia' | 'ecografia' | 'tomografia' | 'resonancia' | 'endoscopia' | 'laboratorio' | 'otro';
   }>>([]);
   
-  const [odontogramData, setOdontogramData] = useState<Array<{
-    id: number;
-    status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
-    notes?: string;
-  }>>(history?.odontogram || []);
+  const [odontogramData, setOdontogramData] = useState<ToothCondition[]>(
+    history?.odontogram ? history.odontogram.map((tooth: any) => ({
+      number: tooth.id,
+      status: tooth.status,
+      sectors: tooth.sectors,
+      hasCrown: tooth.hasCrown,
+      hasProsthesis: tooth.hasProsthesis,
+      notes: tooth.notes
+    })) : []
+  );
   
   const [formData, setFormData] = useState({
     date: history?.consultationDate || '',
@@ -104,7 +110,16 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
         notes: history.notes || '',
         status: history.status
       });
-      setOdontogramData(history.odontogram || []);
+      setOdontogramData(
+        history.odontogram ? history.odontogram.map((tooth: any) => ({
+          number: tooth.id,
+          status: tooth.status,
+          sectors: tooth.sectors,
+          hasCrown: tooth.hasCrown,
+          hasProsthesis: tooth.hasProsthesis,
+          notes: tooth.notes
+        })) : []
+      );
     }
   }, [history]);
 
@@ -212,7 +227,16 @@ export default function EditHistoryModal({ history, isOpen, onClose, onSave }: E
           uploadDate: new Date().toISOString()
         }))
       ],
-      odontogram: formData.specialty === 'odontologia' ? odontogramData : history.odontogram,
+      odontogram: formData.specialty === 'odontologia' 
+        ? odontogramData.map(tooth => ({
+            id: tooth.number,
+            status: tooth.status,
+            sectors: tooth.sectors,
+            hasCrown: tooth.hasCrown,
+            hasProsthesis: tooth.hasProsthesis,
+            notes: tooth.notes
+          }))
+        : history.odontogram,
       status: formData.status as MedicalHistory['status']
     };
 

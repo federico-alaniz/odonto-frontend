@@ -280,7 +280,16 @@ export default function NuevaConsultaPage() {
           type: img.type,
           uploadDate: new Date().toISOString()
         })) : undefined,
-        odontogram: formData.specialty === 'odontologia' && odontogramData.length > 0 ? odontogramData : undefined,
+        odontogram: formData.specialty === 'odontologia' && odontogramData.length > 0 
+          ? odontogramData.map(tooth => ({
+              id: tooth.number,
+              status: tooth.status,
+              sectors: tooth.sectors,
+              hasCrown: tooth.hasCrown,
+              hasProsthesis: tooth.hasProsthesis,
+              notes: tooth.notes
+            }))
+          : undefined,
         createdAt: new Date().toISOString()
       };
 

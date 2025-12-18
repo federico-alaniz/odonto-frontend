@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../adapter';
 import Odontogram from '../components/Odontogram';
+import { ToothCondition } from '@/services/medicalRecords';
 // TODO: Reemplazar con llamadas al backend
 // import { patients } from '@/utils/fake-patients';
 
@@ -28,11 +29,7 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
     description: string;
     type: 'radiografia' | 'ecografia' | 'tomografia' | 'resonancia' | 'endoscopia' | 'laboratorio' | 'otro';
   }>>([]);
-  const [odontogramData, setOdontogramData] = useState<Array<{
-    id: number;
-    status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
-    notes?: string;
-  }>>([]);
+  const [odontogramData, setOdontogramData] = useState<ToothCondition[]>([]);
   const [formData, setFormData] = useState({
     patientName: '',
     patientAge: '',
@@ -221,7 +218,16 @@ export default function NewHistoryModal({ isOpen, onClose, onSave }: NewHistoryM
         url: img.preview, // En producción esto sería una URL del servidor
         uploadDate: new Date().toISOString()
       })),
-      odontogram: formData.specialty === 'odontologia' ? odontogramData : undefined,
+      odontogram: formData.specialty === 'odontologia' 
+        ? odontogramData.map(tooth => ({
+            id: tooth.number,
+            status: tooth.status,
+            sectors: tooth.sectors,
+            hasCrown: tooth.hasCrown,
+            hasProsthesis: tooth.hasProsthesis,
+            notes: tooth.notes
+          }))
+        : undefined,
       status: formData.status,
       createdAt: new Date().toISOString()
     };
