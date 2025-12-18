@@ -72,6 +72,7 @@ export default function NewMedicalRecordPage() {
   // Odontogramas
   const [historicalOdontogram, setHistoricalOdontogram] = useState<ToothCondition[]>([]);
   const [currentOdontogram, setCurrentOdontogram] = useState<ToothCondition[]>([]);
+  const [extractedTeeth, setExtractedTeeth] = useState<number[]>([]);
   
   // Tipo de consulta
   const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('general');
@@ -108,6 +109,92 @@ export default function NewMedicalRecordPage() {
     };
 
     loadPatient();
+  }, [patientId]);
+
+  // Inicializar odontograma actual con dientes extraídos como ausentes
+  useEffect(() => {
+    if (extractedTeeth.length > 0) {
+      const missingTeeth: ToothCondition[] = extractedTeeth.map(number => ({
+        number,
+        status: 'missing' as const
+      }));
+      setCurrentOdontogram(missingTeeth);
+      console.log('Odontograma actual inicializado con dientes ausentes:', missingTeeth);
+    }
+  }, [extractedTeeth]);
+
+  // Cargar registros médicos previos para construir el odontograma histórico
+  useEffect(() => {
+    const loadHistoricalOdontogram = async () => {
+      try {
+        const response = await medicalRecordsService.getByPatient(patientId);
+        if (response.success && response.data) {
+          // Acumular todas las intervenciones de registros previos
+          const allConditions: ToothCondition[] = [];
+          const toothMap = new Map<number, ToothCondition>();
+
+          response.data.forEach((record: any) => {
+            if (record.odontogramas?.actual) {
+              record.odontogramas.actual.forEach((condition: any) => {
+                const existing = toothMap.get(condition.number);
+                
+                if (!existing) {
+                  // Si el diente no existe en el mapa, agregarlo
+                  toothMap.set(condition.number, { ...condition });
+                } else {
+                  // Si ya existe, combinar las condiciones
+                  // Prioridad: extraction > otros estados > healthy
+                  if (condition.status === 'extraction') {
+                    existing.status = 'extraction';
+                  } else if (condition.status !== 'healthy' && existing.status === 'healthy') {
+                    existing.status = condition.status;
+                  }
+                  
+                  // Combinar sectores afectados
+                  if (condition.sectors && condition.sectors.length > 0) {
+                    if (!existing.sectors) {
+                      existing.sectors = [];
+                    }
+                    condition.sectors.forEach((sector: any) => {
+                      if (!existing.sectors!.some((s: any) => s.sector === sector.sector)) {
+                        existing.sectors!.push(sector);
+                      }
+                    });
+                  }
+                  
+                  // Mantener coronas y prótesis
+                  if (condition.hasCrown) {
+                    existing.hasCrown = true;
+                  }
+                  if (condition.hasProsthesis) {
+                    existing.hasProsthesis = true;
+                  }
+                }
+              });
+            }
+          });
+
+          // Convertir el mapa a array
+          const historicalConditions = Array.from(toothMap.values());
+          setHistoricalOdontogram(historicalConditions);
+          
+          // Identificar dientes extraídos para marcarlos como ausentes en el odontograma actual
+          const extracted = historicalConditions
+            .filter(condition => condition.status === 'extraction')
+            .map(condition => condition.number);
+          setExtractedTeeth(extracted);
+          
+          console.log('Odontograma histórico cargado:', historicalConditions);
+          console.log('Dientes extraídos (ausentes):', extracted);
+        }
+      } catch (error) {
+        console.error('Error cargando odontograma histórico:', error);
+      }
+    };
+
+    if (patientId) {
+      loadHistoricalOdontogram();
+    }
   }, [patientId]);
 
   const handleInputChange = (field: string, value: string) => {
@@ -639,6 +726,7 @@ export default function NewMedicalRecordPage() {
                         onUpdate={setHistoricalOdontogram}
                         readOnly={true}
                         showLegend={false}
+                        interventionColor="red"
                       />
                     </div>
                   </div>
@@ -657,6 +745,7 @@ export default function NewMedicalRecordPage() {
                         onUpdate={setCurrentOdontogram}
                         readOnly={false}
                         showLegend={true}
+                        interventionColor="blue"
                       />
                     </div>
                   </div>

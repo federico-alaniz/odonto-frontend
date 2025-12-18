@@ -6,6 +6,7 @@ import NextImage from 'next/image';
 import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, Pill, ClipboardList, FileText, Printer } from 'lucide-react';
 import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
 import { patientsService } from '@/services/api/patients.service';
+import { usersService } from '@/services/api/users.service';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
 
@@ -27,6 +28,7 @@ export default function RegistroDetailPage() {
   
   const [registro, setRegistro] = useState<MedicalRecord | null>(null);
   const [patient, setPatient] = useState<any>(null);
+  const [doctorName, setDoctorName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   
   // Estados para el visor de imágenes
@@ -49,6 +51,28 @@ export default function RegistroDetailPage() {
         const recordResponse = await medicalRecordsService.getById(registroId);
         if (recordResponse.success && recordResponse.data) {
           setRegistro(recordResponse.data);
+          
+          // Load doctor information if doctorId exists, otherwise use createdBy
+          const userIdToLoad = recordResponse.data.doctorId || recordResponse.data.createdBy;
+          
+          if (userIdToLoad) {
+            console.log('User ID a cargar:', userIdToLoad, recordResponse.data.doctorId ? '(doctorId)' : '(createdBy)');
+            try {
+              const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
+              console.log('Respuesta del servicio de usuarios:', doctorResponse);
+              if (doctorResponse.success && doctorResponse.data) {
+                const fullName = doctorResponse.data.name || 
+                  `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
+                console.log('Nombre completo del odontólogo:', fullName);
+                setDoctorName(fullName || 'N/A');
+              }
+            } catch (error) {
+              console.error('Error loading doctor information:', error);
+              setDoctorName('N/A');
+            }
+          } else {
+            console.log('No hay doctorId ni createdBy en el registro médico');
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error);
@@ -142,7 +166,8 @@ export default function RegistroDetailPage() {
             { value: ciudad, x: 420, y: 105 },
             { value: dia, x: 470, y: 85 },   // Día
             { value: mes, x: 495, y: 85 },   // Mes
-            { value: anio, x: 520, y: 85 }   // Año
+            { value: anio, x: 520, y: 85 },   // Año
+            { value: doctorName || '', x: 150, y: 323 }  // Odontólogo
           ];
           
           // Agregar solo los valores al SVG
@@ -162,79 +187,48 @@ export default function RegistroDetailPage() {
           svgClone.appendChild(textGroup);
           
           // Aplicar condiciones del odontograma si existen
-          if (registro.odontogramas && registro.odontogramas.actual) {
-            console.log('Condiciones del odontograma:', registro.odontogramas.actual);
-            
-            // Log detallado de dientes con problemas
-            const problemTeeth = registro.odontogramas.actual.filter((c: any) => c.status !== 'healthy' && c.status !== 'missing');
-            console.log('Dientes con problemas:', problemTeeth);
-            
-            // Log específico de dientes 11, 13 y 22
-            const tooth11 = registro.odontogramas.actual.find((c: any) => c.number === 11);
-            const tooth13 = registro.odontogramas.actual.find((c: any) => c.number === 13);
-            const tooth22 = registro.odontogramas.actual.find((c: any) => c.number === 22);
-            console.log('Diente 11:', tooth11);
-            console.log('Diente 13:', tooth13);
-            console.log('Diente 22:', tooth22);
-            
-            // Mapeo de números de diente a coordenadas (basado en el SVG real)
-            // IMPORTANTE: En el SVG, el sector DERECHO del paciente (18-11) está en el lado IZQUIERDO visual (x pequeñas)
-            // y el sector IZQUIERDO del paciente (21-28) está en el lado DERECHO visual (x grandes)
+          if (registro.odontogramas) {
+            // Mapeo de números de diente a coordenadas
             const toothCoordinates: { [key: number]: { x: number, y: number } } = {
-              // Dientes permanentes superiores - Sector DERECHO del paciente (18-11) = lado IZQUIERDO del SVG
               18: { x: 84, y: 138 }, 17: { x: 103, y: 138 }, 16: { x: 122, y: 138 }, 15: { x: 141, y: 138 },
               14: { x: 160, y: 138 }, 13: { x: 179, y: 138 }, 12: { x: 198, y: 138 }, 11: { x: 217, y: 138 },
-              // Dientes permanentes superiores - Sector IZQUIERDO del paciente (21-28) = lado DERECHO del SVG
               21: { x: 251, y: 138 }, 22: { x: 270, y: 138 }, 23: { x: 289, y: 138 }, 24: { x: 308, y: 138 },
               25: { x: 327, y: 138 }, 26: { x: 346, y: 138 }, 27: { x: 365, y: 138 }, 28: { x: 384, y: 138 },
-              // Dientes permanentes inferiores - Sector DERECHO del paciente (48-41) = lado IZQUIERDO del SVG
               48: { x: 83, y: 175 }, 47: { x: 102, y: 175 }, 46: { x: 121, y: 175 }, 45: { x: 140, y: 175 },
               44: { x: 178, y: 175 }, 43: { x: 197, y: 175 }, 42: { x: 216, y: 175 }, 41: { x: 235, y: 175 },
-              // Dientes permanentes inferiores - Sector IZQUIERDO del paciente (31-38) = lado DERECHO del SVG
               31: { x: 251, y: 175 }, 32: { x: 270, y: 175 }, 33: { x: 289, y: 175 }, 34: { x: 308, y: 175 },
               35: { x: 327, y: 175 }, 36: { x: 346, y: 175 }, 37: { x: 365, y: 175 }, 38: { x: 384, y: 175 },
-              // Dientes temporales superiores - Sector DERECHO del paciente (55-51) = lado IZQUIERDO del SVG
               55: { x: 141, y: 230 }, 54: { x: 160, y: 230 }, 53: { x: 179, y: 230 }, 52: { x: 198, y: 230 }, 51: { x: 217, y: 230 },
-              // Dientes temporales superiores - Sector IZQUIERDO del paciente (61-65) = lado DERECHO del SVG
               61: { x: 251, y: 230 }, 62: { x: 270, y: 230 }, 63: { x: 289, y: 230 }, 64: { x: 308, y: 230 }, 65: { x: 327, y: 230 },
-              // Dientes temporales inferiores - Sector DERECHO del paciente (85-81) = lado IZQUIERDO del SVG
               85: { x: 140, y: 267 }, 84: { x: 159, y: 267 }, 83: { x: 178, y: 267 }, 82: { x: 197, y: 267 }, 81: { x: 216, y: 267 },
-              // Dientes temporales inferiores - Sector IZQUIERDO del paciente (71-75) = lado DERECHO del SVG
               71: { x: 251, y: 267 }, 72: { x: 270, y: 267 }, 73: { x: 289, y: 267 }, 74: { x: 308, y: 267 }, 75: { x: 327, y: 267 }
             };
-            
-            registro.odontogramas.actual.forEach((condition: any) => {
-              const toothNumber = condition.number;
-              const status = condition.status;
-              const sectors = condition.sectors || [];
-              const hasProsthesis = condition.hasProsthesis || false;
-              const coords = toothCoordinates[toothNumber];
-              
-              console.log(`Procesando diente ${toothNumber}, estado: ${status}, sectores: ${sectors.length}, prótesis: ${hasProsthesis}`);
-              
-              if (!coords) {
-                console.log(`No se encontraron coordenadas para el diente ${toothNumber}`);
-                return;
-              }
-              
-              // Buscar el grupo <g> que contiene un rect con la transformación correspondiente
-              const groups = svgClone.querySelectorAll('g[clip-path]');
-              let toothGroup: Element | null = null;
-              
-              groups.forEach((group) => {
-                const rectWithTransform = group.querySelector(`rect[transform*="translate(${coords.x} ${coords.y})"]`);
-                if (rectWithTransform) {
-                  toothGroup = group;
-                  console.log(`Encontrado grupo para diente ${toothNumber}`);
-                }
-              });
-              
-              if (toothGroup) {
+
+            // Función para procesar condiciones con un color específico
+            const processConditions = (conditions: any[], color: string, label: string) => {
+              conditions.forEach((condition: any) => {
+                const toothNumber = condition.number;
+                const status = condition.status;
+                const sectors = condition.sectors || [];
+                const hasCrown = condition.hasCrown || false;
+                const hasProsthesis = condition.hasProsthesis || false;
+                const coords = toothCoordinates[toothNumber];
+                
+                if (!coords) return;
+                
+                const groups = svgClone.querySelectorAll('g[clip-path]');
+                let toothGroup: Element | null = null;
+                
+                groups.forEach((group) => {
+                  const rectWithTransform = group.querySelector(`rect[transform*="translate(${coords.x} ${coords.y})"]`);
+                  if (rectWithTransform) toothGroup = group;
+                });
+                
+                if (!toothGroup) return;
                 const group = toothGroup as Element;
                 
-                // 1. Aplicar estilos según el estado principal
+                // Extracciones
                 if (status === 'extraction') {
-                  // Diente extraído: dibujar una X roja completa que cubra todo el diente
                   const baseRect = group.querySelector('rect[transform]') as SVGRectElement;
                   if (baseRect) {
                     const transform = baseRect.getAttribute('transform');
@@ -245,50 +239,40 @@ export default function RegistroDetailPage() {
                       const width = 13;
                       const height = 13;
                       
-                      // Línea diagonal de arriba-izquierda a abajo-derecha
                       const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                       line1.setAttribute('x1', baseX.toString());
                       line1.setAttribute('y1', baseY.toString());
                       line1.setAttribute('x2', (baseX + width).toString());
                       line1.setAttribute('y2', (baseY + height).toString());
-                      line1.setAttribute('stroke', '#2563eb');
+                      line1.setAttribute('stroke', color);
                       line1.setAttribute('stroke-width', '2');
-                      line1.setAttribute('stroke-linecap', 'square');
+                      line1.setAttribute('opacity', '0.85');
                       group.appendChild(line1);
                       
-                      // Línea diagonal de arriba-derecha a abajo-izquierda
                       const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                       line2.setAttribute('x1', (baseX + width).toString());
                       line2.setAttribute('y1', baseY.toString());
                       line2.setAttribute('x2', baseX.toString());
                       line2.setAttribute('y2', (baseY + height).toString());
-                      line2.setAttribute('stroke', '#2563eb');
+                      line2.setAttribute('stroke', color);
                       line2.setAttribute('stroke-width', '2');
-                      line2.setAttribute('stroke-linecap', 'square');
+                      line2.setAttribute('opacity', '0.85');
                       group.appendChild(line2);
-                      
-                      console.log(`Diente extraído ${toothNumber}: X roja completa agregada`);
                     }
                   }
                 } else if (status !== 'healthy' && status !== 'missing') {
-                  // Otros estados: rellenar el rectángulo central con rojo
                   const allRects = group.querySelectorAll('rect');
                   if (allRects.length > 2) {
-                    const centerRect = allRects[allRects.length - 1] as Element;
-                    centerRect.setAttribute('fill', '#2563eb');
-                    console.log(`Diente ${toothNumber}: rectángulo central (${allRects.length - 1}) cambiado a rojo`);
+                    (allRects[allRects.length - 1] as Element).setAttribute('fill', color);
+                    (allRects[allRects.length - 1] as Element).setAttribute('opacity', '0.85');
                   } else if (allRects.length === 2) {
-                    // Si solo hay 2 rectángulos, cambiar el segundo
-                    const centerRect = allRects[1] as Element;
-                    centerRect.setAttribute('fill', '#2563eb');
-                    console.log(`Diente ${toothNumber}: rectángulo 1 cambiado a rojo`);
+                    (allRects[1] as Element).setAttribute('fill', color);
+                    (allRects[1] as Element).setAttribute('opacity', '0.85');
                   }
                 }
                 
-                // 2. Procesar sectores afectados
+                // Sectores
                 if (sectors.length > 0) {
-                  console.log(`Diente ${toothNumber}: procesando ${sectors.length} sectores afectados`);
-                  
                   const baseRect = group.querySelector('rect[transform]') as SVGRectElement;
                   if (baseRect) {
                     const transform = baseRect.getAttribute('transform');
@@ -317,27 +301,26 @@ export default function RegistroDetailPage() {
                           centerRect.setAttribute('y', (baseY + 3.5).toString());
                           centerRect.setAttribute('width', '6');
                           centerRect.setAttribute('height', '6');
-                          centerRect.setAttribute('fill', '#2563eb');
+                          centerRect.setAttribute('fill', color);
+                          centerRect.setAttribute('opacity', '0.85');
                           group.appendChild(centerRect);
-                          console.log(`Diente ${toothNumber}: sector ${sector} agregado`);
                           return;
                         }
                         
                         if (points) {
                           const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
                           polygon.setAttribute('points', points);
-                          polygon.setAttribute('fill', '#2563eb');
+                          polygon.setAttribute('fill', color);
+                          polygon.setAttribute('opacity', '0.85');
                           group.appendChild(polygon);
-                          console.log(`Diente ${toothNumber}: sector ${sector} agregado`);
                         }
                       });
                     }
                   }
                 }
                 
-                // 3. Procesar prótesis (2 líneas horizontales paralelas)
-                if (hasProsthesis) {
-                  console.log(`Diente ${toothNumber}: procesando prótesis`);
+                // Coronas
+                if (hasCrown) {
                   const baseRect = group.querySelector('rect[transform]') as SVGRectElement;
                   if (baseRect) {
                     const transform = baseRect.getAttribute('transform');
@@ -345,39 +328,71 @@ export default function RegistroDetailPage() {
                     if (match) {
                       const baseX = parseInt(match[1]);
                       const baseY = parseInt(match[2]);
-                      const width = 20;
+                      const centerX = baseX + 6.5;
+                      const centerY = baseY + 6.5;
                       
-                      // Primera línea horizontal (superior)
-                      const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                      line1.setAttribute('x1', (baseX).toString());
-                      line1.setAttribute('y1', (baseY + 5).toString());
-                      line1.setAttribute('x2', (baseX + width - 2).toString());
-                      line1.setAttribute('y2', (baseY + 5).toString());
-                      line1.setAttribute('stroke', '#2563eb');
-                      line1.setAttribute('stroke-width', '1.5');
-                      group.appendChild(line1);
-                      
-                      // Segunda línea horizontal (inferior)
-                      const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                      line2.setAttribute('x1', (baseX).toString());
-                      line2.setAttribute('y1', (baseY + 8).toString());
-                      line2.setAttribute('x2', (baseX + width - 2).toString());
-                      line2.setAttribute('y2', (baseY + 8).toString());
-                      line2.setAttribute('stroke', '#2563eb');
-                      line2.setAttribute('stroke-width', '1.5');
-                      group.appendChild(line2);
-                      
-                      console.log(`Diente ${toothNumber}: prótesis agregada (2 líneas horizontales)`);
+                      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                      circle.setAttribute('cx', centerX.toString());
+                      circle.setAttribute('cy', centerY.toString());
+                      circle.setAttribute('r', '5.5');
+                      circle.setAttribute('fill', 'none');
+                      circle.setAttribute('stroke', color);
+                      circle.setAttribute('stroke-width', '2');
+                      circle.setAttribute('opacity', '0.85');
+                      svgClone.appendChild(circle);
                     }
                   }
                 }
-              } else {
-                console.log(`No se encontró grupo para diente ${toothNumber}`);
-              }
-            });
+                
+                // Prótesis
+                if (hasProsthesis) {
+                  const baseRect = group.querySelector('rect[transform]') as SVGRectElement;
+                  if (baseRect) {
+                    const transform = baseRect.getAttribute('transform');
+                    const match = transform?.match(/translate\((\d+)\s+(\d+)\)/);
+                    if (match) {
+                      const baseX = parseInt(match[1]);
+                      const baseY = parseInt(match[2]);
+                      const extension = 3;
+                      
+                      const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                      line1.setAttribute('x1', (baseX - extension).toString());
+                      line1.setAttribute('y1', (baseY + 4).toString());
+                      line1.setAttribute('x2', (baseX + 13 + extension).toString());
+                      line1.setAttribute('y2', (baseY + 4).toString());
+                      line1.setAttribute('stroke', color);
+                      line1.setAttribute('stroke-width', '2');
+                      line1.setAttribute('opacity', '0.85');
+                      group.appendChild(line1);
+                      
+                      const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                      line2.setAttribute('x1', (baseX - extension).toString());
+                      line2.setAttribute('y1', (baseY + 9).toString());
+                      line2.setAttribute('x2', (baseX + 13 + extension).toString());
+                      line2.setAttribute('y2', (baseY + 9).toString());
+                      line2.setAttribute('stroke', color);
+                      line2.setAttribute('stroke-width', '2');
+                      line2.setAttribute('opacity', '0.85');
+                      group.appendChild(line2);
+                    }
+                  }
+                }
+              });
+            };
+
+            // Procesar histórico en rojo
+            if (registro.odontogramas.historico && registro.odontogramas.historico.length > 0) {
+              console.log('📕 Procesando odontograma histórico (ROJO)');
+              processConditions(registro.odontogramas.historico, '#ef4444', 'HISTÓRICO');
+            }
+
+            // Procesar actual en azul
+            if (registro.odontogramas.actual && registro.odontogramas.actual.length > 0) {
+              console.log('📘 Procesando odontograma actual (AZUL)');
+              processConditions(registro.odontogramas.actual, '#2563eb', 'ACTUAL');
+            }
           }
           
-          // Convertir SVG modificado a imagen usando canvas
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           const svgData = new XMLSerializer().serializeToString(svgClone);
@@ -426,9 +441,89 @@ export default function RegistroDetailPage() {
         
         const svgElement2 = tempDiv2.querySelector('svg');
         if (svgElement2) {
+          // Clonar el SVG para modificarlo
+          const svgClone2 = svgElement2.cloneNode(true) as SVGSVGElement;
+          
+          // Crear grupo de texto para información de la consulta
+          const textGroup2 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          textGroup2.setAttribute('id', 'consulta-info');
+          
+          // Obtener mes y año de la fecha de la consulta
+          let mesConsulta = '';
+          let anioConsulta = '';
+          
+          if (registro?.fecha) {
+            const fechaConsulta = new Date(registro.fecha);
+            mesConsulta = (fechaConsulta.getMonth() + 1).toString().padStart(2, '0');
+            anioConsulta = fechaConsulta.getFullYear().toString().slice(-2); // Últimos 2 dígitos
+          } else {
+            mesConsulta = '01';
+            anioConsulta = '24';
+          }
+          
+          // Obtener sexo del paciente (F, M, o X si no especifica)
+          let sexo = 'X';
+          if (patient?.genero) {
+            console.log(patient?.genero)
+            if (patient.genero === 'femenino') {
+              sexo = 'F';
+            } else if (patient.genero === 'masculino') {
+              sexo = 'M';
+            } else {
+              sexo = 'X'; // Para 'otro' o cualquier otro valor
+            }
+          }
+          
+          // Calcular edad del paciente
+          let edad = '';
+          if (patient?.fechaNacimiento) {
+            const hoy = new Date();
+            const nacimiento = new Date(patient.fechaNacimiento);
+            let edadCalculada = hoy.getFullYear() - nacimiento.getFullYear();
+            const mesActual = hoy.getMonth();
+            const mesNacimiento = nacimiento.getMonth();
+            
+            if (mesActual < mesNacimiento || (mesActual === mesNacimiento && hoy.getDate() < nacimiento.getDate())) {
+              edadCalculada--;
+            }
+            
+            edad = edadCalculada.toString().padStart(2, '0');
+          } else {
+            edad = '00';
+          }
+          
+          // Información a agregar al SVG con coordenadas
+          const consultaInfo = [
+            { value: sexo, x: 211, y: 150 },                      // Sexo
+            { value: edad.charAt(0), x: 270, y: 150 },            // Edad - primer dígito
+            { value: edad.charAt(1), x: 290, y: 150 },            // Edad - segundo dígito
+            { value: mesConsulta.charAt(0), x: 270, y: 102 },    // Mes - primer dígito
+            { value: mesConsulta.charAt(1), x: 290, y: 102 },    // Mes - segundo dígito
+            { value: anioConsulta.charAt(0), x: 365, y: 102 },   // Año - primer dígito
+            { value: anioConsulta.charAt(1), x: 385, y: 102 }    // Año - segundo dígito
+          ];
+          
+          // Agregar los valores al SVG
+          consultaInfo.forEach((info) => {
+            const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textElement.setAttribute('x', info.x.toString());
+            textElement.setAttribute('y', info.y.toString());
+            textElement.setAttribute('font-family', 'Arial, sans-serif');
+            textElement.setAttribute('font-size', '12');
+            textElement.setAttribute('font-weight', 'bold');
+            textElement.setAttribute('fill', '#000000');
+            textElement.setAttribute('text-anchor', 'middle');
+            textElement.setAttribute('dominant-baseline', 'middle');
+            textElement.textContent = info.value;
+            textGroup2.appendChild(textElement);
+          });
+          
+          // Insertar el grupo al final del SVG
+          svgClone2.appendChild(textGroup2);
+          
           const canvas2 = document.createElement('canvas');
           const ctx2 = canvas2.getContext('2d');
-          const svgData2 = new XMLSerializer().serializeToString(svgElement2);
+          const svgData2 = new XMLSerializer().serializeToString(svgClone2);
           const img2 = new window.Image();
           
           await new Promise((resolve, reject) => {
@@ -657,6 +752,16 @@ export default function RegistroDetailPage() {
                   <p className="text-lg font-semibold text-gray-900">{getConsultaTypeLabel(registro.tipoConsulta)}</p>
                 </div>
               </div>
+              
+              {doctorName && (
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-500">Odontólogo</label>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <p className="text-lg font-semibold text-gray-900">{doctorName}</p>
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-500">Creado</label>
