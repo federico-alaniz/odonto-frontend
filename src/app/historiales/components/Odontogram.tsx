@@ -1,20 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { ToothCondition, ToothSector } from '@/services/medicalRecords';
 
-interface ToothSector {
-  sector: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  hasRestoration: boolean;
-}
-
-export interface ToothCondition {
-  number: number;
-  status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
-  sectors?: ToothSector[];
-  hasCrown?: boolean;
-  hasProsthesis?: boolean;
-  notes?: string;
-}
+export type { ToothCondition, ToothSector };
 
 interface OdontogramProps {
   initialConditions?: ToothCondition[];

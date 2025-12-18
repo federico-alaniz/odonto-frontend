@@ -22,7 +22,7 @@ export interface DatosOdontologicos {
   materiales?: string;
 }
 
-interface ToothSector {
+export interface ToothSector {
   sector: 'top' | 'bottom' | 'left' | 'right' | 'center';
   hasRestoration: boolean;
 }

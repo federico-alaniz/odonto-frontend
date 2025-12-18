@@ -6,6 +6,7 @@ import Portal from '../../calendario/components/Portal';
 import { MedicalHistory } from '../adapter';
 import ImageViewerModal from './ImageViewerModal';
 import Odontogram from '../components/Odontogram';
+import { ToothCondition } from '@/services/medicalRecords';
 
 interface HistoryDetailModalProps {
   history: MedicalHistory | null;
@@ -232,7 +233,14 @@ export default function HistoryDetailModal({ history, isOpen, onClose, onEdit }:
             {history.specialty === 'odontologia' && history.odontogram && (
               <div>
                 <Odontogram
-                  initialConditions={history.odontogram}
+                  initialConditions={history.odontogram.map((tooth: any) => ({
+                    number: tooth.id,
+                    status: tooth.status,
+                    sectors: tooth.sectors,
+                    hasCrown: tooth.hasCrown,
+                    hasProsthesis: tooth.hasProsthesis,
+                    notes: tooth.notes
+                  }))}
                   onUpdate={() => {}} // Modo solo lectura
                   readOnly={true}
                 />

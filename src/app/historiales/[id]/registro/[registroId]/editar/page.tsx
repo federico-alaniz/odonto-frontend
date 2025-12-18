@@ -24,21 +24,7 @@ import MedicalTextareaField from '@/components/forms/MedicalTextareaField';
 import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
 import MedicalFormActions from '@/components/forms/MedicalFormActions';
 import MedicalButton from '@/components/forms/MedicalButton';
-
-// Tipos para el odontograma
-interface ToothSector {
-  sector: 'top' | 'bottom' | 'left' | 'right' | 'center';
-  hasRestoration: boolean;
-}
-
-interface ToothCondition {
-  id: number;
-  status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
-  sectors?: ToothSector[];
-  hasCrown?: boolean;
-  hasProsthesis?: boolean;
-  notes?: string;
-}
+import { ToothCondition, ToothSector } from '@/services/medicalRecords';
 
 export default function RegistroEditPage() {
   const params = useParams();
@@ -96,7 +82,16 @@ export default function RegistroEditPage() {
     if (foundRegistro) {
       setPatientName(`${foundRegistro.patient.firstName} ${foundRegistro.patient.lastName}`);
       setRegistro(foundRegistro);
-      setOdontogramData(foundRegistro.odontogram || []);
+      // Mapear el odontograma del adaptador (que usa 'id') al tipo ToothCondition (que usa 'number')
+      const mappedOdontogram: ToothCondition[] = (foundRegistro.odontogram || []).map((tooth: any) => ({
+        number: tooth.id,
+        status: tooth.status,
+        sectors: tooth.sectors,
+        hasCrown: tooth.hasCrown,
+        hasProsthesis: tooth.hasProsthesis,
+        notes: tooth.notes
+      }));
+      setOdontogramData(mappedOdontogram);
       // Inicializar el formulario con los datos del registro
       setFormData({
         consultationDate: foundRegistro.consultationDate.split('T')[0], // Solo la fecha
