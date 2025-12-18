@@ -21,9 +21,10 @@ interface OdontogramProps {
   onUpdate: (conditions: ToothCondition[]) => void;
   readOnly?: boolean;
   showLegend?: boolean;
+  interventionColor?: 'red' | 'blue';
 }
 
-export default function Odontogram({ initialConditions = [], onUpdate, readOnly = false, showLegend = true }: OdontogramProps) {
+export default function Odontogram({ initialConditions = [], onUpdate, readOnly = false, showLegend = true, interventionColor = 'red' }: OdontogramProps) {
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
     // Inicializar todos los dientes como sanos si no hay condiciones previas
     const defaultConditions: ToothCondition[] = [];
@@ -54,6 +55,12 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   const [crownMode, setCrownMode] = useState<boolean>(false);
   const [prosthesisMode, setProsthesisMode] = useState<boolean>(false);
   const [extractionMode, setExtractionMode] = useState<boolean>(false);
+
+  // Colores basados en el tipo de odontograma
+  const sectorColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
+  const crownColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
+  const prosthesisColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
+  const extractionColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
 
   const getToothColor = (status: ToothCondition['status']) => {
     const colors = {
@@ -267,7 +274,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             {/* Sector superior */}
             <polygon
               points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
-              fill={getSectorRestoration(number, 'top') ? '#ef4444' : 'transparent'}
+              fill={getSectorRestoration(number, 'top') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'top', e)}
             />
@@ -275,7 +282,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             {/* Sector inferior */}
             <polygon
               points={`${position.x + 11},${position.y + 33} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44} ${position.x},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'bottom') ? '#ef4444' : 'transparent'}
+              fill={getSectorRestoration(number, 'bottom') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'bottom', e)}
             />
@@ -283,7 +290,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             {/* Sector izquierdo */}
             <polygon
               points={`${position.x},${position.y} ${position.x + 11},${position.y + 11} ${position.x + 11},${position.y + 33} ${position.x},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'left') ? '#ef4444' : 'transparent'}
+              fill={getSectorRestoration(number, 'left') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'left', e)}
             />
@@ -291,7 +298,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             {/* Sector derecho */}
             <polygon
               points={`${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'right') ? '#ef4444' : 'transparent'}
+              fill={getSectorRestoration(number, 'right') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'right', e)}
             />
@@ -302,7 +309,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
               y={position.y + 11}
               width="22"
               height="22"
-              fill={getSectorRestoration(number, 'center') ? '#ef4444' : 'transparent'}
+              fill={getSectorRestoration(number, 'center') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'center', e)}
             />
@@ -365,28 +372,28 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             {getSectorRestoration(number, 'top') && (
               <polygon
                 points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
-                fill="#ef4444"
+                fill={sectorColor}
                 className="pointer-events-none"
               />
             )}
             {getSectorRestoration(number, 'bottom') && (
               <polygon
                 points={`${position.x + 11},${position.y + 33} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44} ${position.x},${position.y + 44}`}
-                fill="#ef4444"
+                fill={sectorColor}
                 className="pointer-events-none"
               />
             )}
             {getSectorRestoration(number, 'left') && (
               <polygon
                 points={`${position.x},${position.y} ${position.x + 11},${position.y + 11} ${position.x + 11},${position.y + 33} ${position.x},${position.y + 44}`}
-                fill="#ef4444"
+                fill={sectorColor}
                 className="pointer-events-none"
               />
             )}
             {getSectorRestoration(number, 'right') && (
               <polygon
                 points={`${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44}`}
-                fill="#ef4444"
+                fill={sectorColor}
                 className="pointer-events-none"
               />
             )}
@@ -396,7 +403,7 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
                 y={position.y + 11}
                 width="22"
                 height="22"
-                fill="#ef4444"
+                fill={sectorColor}
                 className="pointer-events-none"
               />
             )}
@@ -411,18 +418,18 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
               y1={position.y + 5}
               x2={position.x + 39}
               y2={position.y + 39}
-              stroke="currentColor"
+              stroke={extractionColor}
               strokeWidth="3"
-              className="stroke-red-600 pointer-events-none"
+              className="pointer-events-none"
             />
             <line
               x1={position.x + 39}
               y1={position.y + 5}
               x2={position.x + 5}
               y2={position.y + 39}
-              stroke="currentColor"
+              stroke={extractionColor}
               strokeWidth="3"
-              className="stroke-red-600 pointer-events-none"
+              className="pointer-events-none"
             />
           </>
         )}
@@ -434,9 +441,9 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
             cy={position.y + 22}
             r="16"
             fill="none"
-            stroke="currentColor"
+            stroke={crownColor}
             strokeWidth="3"
-            className="stroke-blue-600 pointer-events-none"
+            className="pointer-events-none"
           />
         )}
 
@@ -449,9 +456,9 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
               y1={position.y + 18}
               x2={position.x + 36}
               y2={position.y + 18}
-              stroke="currentColor"
+              stroke={prosthesisColor}
               strokeWidth="3"
-              className="stroke-green-600 pointer-events-none"
+              className="pointer-events-none"
             />
             {/* Segunda línea paralela */}
             <line
@@ -459,9 +466,9 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
               y1={position.y + 26}
               x2={position.x + 36}
               y2={position.y + 26}
-              stroke="currentColor"
+              stroke={prosthesisColor}
               strokeWidth="3"
-              className="stroke-green-600 pointer-events-none"
+              className="pointer-events-none"
             />
           </>
         )}
