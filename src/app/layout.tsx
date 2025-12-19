@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SidebarLayout from "@/components/SidebarLayout";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import Providers from "./providers";
 import { AuthProvider } from "@/hooks/useAuth";
 // import { RoleSwitcher } from "@/components/testing/RoleSwitcher"; // Desactivado - usar roles reales del login
 
@@ -31,15 +32,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <ToastProvider>
-            <SidebarLayout>
-              {children}
-            </SidebarLayout>
-            {/* Testing component - desactivado para usar roles reales del login */}
-            {/* <RoleSwitcher /> */}
-          </ToastProvider>
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <ToastProvider>
+              <SidebarLayout>
+                {children}
+              </SidebarLayout>
+              {/* Testing component - desactivado para usar roles reales del login */}
+              {/* <RoleSwitcher /> */}
+            </ToastProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

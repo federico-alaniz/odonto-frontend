@@ -474,14 +474,12 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                   <HelpCircle className="w-4 h-4" />
                   <span>Ayuda</span>
                 </Link>
-                
+
                 <div className="border-t border-gray-300 mt-2 pt-2">
                   <button
                     onClick={() => {
                       setIsUserDropdownOpen(false);
                       logout();
-                      // Redirigir al login después del logout
-                      window.location.href = '/login';
                     }}
                     className="flex items-center space-x-3 px-4 py-3 text-sm text-red-700 font-semibold hover:bg-red-50 hover:text-red-800 transition-colors duration-200 w-full text-left"
                   >
@@ -502,9 +500,9 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             title="Ver perfil"
           >
             {currentUser?.avatar ? (
-              <img 
-                src={currentUser.avatar} 
-                alt={currentUser.name || 'Usuario'} 
+              <img
+                src={currentUser?.avatar}
+                alt={currentUser?.name || 'Usuario'}
                 className="w-full h-full object-cover"
               />
             ) : (

@@ -192,9 +192,10 @@ export interface PatientStatsResponse {
 
 // Helper para obtener headers
 const getHeaders = (clinicId: string, userId?: string) => {
+  const normalizedClinicId = (clinicId || 'clinic_001').toLowerCase();
   const headers: any = {
     'Content-Type': 'application/json',
-    'X-Clinic-Id': clinicId,
+    'X-Clinic-Id': normalizedClinicId,
   };
   
   if (userId) {
@@ -309,8 +310,12 @@ export const patientsService = {
       );
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al obtener paciente');
+        const errorData = await response.json().catch(() => ({} as any));
+        const errorMessage =
+          errorData?.errors?.[0] ||
+          errorData?.error ||
+          'Error al obtener paciente';
+        throw new Error(errorMessage);
       }
       
       return await response.json();

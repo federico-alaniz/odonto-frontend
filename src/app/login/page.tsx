@@ -13,13 +13,14 @@ import {
   AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth, getDemoUsers } from '@/hooks/useAuth';
+import { signIn, useSession } from 'next-auth/react';
 import { UserRole } from '@/types/roles';
-import { usersService } from '@/services/api/users.service';
+
+const AUTH_DEBUG = process.env.NEXT_PUBLIC_AUTH_DEBUG === '1';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, logout } = useAuth();
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -28,11 +29,26 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Limpiar sesión al cargar la página de login
   useEffect(() => {
-    logout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (AUTH_DEBUG) {
+      // eslint-disable-next-line no-console
+      console.log('[AUTH_DEBUG][login] session status', {
+        status,
+        role: (session as any)?.user?.role,
+        hasUser: Boolean((session as any)?.user),
+      });
+    }
+    if (status !== 'authenticated') return;
+    const role = (session as any)?.user?.role as UserRole | undefined;
+    if (!role) return;
+    const redirectPath = getRoleRedirectPath(role);
+
+    if (AUTH_DEBUG) {
+      // eslint-disable-next-line no-console
+      console.log('[AUTH_DEBUG][login] redirecting to role dashboard', { role, redirectPath });
+    }
+    router.push(redirectPath);
+  }, [session, status, router]);
 
   // Función para obtener la ruta según el rol
   const getRoleRedirectPath = (role: UserRole): string => {
@@ -62,55 +78,20 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // TODO: Obtener clinicId del contexto o configuración
-      const clinicId = 'clinic_001';
-      
-      let user;
-      
-      // Intentar autenticar con la base de datos primero
-      try {
-        const response = await usersService.authenticateByEmail(formData.email, clinicId);
-        if (response.success && response.data) {
-          user = response.data;
-          console.log('Usuario encontrado en BD:', user);
-        }
-      } catch (dbError) {
-        console.log('Usuario no encontrado en BD, buscando en demos...');
-        
-        // Si no está en BD, buscar en usuarios demo
-        const demoUsers = getDemoUsers();
-        user = Object.values(demoUsers).find(u => u.email === formData.email);
-        
-        // Si tampoco está en demos, crear usuario temporal con rol doctor
-        if (!user) {
-          console.log('Usuario no encontrado, creando temporal...');
-          user = {
-            ...demoUsers.doctor,
-            email: formData.email,
-            name: formData.email.split('@')[0],
-          };
-        }
-      }
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-      // Validar que se haya encontrado o creado un usuario
-      if (!user) {
-        setError('No se pudo autenticar el usuario');
+      if (result?.error) {
+        setError('Credenciales inválidas');
         setIsLoading(false);
         return;
       }
 
-      // Simular validación de password (en producción se valida en backend)
-      // TODO: Validar password en el backend
-      
-      // Limpiar sesión anterior antes de hacer login
-      logout();
-      
-      // Hacer login con el usuario encontrado o creado
-      login(user);
-      
-      // Redirigir según el rol
-      const redirectPath = getRoleRedirectPath(user.role);
-      router.push(redirectPath);
+      // Session will update and useEffect above will redirect.
+      setIsLoading(false);
       
     } catch (err) {
       console.error('Error en login:', err);
@@ -303,39 +284,6 @@ export default function LoginPage() {
               >
                 Regístrate aquí
               </Link>
-            </p>
-          </div>
-        </div>
-
-        {/* Usuarios Demo */}
-        <div className="mt-6 bg-white rounded-xl shadow-lg p-6 border border-blue-100">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-blue-600" />
-            Usuarios Demo Disponibles
-          </h3>
-          <div className="space-y-3">
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900 mb-1">👑 Administrador</p>
-              <p className="text-xs text-gray-700 font-mono">admin@mediclinic.com</p>
-              <p className="text-xs text-blue-600 mt-1">→ Redirige a /admin</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900 mb-1">👨‍⚕️ Doctor</p>
-              <p className="text-xs text-gray-700 font-mono">juan.perez@mediclinic.com</p>
-              <p className="text-xs text-blue-600 mt-1">→ Redirige a /doctor</p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <p className="text-xs font-semibold text-gray-900 mb-1">👩‍💼 Secretaria</p>
-              <p className="text-xs text-gray-700 font-mono">ana.martinez@mediclinic.com</p>
-              <p className="text-xs text-blue-600 mt-1">→ Redirige a /secretary</p>
-            </div>
-          </div>
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs text-blue-800 text-center font-medium">
-              💡 También puedes usar cualquier email con cualquier contraseña
-            </p>
-            <p className="text-xs text-blue-600 text-center mt-1">
-              (Se creará un usuario temporal con rol Doctor)
             </p>
           </div>
         </div>

@@ -376,26 +376,10 @@ class UsersService {
       });
 
       return await handleResponse(response);
-    } catch (error: any) {
-      // Si el backend no está disponible, simular éxito para desarrollo
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        console.warn('Backend no disponible, simulando actualización de perfil');
-        // Obtener usuario actual del localStorage
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-          const currentUser = JSON.parse(storedUser);
-          const updatedUser = { ...currentUser, ...profileData };
-          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-          return {
-            success: true,
-            data: updatedUser
-          };
-        }
-      }
+    } catch (error) {
       return handleFetchError(error);
     }
   }
-
 }
 
 // Exportar instancia única del servicio

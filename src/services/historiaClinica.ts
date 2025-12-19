@@ -29,13 +29,13 @@ class HistoriaClinicaService {
   private baseUrl = `${API_BASE_URL}/api/patients`;
 
   private async fetchWithHeaders(url: string, options: RequestInit = {}) {
-    const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+    const clinicId = (localStorage.getItem('clinicId') || 'clinic_001').toLowerCase();
     const userId = localStorage.getItem('userId') || 'system';
     
     const headers = {
       'Content-Type': 'application/json',
-      'X-Clinic-ID': clinicId,
-      'X-User-ID': userId,
+      'X-Clinic-Id': clinicId,
+      'X-User-Id': userId,
       ...options.headers,
     };
 

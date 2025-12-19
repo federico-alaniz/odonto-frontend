@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useMemo, useState } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { User, UserRole, AuthContextType } from '../types/roles';
 import { getRoleConfig } from '../utils/roleConfig';
+import { usersService } from '../services/api/users.service';
+
+const AUTH_DEBUG = process.env.NEXT_PUBLIC_AUTH_DEBUG === '1';
 
 // Contexto de autenticación
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Usuarios demo para testing en Fase 1
-const DEMO_USERS: Record<UserRole, User> = {
+const DEMO_USERS: Record<UserRole, any> = {
   admin: {
     id: 'admin_001',
     role: 'admin',
@@ -56,54 +60,80 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status } = useSession();
+  const sessionUser = (session as any)?.user as Partial<User> | undefined;
+  const sessionRole = ((session as any)?.role ?? (sessionUser as any)?.role) as UserRole | undefined;
+  const baseUser = useMemo(() => {
+    return sessionUser && sessionRole
+      ? ({
+          ...(sessionUser as any),
+          role: sessionRole,
+          permissions: (sessionUser as any)?.permissions ?? getRoleConfig(sessionRole).defaultPermissions,
+        } as User)
+      : null;
+  }, [sessionRole, sessionUser]);
+
+  const [hydratedUser, setHydratedUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Cargar usuario desde localStorage
-    const loadStoredUser = () => {
-      try {
-        const storedUser = localStorage.getItem('currentUser');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          setCurrentUser(user);
-        } else {
-          // No hay usuario guardado - dejar como null para que redirija al login
-          setCurrentUser(null);
-        }
-      } catch (error) {
-        console.error('Error loading stored user:', error);
-        setCurrentUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    setHydratedUser(baseUser);
+  }, [baseUser]);
 
-    // Simular delay de carga
-    setTimeout(loadStoredUser, 500);
-  }, []);
+  useEffect(() => {
+    if (!baseUser?.id) return;
+
+    const tenantId = ((session as any)?.tenantId ?? (sessionUser as any)?.tenantId ?? 'clinic_001') as string;
+
+    void (async () => {
+      try {
+        const res = await usersService.getProfile(baseUser.id as any, tenantId);
+        if (!res?.success || !res?.data) return;
+        setHydratedUser({
+          ...baseUser,
+          ...(res.data as any),
+          role: baseUser.role,
+          permissions: baseUser.permissions,
+        });
+      } catch {
+        // ignore
+      }
+    })();
+  }, [baseUser?.id, session, sessionRole, sessionUser]);
+
+  const currentUser = hydratedUser;
+  const isLoading = status === 'loading';
 
   const login = (user: User) => {
-    setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    
-    // Simular evento de login
-    console.log(`Usuario ${user.name} (${user.role}) ha iniciado sesión`);
+    // Compatibility shim: the app calls login(user) in some places.
+    // The real login flow should use credentials in /login which calls signIn.
+    // If invoked, attempt credentials sign-in using the user's email; password must be provided via /login.
+    void signIn('credentials', { email: user.email, password: '', redirect: false });
   };
 
   const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('currentUser');
-    
-    console.log('Usuario ha cerrado sesión');
+    void (async () => {
+      if (AUTH_DEBUG) {
+        // eslint-disable-next-line no-console
+        console.log('[AUTH_DEBUG][logout] start', {
+          status,
+          hasSessionUser: Boolean((session as any)?.user),
+        });
+      }
+
+      await signOut({ redirect: false });
+
+      if (AUTH_DEBUG) {
+        // eslint-disable-next-line no-console
+        console.log('[AUTH_DEBUG][logout] after signOut -> redirecting to /login');
+      }
+      window.location.href = '/login';
+    })();
   };
 
-  const switchRole = (role: UserRole) => {
-    const newUser = DEMO_USERS[role];
-    setCurrentUser(newUser);
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    
-    console.log(`Cambiado a rol: ${role} (${newUser.name})`);
+  const switchRole = (_role: UserRole) => {
+    // Disabled: role switching was only for demo/testing.
+    // Keep as no-op to avoid breaking callers.
+    return;
   };
 
   const hasPermission = (resource: string, action: string, scope?: string): boolean => {
@@ -186,4 +216,4 @@ export const useCurrentRole = () => {
 export const getDemoUsers = () => DEMO_USERS;
 
 // Función para obtener un usuario demo específico
-export const getDemoUser = (role: UserRole): User => DEMO_USERS[role];
+export const getDemoUser = (role: UserRole): User => DEMO_USERS[role] as User;

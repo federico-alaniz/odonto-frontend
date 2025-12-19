@@ -26,7 +26,7 @@ import Link from 'next/link';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { currentUser, login } = useAuth();
+  const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,8 +47,7 @@ export default function ProfilePage() {
     codigoPostal: '',
   });
 
-  // TODO: Obtener del contexto
-  const clinicId = 'clinic_001';
+  const clinicId = (currentUser as any)?.tenantId || 'clinic_001';
 
   useEffect(() => {
     if (currentUser) {
@@ -67,6 +66,37 @@ export default function ProfilePage() {
       setAvatarPreview(currentUser.avatar || null);
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    void (async () => {
+      setIsLoading(true);
+      try {
+        const response = await usersService.getProfile(currentUser.id, clinicId);
+        if (!response.success || !response.data) return;
+
+        const user = response.data as any;
+        setFormData({
+          nombres: user.nombres || '',
+          apellidos: user.apellidos || '',
+          email: user.email || '',
+          telefono: user.telefono || '',
+          fechaNacimiento: user.fechaNacimiento || '',
+          genero: user.genero || '',
+          direccion: user.direccion || '',
+          ciudad: user.ciudad || '',
+          provincia: user.provincia || '',
+          codigoPostal: user.codigoPostal || '',
+        });
+        setAvatarPreview(user.avatar || null);
+      } catch (_error) {
+        showError('Error al cargar perfil', 'No se pudo obtener tu información. Intenta nuevamente.');
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [clinicId, currentUser?.id, showError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -98,9 +128,6 @@ export default function ProfilePage() {
     reader.onloadend = () => {
       const localUrl = reader.result as string;
       setAvatarPreview(localUrl);
-      
-      // Actualizar el formData con la URL local del avatar
-      setFormData(prev => ({ ...prev, avatar: localUrl }));
     };
     reader.readAsDataURL(file);
 
@@ -118,9 +145,21 @@ export default function ProfilePage() {
       
       if (response.success && response.data) {
         showSuccess('Perfil actualizado', 'Tus datos han sido guardados correctamente');
-        
-        // Actualizar usuario en contexto
-        login(response.data);
+
+        const user = response.data as any;
+        setFormData({
+          nombres: user.nombres || '',
+          apellidos: user.apellidos || '',
+          email: user.email || '',
+          telefono: user.telefono || '',
+          fechaNacimiento: user.fechaNacimiento || '',
+          genero: user.genero || '',
+          direccion: user.direccion || '',
+          ciudad: user.ciudad || '',
+          provincia: user.provincia || '',
+          codigoPostal: user.codigoPostal || '',
+        });
+        setAvatarPreview(user.avatar || null);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
