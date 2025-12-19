@@ -39,7 +39,7 @@ export default function RegistroDetailPage() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+        const clinicId = (localStorage.getItem('clinicId') || 'clinic_001').toLowerCase();
         
         // Load patient data
         const patientResponse = await patientsService.getPatientById(patientId, clinicId);
@@ -58,13 +58,26 @@ export default function RegistroDetailPage() {
           if (userIdToLoad) {
             console.log('User ID a cargar:', userIdToLoad, recordResponse.data.doctorId ? '(doctorId)' : '(createdBy)');
             try {
-              const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
-              console.log('Respuesta del servicio de usuarios:', doctorResponse);
-              if (doctorResponse.success && doctorResponse.data) {
-                const fullName = doctorResponse.data.name || 
-                  `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
-                console.log('Nombre completo del odontólogo:', fullName);
-                setDoctorName(fullName || 'N/A');
+              if (userIdToLoad === 'system') {
+                setDoctorName('N/A');
+              } else if (userIdToLoad.includes('@')) {
+                const doctorResponse = await usersService.authenticateByEmail(userIdToLoad, clinicId);
+                console.log('Respuesta del servicio de usuarios (by email):', doctorResponse);
+                if (doctorResponse.success && doctorResponse.data) {
+                  const fullName = doctorResponse.data.name || 
+                    `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
+                  console.log('Nombre completo del odontólogo:', fullName);
+                  setDoctorName(fullName || 'N/A');
+                }
+              } else {
+                const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
+                console.log('Respuesta del servicio de usuarios (by id):', doctorResponse);
+                if (doctorResponse.success && doctorResponse.data) {
+                  const fullName = doctorResponse.data.name || 
+                    `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
+                  console.log('Nombre completo del odontólogo:', fullName);
+                  setDoctorName(fullName || 'N/A');
+                }
               }
             } catch (error) {
               console.error('Error loading doctor information:', error);
