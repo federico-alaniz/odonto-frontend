@@ -48,8 +48,6 @@ export default function SecretaryAppointmentsPage() {
       setLoading(true);
       const clinicId = 'clinic_001'; // TODO: obtener del contexto
 
-      console.log('📊 Cargando datos para el calendario...');
-
       // Cargar citas, doctores y pacientes en paralelo
       const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId, { limit: 1000 }),
@@ -57,48 +55,34 @@ export default function SecretaryAppointmentsPage() {
         patientsService.getPatients(clinicId, { limit: 1000 })
       ]);
 
-      console.log('✅ Datos cargados:');
-      console.log('  - Citas:', appointmentsRes.data.length);
-      console.log('  - Doctores:', doctorsRes.data.length);
-      console.log('  - Pacientes:', patientsRes.data.length);
-
       setAppointments(appointmentsRes.data);
       setDoctors(doctorsRes.data);
       setPatients(patientsRes.data);
 
-      console.log('✅ Estados actualizados');
     } catch (error) {
       console.error('❌ Error loading data:', error);
     } finally {
       setLoading(false);
-      console.log('✅ Loading = false');
     }
   };
 
   // Filtrar appointments
   useEffect(() => {
-    console.log('🔍 Filtrando citas...');
-    console.log('  - Total citas:', appointments.length);
-    
     let filtered = appointments;
 
     if (filterDoctor) {
       filtered = filtered.filter(apt => apt.doctorId === filterDoctor);
-      console.log('  - Filtradas por doctor:', filtered.length);
     }
 
     if (filterStatus) {
       filtered = filtered.filter(apt => apt.estado === filterStatus);
-      console.log('  - Filtradas por estado:', filtered.length);
     }
 
     if (showTodayOnly) {
       const selectedDay = formatDateForComparison(agendaDate);
       filtered = filtered.filter(apt => apt.fecha === selectedDay);
-      console.log('  - Filtradas por fecha', selectedDay, ':', filtered.length);
     }
 
-    console.log('✅ Citas filtradas:', filtered.length);
     setFilteredAppointments(filtered);
   }, [filterDoctor, filterStatus, showTodayOnly, agendaDate, appointments]);
 

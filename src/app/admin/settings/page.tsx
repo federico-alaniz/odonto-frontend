@@ -28,6 +28,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
+import { useAuth } from '@/hooks/useAuth';
 
 type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations';
 
@@ -60,14 +61,19 @@ interface OperatingRoom {
 
 export default function AdminSettingsPage() {
   const { showWarning, showSuccess: showSuccessToast, showError } = useToast();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // TODO: Obtener del contexto
-  const clinicId = 'clinic_001';
-  const userId = 'usr_000001';
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const userId = (currentUser as any)?.id;
+
+  const specialtiesStorageKey = clinicId ? `${clinicId}_specialties` : 'clinic_specialties';
+  const consultingRoomsStorageKey = clinicId ? `${clinicId}_consulting_rooms` : 'clinic_consulting_rooms';
+  const operatingRoomsStorageKey = clinicId ? `${clinicId}_operating_rooms` : 'clinic_operating_rooms';
+  const clinicMetaStorageKey = clinicId ? `${clinicId}_clinic_meta` : 'clinic_meta';
 
   // Estados para recursos clínicos
   const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
@@ -76,28 +82,52 @@ export default function AdminSettingsPage() {
 
   // Cargar configuración al montar
   useEffect(() => {
+    if (!clinicId) return;
     loadSettings();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinicId]);
 
   const loadSettings = async () => {
     try {
       setIsLoading(true);
+      if (!clinicId) return;
       const response = await clinicSettingsService.getSettings(clinicId);
       
       if (response.success && response.data) {
+        if ((response.data as any).generalSettings) {
+          const gs = (response.data as any).generalSettings;
+          setGeneralSettings((prev) => ({
+            ...prev,
+            clinicName: gs.clinicName ?? prev.clinicName,
+            clinicAddress: gs.clinicAddress ?? gs.address ?? prev.clinicAddress,
+            clinicCity: gs.clinicCity ?? prev.clinicCity,
+            clinicProvince: gs.clinicProvince ?? prev.clinicProvince,
+            clinicPostalCode: gs.clinicPostalCode ?? prev.clinicPostalCode,
+            clinicPhone: gs.clinicPhone ?? gs.phone ?? prev.clinicPhone,
+            clinicEmail: gs.clinicEmail ?? gs.email ?? prev.clinicEmail,
+            clinicWebsite: gs.clinicWebsite ?? gs.website ?? prev.clinicWebsite,
+            clinicLogo: gs.logo ?? prev.clinicLogo,
+            timezone: gs.timezone ?? prev.timezone,
+            language: gs.language ?? prev.language,
+          }));
+
+          const nextLogo = gs.logo ?? '';
+          setLogoPreview(nextLogo || null);
+          localStorage.setItem(
+            clinicMetaStorageKey,
+            JSON.stringify({ clinicName: gs.clinicName ?? '', logo: nextLogo })
+          );
+        }
+
         setSpecialties(response.data.specialties || []);
         setConsultingRooms(response.data.consultingRooms || []);
         setOperatingRooms(response.data.operatingRooms as any || []);
         
-        console.log('✅ Configuración cargada desde el backend');
-        console.log('  - Especialidades:', response.data.specialties?.length || 0);
-        console.log('  - Consultorios:', response.data.consultingRooms?.length || 0);
-        console.log('  - Quirófanos:', response.data.operatingRooms?.length || 0);
         
         // También guardar en localStorage como cache
-        localStorage.setItem('clinic_specialties', JSON.stringify(response.data.specialties || []));
-        localStorage.setItem('clinic_consulting_rooms', JSON.stringify(response.data.consultingRooms || []));
-        localStorage.setItem('clinic_operating_rooms', JSON.stringify(response.data.operatingRooms || []));
+        localStorage.setItem(specialtiesStorageKey, JSON.stringify(response.data.specialties || []));
+        localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(response.data.consultingRooms || []));
+        localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(response.data.operatingRooms || []));
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -114,14 +144,14 @@ export default function AdminSettingsPage() {
 
   // Estados para configuración general
   const [generalSettings, setGeneralSettings] = useState({
-    clinicName: 'Centro Médico MediCore',
-    clinicAddress: 'Av. Corrientes 1234, CABA',
-    clinicCity: 'Buenos Aires',
-    clinicProvince: 'Buenos Aires',
-    clinicPostalCode: '1043',
-    clinicPhone: '+54 11 4567-8900',
-    clinicEmail: 'contacto@medicore.com.ar',
-    clinicWebsite: 'www.medicore.com.ar',
+    clinicName: '',
+    clinicAddress: '',
+    clinicCity: '',
+    clinicProvince: '',
+    clinicPostalCode: '',
+    clinicPhone: '',
+    clinicEmail: '',
+    clinicWebsite: '',
     clinicLogo: '',
     timezone: 'America/Argentina/Buenos_Aires',
     language: 'es',
@@ -181,12 +211,21 @@ export default function AdminSettingsPage() {
     try {
       setIsSaving(true);
       
-      console.log('💾 Guardando configuración en el backend...');
       
       // Guardar en el backend
       const response = await clinicSettingsService.updateSettings(
         clinicId,
         {
+          generalSettings: {
+            clinicName: generalSettings.clinicName,
+            address: generalSettings.clinicAddress,
+            phone: generalSettings.clinicPhone,
+            email: generalSettings.clinicEmail,
+            website: generalSettings.clinicWebsite,
+            timezone: generalSettings.timezone,
+            language: generalSettings.language,
+            logo: generalSettings.clinicLogo || null,
+          } as any,
           specialties,
           consultingRooms,
           operatingRooms
@@ -196,15 +235,20 @@ export default function AdminSettingsPage() {
       
       if (response.success) {
         // También guardar en localStorage como cache
-        localStorage.setItem('clinic_specialties', JSON.stringify(specialties));
-        localStorage.setItem('clinic_consulting_rooms', JSON.stringify(consultingRooms));
-        localStorage.setItem('clinic_operating_rooms', JSON.stringify(operatingRooms));
+        localStorage.setItem(specialtiesStorageKey, JSON.stringify(specialties));
+        localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(consultingRooms));
+        localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(operatingRooms));
+
+        localStorage.setItem(
+          clinicMetaStorageKey,
+          JSON.stringify({ clinicName: generalSettings.clinicName, logo: generalSettings.clinicLogo })
+        );
+        window.dispatchEvent(new Event('clinicSettingsUpdated'));
         
         setShowSuccess(true);
         showSuccessToast('Configuración guardada', 'Los cambios se han guardado exitosamente');
         setTimeout(() => setShowSuccess(false), 3000);
         
-        console.log('✅ Configuración guardada exitosamente');
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -545,97 +589,6 @@ export default function AdminSettingsPage() {
                       </div>
                     </div>
 
-                    {/* Configuración Regional */}
-                    <div className="space-y-4 pt-6 border-t border-gray-200">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Globe className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Configuración Regional</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Zona Horaria
-                          </label>
-                          <select
-                            value={generalSettings.timezone}
-                            onChange={(e) => setGeneralSettings({...generalSettings, timezone: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          >
-                            <option value="America/Argentina/Buenos_Aires">Buenos Aires (GMT-3)</option>
-                            <option value="America/Argentina/Cordoba">Córdoba (GMT-3)</option>
-                            <option value="America/Argentina/Mendoza">Mendoza (GMT-3)</option>
-                            <option value="America/Argentina/Salta">Salta (GMT-3)</option>
-                            <option value="America/Argentina/Tucuman">Tucumán (GMT-3)</option>
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Zona horaria utilizada para citas y reportes
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Idioma del Sistema
-                          </label>
-                          <select
-                            value={generalSettings.language}
-                            onChange={(e) => setGeneralSettings({...generalSettings, language: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          >
-                            <option value="es">Español</option>
-                            <option value="en">English</option>
-                            <option value="pt">Português</option>
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Idioma de la interfaz y notificaciones
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Formato de Fecha
-                          </label>
-                          <select
-                            value={generalSettings.dateFormat}
-                            onChange={(e) => setGeneralSettings({...generalSettings, dateFormat: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          >
-                            <option value="DD/MM/YYYY">DD/MM/YYYY (31/12/2025)</option>
-                            <option value="MM/DD/YYYY">MM/DD/YYYY (12/31/2025)</option>
-                            <option value="YYYY-MM-DD">YYYY-MM-DD (2025-12-31)</option>
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Formato para mostrar fechas en el sistema
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Formato de Hora
-                          </label>
-                          <select
-                            value={generalSettings.timeFormat}
-                            onChange={(e) => setGeneralSettings({...generalSettings, timeFormat: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          >
-                            <option value="24h">24 horas (14:30)</option>
-                            <option value="12h">12 horas (2:30 PM)</option>
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Formato para mostrar horas en el sistema
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Info Box */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                      <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-blue-800">
-                        <p className="font-medium mb-1">Información importante</p>
-                        <p>Los cambios en la configuración general se aplicarán inmediatamente después de guardar. Asegúrate de que toda la información sea correcta antes de continuar.</p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}

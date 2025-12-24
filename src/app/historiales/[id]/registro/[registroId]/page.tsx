@@ -56,39 +56,30 @@ export default function RegistroDetailPage() {
           const userIdToLoad = recordResponse.data.doctorId || recordResponse.data.createdBy;
           
           if (userIdToLoad) {
-            console.log('User ID a cargar:', userIdToLoad, recordResponse.data.doctorId ? '(doctorId)' : '(createdBy)');
             try {
               if (userIdToLoad === 'system') {
                 setDoctorName('N/A');
               } else if (userIdToLoad.includes('@')) {
                 const doctorResponse = await usersService.authenticateByEmail(userIdToLoad, clinicId);
-                console.log('Respuesta del servicio de usuarios (by email):', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
-                  console.log('Nombre completo del odontólogo:', fullName);
                   setDoctorName(fullName || 'N/A');
                 }
               } else {
                 const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
-                console.log('Respuesta del servicio de usuarios (by id):', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
-                  console.log('Nombre completo del odontólogo:', fullName);
                   setDoctorName(fullName || 'N/A');
                 }
               }
             } catch (error) {
-              console.error('Error loading doctor information:', error);
               setDoctorName('N/A');
             }
-          } else {
-            console.log('No hay doctorId ni createdBy en el registro médico');
           }
         }
       } catch (error) {
-        console.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
@@ -395,13 +386,11 @@ export default function RegistroDetailPage() {
 
             // Procesar histórico en rojo
             if (registro.odontogramas.historico && registro.odontogramas.historico.length > 0) {
-              console.log('📕 Procesando odontograma histórico (ROJO)');
               processConditions(registro.odontogramas.historico, '#ef4444', 'HISTÓRICO');
             }
 
             // Procesar actual en azul
             if (registro.odontogramas.actual && registro.odontogramas.actual.length > 0) {
-              console.log('📘 Procesando odontograma actual (AZUL)');
               processConditions(registro.odontogramas.actual, '#2563eb', 'ACTUAL');
             }
           }
@@ -477,7 +466,6 @@ export default function RegistroDetailPage() {
           // Obtener sexo del paciente (F, M, o X si no especifica)
           let sexo = 'X';
           if (patient?.genero) {
-            console.log(patient?.genero)
             if (patient.genero === 'femenino') {
               sexo = 'F';
             } else if (patient.genero === 'masculino') {

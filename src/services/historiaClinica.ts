@@ -39,15 +39,11 @@ class HistoriaClinicaService {
       ...options.headers,
     };
 
-    console.log('🔍 Fetching Historia Clínica:', url);
-
     try {
       const response = await fetch(url, {
         ...options,
         headers,
       });
-
-      console.log('✅ Response status:', response.status);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ errors: ['Error en la solicitud'] }));

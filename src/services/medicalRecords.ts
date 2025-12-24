@@ -179,17 +179,11 @@ class MedicalRecordsService {
       ...options.headers,
     };
 
-    console.log('🔍 Fetching:', url);
-    console.log('📦 Headers:', headers);
-    console.log('📝 Body:', options.body);
-
     try {
       const response = await fetch(url, {
         ...options,
         headers,
       });
-
-      console.log('✅ Response status:', response.status);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ errors: ['Error en la solicitud'] }));

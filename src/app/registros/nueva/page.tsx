@@ -249,57 +249,9 @@ export default function NuevaConsultaPage() {
       // Simular llamada a API
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const medications = parseMedications(formData.medications);
-      
-      const newHistory: Omit<MedicalHistory, 'id'> = {
-        patientId: selectedPatientId || `new_${Date.now()}`,
-        patient: formData.patient,
-        consultationDate: formData.date,
-        consultationTime: formData.time,
-        doctor: formData.doctor,
-        specialty: formData.specialty,
-        type: formData.type,
-        diagnosis: formData.diagnosis,
-        symptoms: formData.symptoms,
-        treatment: formData.treatment,
-        medications: medications.length > 0 ? medications : undefined,
-        vitalSigns: Object.values(formData.vitalSigns).some(v => v) ? {
-          bloodPressure: formData.vitalSigns.bloodPressure || undefined,
-          heartRate: formData.vitalSigns.heartRate ? parseFloat(formData.vitalSigns.heartRate) : undefined,
-          temperature: formData.vitalSigns.temperature ? parseFloat(formData.vitalSigns.temperature) : undefined,
-          weight: formData.vitalSigns.weight ? parseFloat(formData.vitalSigns.weight) : undefined,
-          height: formData.vitalSigns.height ? parseFloat(formData.vitalSigns.height) : undefined
-        } : undefined,
-        notes: formData.notes || undefined,
-        status: formData.status,
-        diagnosticImages: diagnosticImages.length > 0 ? diagnosticImages.map((img, index) => ({
-          id: `img_${Date.now()}_${index}`,
-          name: img.file.name,
-          url: img.preview,
-          description: img.description,
-          type: img.type,
-          uploadDate: new Date().toISOString()
-        })) : undefined,
-        odontogram: formData.specialty === 'odontologia' && odontogramData.length > 0 
-          ? odontogramData.map(tooth => ({
-              id: tooth.number,
-              status: tooth.status,
-              sectors: tooth.sectors,
-              hasCrown: tooth.hasCrown,
-              hasProsthesis: tooth.hasProsthesis,
-              notes: tooth.notes
-            }))
-          : undefined,
-        createdAt: new Date().toISOString()
-      };
-
-      // Aquí iría la llamada real a la API
-      console.log('Nueva consulta creada:', newHistory);
-      
-      // Mostrar mensaje de éxito
       showSuccess(
         'Consulta registrada exitosamente',
-        'Los datos de la consulta han sido guardados en el historial'
+        'El registro médico ha sido creado correctamente'
       );
       
       // Redirigir a la página de registros

@@ -112,20 +112,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = () => {
     void (async () => {
-      if (AUTH_DEBUG) {
-        // eslint-disable-next-line no-console
-        console.log('[AUTH_DEBUG][logout] start', {
-          status,
-          hasSessionUser: Boolean((session as any)?.user),
-        });
-      }
-
       await signOut({ redirect: false });
-
-      if (AUTH_DEBUG) {
-        // eslint-disable-next-line no-console
-        console.log('[AUTH_DEBUG][logout] after signOut -> redirecting to /login');
-      }
       window.location.href = '/login';
     })();
   };

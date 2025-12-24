@@ -175,7 +175,6 @@ export default function SecretaryDashboard() {
   };
 
   const handleCallPatient = (patientPhone: string) => {
-    console.log(`Llamando a paciente: ${patientPhone}`);
     // Aquí se integraría con sistema de telefonía
   };
 

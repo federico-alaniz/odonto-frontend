@@ -255,25 +255,15 @@ export const patientsService = {
       const url = `${API_BASE_URL}/api/patients`;
       const headers = getHeaders(clinicId, userId);
       
-      console.log('🚀 Creando paciente...');
-      console.log('URL:', url);
-      console.log('Headers:', headers);
-      console.log('Data:', data);
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(data)
       });
       
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
-      
       const responseData = await response.json();
-      console.log('📦 Response data:', responseData);
       
       if (!response.ok) {
-        console.error('❌ Backend error response:', responseData);
         const errorMessage = responseData.errors?.[0] || 
                             responseData.error || 
                             'Error al crear paciente';

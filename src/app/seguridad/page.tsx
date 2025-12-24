@@ -224,7 +224,6 @@ export default function SeguridadPage() {
                       variant="secondary"
                       onClick={() => {
                         // Lógica para cerrar sesión remota
-                        console.log('Cerrando sesión:', session.id);
                       }}
                     >
                       Cerrar Sesión
@@ -238,7 +237,6 @@ export default function SeguridadPage() {
                   variant="secondary"
                   onClick={() => {
                     // Lógica para cerrar todas las sesiones
-                    console.log('Cerrando todas las sesiones');
                   }}
                 >
                   Cerrar Todas las Sesiones Remotas
@@ -266,7 +264,6 @@ export default function SeguridadPage() {
                 onClick={() => {
                   // Lógica para eliminar cuenta (con confirmación)
                   if (confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) {
-                    console.log('Eliminando cuenta...');
                   }
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"

@@ -312,15 +312,11 @@ export default function NewAppointmentWizard() {
         tipo: 'consulta' as const
       };
 
-      console.log('🚀 Creando cita:', appointmentData);
-
       const response = await appointmentsService.createAppointment(
         clinicId,
         userId,
         appointmentData
       );
-
-      console.log('✅ Cita creada:', response);
 
       showSuccess('Turno agendado', 'El turno se agenдó exitosamente');
       router.push('/secretary/appointments');

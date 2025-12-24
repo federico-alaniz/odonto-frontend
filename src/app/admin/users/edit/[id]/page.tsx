@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { UserFormData, HorarioAtencion, User as UserType } from '@/types/roles';
 import { usersService } from '@/services/api/users.service';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 const DIAS_SEMANA = [
   { value: 0, label: 'Dom' },
@@ -38,6 +39,7 @@ export default function EditUserPage() {
   const params = useParams();
   const userId = params.id as string;
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,16 +51,16 @@ export default function EditUserPage() {
   const [showEspecialidadesDropdown, setShowEspecialidadesDropdown] = useState(false);
   const [especialidadSearch, setEspecialidadSearch] = useState('');
 
-  // TODO: Obtener estos valores del contexto de autenticación
-  const clinicId = 'clinic_001';
-  const currentUserId = 'usr_000001';
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const currentUserId = (currentUser as any)?.id;
 
   // Cargar datos del usuario
   useEffect(() => {
+    if (!clinicId) return;
     loadUser();
     loadEspecialidades();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, clinicId]);
 
   const loadUser = async () => {
     try {

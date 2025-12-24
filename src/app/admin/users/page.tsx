@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { usersService } from '@/services/api/users.service';
 import { User } from '@/types/roles';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserFilters {
   search: string;
@@ -40,6 +41,7 @@ interface UserFilters {
 }
 
 export default function AdminUsersPage() {
+  const { currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,20 +61,27 @@ export default function AdminUsersPage() {
   const [selectedUserForView, setSelectedUserForView] = useState<User | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  // TODO: Obtener estos valores del contexto de autenticación
-  const clinicId = 'clinic_001';
-  const currentUserId = 'usr_000001';
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const currentUserId = (currentUser as any)?.id;
 
   // Cargar usuarios desde la API (se ejecuta al montar y cuando cambian los filtros)
   useEffect(() => {
+    if (!clinicId) return;
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.role, filters.status, currentPage]);
+  }, [clinicId, filters.role, filters.status, currentPage]);
 
   const loadUsers = async () => {
     try {
       setIsLoading(true);
       setError(null);
+
+      if (!clinicId) {
+        setUsers([]);
+        setTotalPages(1);
+        setTotalUsers(0);
+        return;
+      }
       
       const response = await usersService.getUsers(clinicId, {
         role: filters.role as any,

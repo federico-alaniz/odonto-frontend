@@ -4,6 +4,8 @@ import { useSidebar } from '@/hooks/useSidebar';
 import Sidebar from './Sidebar';
 import { Building2, Menu } from 'lucide-react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -12,9 +14,42 @@ interface SidebarLayoutProps {
 export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const { isCollapsed, isMobile, isClient, toggleSidebar } = useSidebar();
   const pathname = usePathname();
+  const { currentUser } = useAuth();
+
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const clinicMetaStorageKey = clinicId ? `${clinicId}_clinic_meta` : 'clinic_meta';
+  const [clinicMeta, setClinicMeta] = useState<{ clinicName?: string; logo?: string } | null>(null);
+
+  useEffect(() => {
+    const readClinicMeta = () => {
+      try {
+        const raw = localStorage.getItem(clinicMetaStorageKey);
+        if (!raw) {
+          setClinicMeta(null);
+          return;
+        }
+        setClinicMeta(JSON.parse(raw));
+      } catch {
+        setClinicMeta(null);
+      }
+    };
+
+    readClinicMeta();
+
+    const onUpdated = () => readClinicMeta();
+    window.addEventListener('clinicSettingsUpdated', onUpdated);
+    window.addEventListener('storage', onUpdated);
+    return () => {
+      window.removeEventListener('clinicSettingsUpdated', onUpdated);
+      window.removeEventListener('storage', onUpdated);
+    };
+  }, [clinicMetaStorageKey]);
+
+  const clinicDisplayName = clinicMeta?.clinicName || 'MediCore';
+  const clinicLogo = clinicMeta?.logo;
 
   // Rutas públicas que no deben mostrar el sidebar
-  const publicRoutes = ['/login', '/registro', '/recuperar-password', '/terminos', '/privacidad'];
+  const publicRoutes = ['/login', '/platform', '/registro', '/recuperar-password', '/terminos', '/privacidad'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Si es una ruta pública, solo renderizar el contenido sin sidebar
@@ -56,6 +91,30 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           isCollapsed={!isMobile && isCollapsed} 
           onToggle={toggleSidebar} 
         />
+        
+        {/* Botón de colapsar flotante - Desktop only */}
+        {!isMobile && (
+          <button
+            onClick={toggleSidebar}
+            className="absolute top-4 w-6 h-6 rounded-full bg-white shadow-lg border border-gray-300 hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center justify-center"
+            style={{ 
+              left: isCollapsed ? '52px' : '244px',
+              zIndex: 9999 
+            }}
+            aria-label={isCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          >
+            <svg
+              className={`w-4 h-4 text-gray-600 hover:text-blue-700 transition-all duration-200 ${
+                isCollapsed ? 'rotate-180' : ''
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Main Content */}
@@ -66,10 +125,14 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="w-5 h-5 text-blue-600" />
+                  {clinicLogo ? (
+                    <img src={clinicLogo} alt={clinicDisplayName} className="w-5 h-5 object-contain" />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-blue-600" />
+                  )}
                 </div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  MediCore
+                  {clinicDisplayName}
                 </h1>
               </div>
               <button

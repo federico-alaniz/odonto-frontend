@@ -184,7 +184,7 @@ export default function RegistrosMedicosPage() {
               </button>
               
               <button 
-                onClick={() => console.log('Abrir modal de nueva consulta')}
+                onClick={() => {}}
                 className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-lg font-medium hover:from-emerald-700 hover:to-green-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-md flex items-center space-x-2"
               >
                 <Plus className="w-5 h-5" />

@@ -112,11 +112,6 @@ export default function NewAppointmentModal({ isOpen, onClose, patient }: NewApp
       // Simular llamada a API
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      console.log('Nueva cita programada:', {
-        paciente: patient,
-        cita: formData
-      });
-      
       showSuccess(
         'Cita programada exitosamente',
         'La cita ha sido registrada en el calendario'

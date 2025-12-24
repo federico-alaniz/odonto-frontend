@@ -258,9 +258,6 @@ export default function NewPatientForm() {
       // Llamar al servicio para crear el paciente
       const response = await patientsService.createPatient(clinicId, userId, newPatientData);
       
-      console.log('Paciente creado:', response.data);
-      console.log('Historia clínica creada:', response.historiaClinica);
-      
       // Mostrar mensaje de éxito
       showSuccess(
         'Paciente registrado exitosamente',
