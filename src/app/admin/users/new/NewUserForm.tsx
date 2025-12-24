@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { UserFormData, HorarioAtencion } from '@/types/roles';
 import { usersService } from '@/services/api/users.service';
 import { useAuth } from '@/hooks/useAuth';
+import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 
 const INITIAL_FORM_DATA: UserFormData = {
   nombres: '',
@@ -116,6 +117,8 @@ export default function NewUserForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [especialidades, setEspecialidades] = useState<Array<{ value: string; label: string }>>(ESPECIALIDADES_HARDCODED);
   const [isLoadingEspecialidades, setIsLoadingEspecialidades] = useState(true);
+  const [consultorios, setConsultorios] = useState<Array<{ value: string; label: string }>>([]);
+  const [isLoadingConsultorios, setIsLoadingConsultorios] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
@@ -124,51 +127,88 @@ export default function NewUserForm() {
   // Cargar especialidades desde la configuración del sistema
   useEffect(() => {
     const loadEspecialidades = async () => {
+      if (!clinicId) {
+        setIsLoadingEspecialidades(false);
+        return;
+      }
+
       try {
-        // TODO: Llamar a la API para obtener las especialidades configuradas
-        // const response = await fetch('/api/specialties');
-        // const data = await response.json();
+        const response = await clinicSettingsService.getSpecialties(clinicId);
         
-        // Por ahora, simular carga desde localStorage o usar las de settings
-        // Esto debería venir de la misma fuente que /admin/settings
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simular delay de API
-        
-        // Intentar obtener especialidades guardadas (simulando que vienen de settings)
-        const savedSpecialties = localStorage.getItem('clinic_specialties');
-        
-        if (savedSpecialties) {
-          const parsed = JSON.parse(savedSpecialties);
-          const especialidadesActivas = parsed.filter((esp: any) => esp.active);
-          const formattedEspecialidades = especialidadesActivas.map((esp: any) => ({
-            value: esp.id,
-            label: esp.name
-          }));
-          setEspecialidades(formattedEspecialidades);
+        if (response.success && response.data) {
+          const especialidadesActivas = response.data.filter((esp: any) => esp.active);
+          
+          if (especialidadesActivas.length > 0) {
+            const formattedEspecialidades = especialidadesActivas.map((esp: any) => ({
+              value: esp.id,
+              label: esp.name
+            }));
+            setEspecialidades(formattedEspecialidades);
+          } else {
+            // Si no hay especialidades activas, mostrar mensaje
+            setEspecialidades([]);
+          }
         } else {
-          // Si no hay especialidades guardadas, usar las de ejemplo de settings
-          const defaultSpecialties = [
-            { value: '1', label: 'Cardiología' },
-            { value: '2', label: 'Pediatría' },
-            { value: '3', label: 'Traumatología' }
-          ];
-          setEspecialidades(defaultSpecialties);
+          // Si no hay especialidades configuradas, usar array vacío
+          setEspecialidades([]);
         }
       } catch (error) {
         console.error('Error cargando especialidades:', error);
-        // Usar especialidades por defecto en caso de error
-        const defaultSpecialties = [
-          { value: '1', label: 'Cardiología' },
-          { value: '2', label: 'Pediatría' },
-          { value: '3', label: 'Traumatología' }
-        ];
-        setEspecialidades(defaultSpecialties);
+        // En caso de error, usar array vacío
+        setEspecialidades([]);
       } finally {
         setIsLoadingEspecialidades(false);
       }
     };
 
     loadEspecialidades();
-  }, []);
+  }, [clinicId]);
+
+  // Cargar consultorios desde la configuración del sistema
+  useEffect(() => {
+    const loadConsultorios = async () => {
+      if (!clinicId) {
+        setIsLoadingConsultorios(false);
+        return;
+      }
+
+      try {
+        const response = await clinicSettingsService.getConsultingRooms(clinicId);
+        
+        if (response.success && response.data) {
+          const consultoriosActivos = response.data.filter((room: any) => room.active);
+          
+          if (consultoriosActivos.length > 0) {
+            // Ordenar por número de forma ascendente
+            const sortedConsultorios = consultoriosActivos.sort((a: any, b: any) => {
+              const numA = parseInt(a.number) || 0;
+              const numB = parseInt(b.number) || 0;
+              return numA - numB;
+            });
+            
+            const formattedConsultorios = sortedConsultorios.map((room: any) => ({
+              value: room.id,
+              label: `${room.name} - Piso ${room.floor}`,
+              number: room.number
+            }));
+            setConsultorios(formattedConsultorios);
+          } else {
+            setConsultorios([]);
+          }
+        } else {
+          setConsultorios([]);
+        }
+      } catch (error) {
+        console.error('Error cargando consultorios:', error);
+        setConsultorios([]);
+      } finally {
+        setIsLoadingConsultorios(false);
+      }
+    };
+
+    loadConsultorios();
+  }, [clinicId]);
+
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showEspecialidadesDropdown, setShowEspecialidadesDropdown] = useState(false);
@@ -610,19 +650,37 @@ export default function NewUserForm() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Consultorio *</label>
-                        <input
-                          type="text"
+                        <select
                           value={formData.consultorio}
                           onChange={(e) => updateField('consultorio', e.target.value)}
+                          disabled={isLoadingConsultorios}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                             errors.consultorio ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Consultorio 1"
-                        />
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <option value="">
+                            {isLoadingConsultorios 
+                              ? 'Cargando consultorios...' 
+                              : consultorios.length === 0 
+                                ? 'No hay consultorios configurados'
+                                : 'Seleccione un consultorio'
+                            }
+                          </option>
+                          {consultorios.map((consultorio) => (
+                            <option key={consultorio.value} value={consultorio.value}>
+                              {consultorio.label}
+                            </option>
+                          ))}
+                        </select>
                         {errors.consultorio && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                             <AlertCircle className="w-4 h-4" />
                             {errors.consultorio}
+                          </p>
+                        )}
+                        {!isLoadingConsultorios && consultorios.length === 0 && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Configure consultorios en Configuración → Recursos Clínicos
                           </p>
                         )}
                       </div>
@@ -718,7 +776,14 @@ export default function NewUserForm() {
                                 })
                               ) : (
                                 <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                                  No se encontraron especialidades
+                                  {especialidades.length === 0 ? (
+                                    <div>
+                                      <p className="font-medium text-gray-700 mb-1">No hay especialidades configuradas</p>
+                                      <p className="text-xs">Configure especialidades en Configuración → Recursos Clínicos</p>
+                                    </div>
+                                  ) : (
+                                    'No se encontraron especialidades'
+                                  )}
                                 </div>
                               )}
                             </div>

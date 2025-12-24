@@ -238,7 +238,9 @@ export default function AdminSettingsPage() {
         specialtiesCount: specialties.length,
         consultingRoomsCount: consultingRooms.length,
         operatingRoomsCount: operatingRooms.length,
-        specialties: specialties
+        specialties: specialties,
+        consultingRooms: consultingRooms,
+        operatingRooms: operatingRooms
       });
       
       // Guardar en el backend
@@ -286,38 +288,128 @@ export default function AdminSettingsPage() {
     return colors[color as keyof typeof colors] || colors.blue;
   };
 
-  const handleAddSpecialty = (specialty: Omit<MedicalSpecialty, 'id'>) => {
+  const handleAddSpecialty = async (specialty: Omit<MedicalSpecialty, 'id'>) => {
     const newSpecialty = { ...specialty, id: Date.now().toString() };
-    setSpecialties([...specialties, newSpecialty]);
+    const updatedSpecialties = [...specialties, newSpecialty];
+    setSpecialties(updatedSpecialties);
     setShowSpecialtyModal(false);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSpecialties(clinicId, updatedSpecialties, userId);
+      localStorage.setItem(specialtiesStorageKey, JSON.stringify(updatedSpecialties));
+      showSuccessToast('Especialidad agregada', 'La especialidad se ha guardado exitosamente');
+    } catch (error) {
+      console.error('Error guardando especialidad:', error);
+      showError('Error al guardar', 'No se pudo guardar la especialidad');
+      // Revertir cambio en caso de error
+      setSpecialties(specialties);
+    }
   };
 
-  const handleDeleteSpecialty = (id: string) => {
-    setSpecialties(specialties.filter(s => s.id !== id));
+  const handleDeleteSpecialty = async (id: string) => {
+    const updatedSpecialties = specialties.filter(s => s.id !== id);
+    setSpecialties(updatedSpecialties);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSpecialties(clinicId, updatedSpecialties, userId);
+      localStorage.setItem(specialtiesStorageKey, JSON.stringify(updatedSpecialties));
+      showSuccessToast('Especialidad eliminada', 'La especialidad se ha eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando especialidad:', error);
+      showError('Error al eliminar', 'No se pudo eliminar la especialidad');
+      // Revertir cambio en caso de error
+      setSpecialties(specialties);
+    }
   };
 
-  const handleToggleSpecialty = (id: string) => {
-    setSpecialties(specialties.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  const handleToggleSpecialty = async (id: string) => {
+    const updatedSpecialties = specialties.map(s => s.id === id ? { ...s, active: !s.active } : s);
+    setSpecialties(updatedSpecialties);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSpecialties(clinicId, updatedSpecialties, userId);
+      localStorage.setItem(specialtiesStorageKey, JSON.stringify(updatedSpecialties));
+    } catch (error) {
+      console.error('Error actualizando especialidad:', error);
+      showError('Error al actualizar', 'No se pudo actualizar la especialidad');
+      // Revertir cambio en caso de error
+      setSpecialties(specialties);
+    }
   };
 
-  const handleAddRoom = (room: Omit<ConsultingRoom, 'id'>) => {
+  const handleAddRoom = async (room: Omit<ConsultingRoom, 'id'>) => {
     const newRoom = { ...room, id: Date.now().toString() };
-    setConsultingRooms([...consultingRooms, newRoom]);
+    const updatedRooms = [...consultingRooms, newRoom];
+    setConsultingRooms(updatedRooms);
     setShowRoomModal(false);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateConsultingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(updatedRooms));
+      showSuccessToast('Consultorio agregado', 'El consultorio se ha guardado exitosamente');
+    } catch (error) {
+      console.error('Error guardando consultorio:', error);
+      showError('Error al guardar', 'No se pudo guardar el consultorio');
+      // Revertir cambio en caso de error
+      setConsultingRooms(consultingRooms);
+    }
   };
 
-  const handleDeleteRoom = (id: string) => {
-    setConsultingRooms(consultingRooms.filter(r => r.id !== id));
+  const handleDeleteRoom = async (id: string) => {
+    const updatedRooms = consultingRooms.filter(r => r.id !== id);
+    setConsultingRooms(updatedRooms);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateConsultingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(updatedRooms));
+      showSuccessToast('Consultorio eliminado', 'El consultorio se ha eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando consultorio:', error);
+      showError('Error al eliminar', 'No se pudo eliminar el consultorio');
+      // Revertir cambio en caso de error
+      setConsultingRooms(consultingRooms);
+    }
   };
 
-  const handleAddOperatingRoom = (room: Omit<OperatingRoom, 'id'>) => {
+  const handleAddOperatingRoom = async (room: Omit<OperatingRoom, 'id'>) => {
     const newRoom = { ...room, id: Date.now().toString() };
-    setOperatingRooms([...operatingRooms, newRoom]);
+    const updatedRooms = [...operatingRooms, newRoom];
+    setOperatingRooms(updatedRooms);
     setShowOperatingRoomModal(false);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateOperatingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(updatedRooms));
+      showSuccessToast('Quirófano agregado', 'El quirófano se ha guardado exitosamente');
+    } catch (error) {
+      console.error('Error guardando quirófano:', error);
+      showError('Error al guardar', 'No se pudo guardar el quirófano');
+      // Revertir cambio en caso de error
+      setOperatingRooms(operatingRooms);
+    }
   };
 
-  const handleDeleteOperatingRoom = (id: string) => {
-    setOperatingRooms(operatingRooms.filter(r => r.id !== id));
+  const handleDeleteOperatingRoom = async (id: string) => {
+    const updatedRooms = operatingRooms.filter(r => r.id !== id);
+    setOperatingRooms(updatedRooms);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateOperatingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(updatedRooms));
+      showSuccessToast('Quirófano eliminado', 'El quirófano se ha eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando quirófano:', error);
+      showError('Error al eliminar', 'No se pudo eliminar el quirófano');
+      // Revertir cambio en caso de error
+      setOperatingRooms(operatingRooms);
+    }
   };
 
   if (isLoading) {
@@ -1065,6 +1157,11 @@ function ConsultingRoomModal({ onClose, onSave }: { onClose: () => void; onSave:
   });
   const [equipmentInput, setEquipmentInput] = useState('');
 
+  // Generar nombre sugerido basado en piso y número
+  const suggestedName = formData.floor && formData.number 
+    ? `Consultorio ${formData.floor}${formData.number.padStart(2, '0')}`
+    : '';
+
   const handleAddEquipment = () => {
     if (equipmentInput.trim()) {
       setFormData({ ...formData, equipment: [...formData.equipment, equipmentInput.trim()] });
@@ -1134,8 +1231,19 @@ function ConsultingRoomModal({ onClose, onSave }: { onClose: () => void; onSave:
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              placeholder="Ej: Consultorio 1"
+              placeholder={suggestedName || "Ej: Consultorio 101"}
             />
+            {suggestedName && !formData.name && (
+              <p className="text-xs text-gray-500">
+                Sugerido: <button 
+                  type="button"
+                  onClick={() => setFormData({ ...formData, name: suggestedName })}
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {suggestedName}
+                </button>
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
