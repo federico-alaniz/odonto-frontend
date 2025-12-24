@@ -47,10 +47,7 @@ export default function ConsultationsPage() {
         setLoading(true);
         setError(null);
 
-        const clinicId =
-          (typeof window !== 'undefined' ? window.localStorage.getItem('clinicId') : null) ||
-          ((currentUser as any)?.tenantId as string | undefined) ||
-          'clinic_001';
+        const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
         const doctorId =
           (currentUser?.id as string | undefined) ||

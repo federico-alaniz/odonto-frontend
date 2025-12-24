@@ -47,7 +47,7 @@ export default function ProfilePage() {
     codigoPostal: '',
   });
 
-  const clinicId = (currentUser as any)?.tenantId || 'clinic_001';
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
   useEffect(() => {
     if (currentUser) {

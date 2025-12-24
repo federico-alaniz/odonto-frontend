@@ -25,11 +25,8 @@ import NewAppointmentModal from './modals/NewAppointmentModal';
 import DeletePatientModal from './modals/DeletePatientModal';
 import EditPatientModal from './modals/EditPatientModal';
 import { PatientFilters } from './PatientsFilters';
-// TODO: Reemplazar con llamadas al backend
-// import { patients, type Patient as FakePatient } from '@/utils/fake-data';
-
-// Datos temporales vacíos hasta integrar con backend
-const patients: any[] = [];
+import { patientsService } from '@/services/api/patients.service';
+import { useAuth } from '@/hooks/useAuth';
 
 // Interface adaptada para el componente (compatible con modales existentes)
 interface Patient {
@@ -61,6 +58,7 @@ const adaptPatientsForTable = (backendPatients: any[]): Patient[] => {
 };
 
 export default function PatientsTable({ filters }: PatientsTableProps) {
+  const { currentUser } = useAuth();
   const [sortField, setSortField] = useState<keyof Patient>('apellidos');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,8 +72,36 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
 
-  // Lista de pacientes (usando datos fake adaptados)
-  const [patientsData, setPatientsData] = useState<Patient[]>(() => adaptPatientsForTable(patients));
+  // Lista de pacientes
+  const [patientsData, setPatientsData] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+
+  // Cargar pacientes desde el backend
+  useEffect(() => {
+    const loadPatients = async () => {
+      if (!clinicId) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await patientsService.getPatients(clinicId, {
+          page: 1,
+          limit: 1000 // Cargar todos los pacientes
+        });
+        
+        if (response.success && response.data) {
+          setPatientsData(adaptPatientsForTable(response.data));
+        }
+      } catch (error) {
+        console.error('Error cargando pacientes:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPatients();
+  }, [clinicId]);
 
   // Funciones para manejar acciones
   const handleViewPatient = (patient: Patient) => {
@@ -271,14 +297,24 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     return types[type] || type.toUpperCase();
   };
 
-  // Escuchar actualizaciones globales de la lista de pacientes (disparadas por addNewPatient)
+  // Recargar pacientes cuando se crea uno nuevo
   useEffect(() => {
-    const onPatientsUpdated = () => {
-      setPatientsData(adaptPatientsForTable(patients));
+    const onPatientsUpdated = async () => {
+      if (!clinicId) return;
+      
+      try {
+        const response = await patientsService.getPatients(clinicId, {
+          page: 1,
+          limit: 1000
+        });
+        
+        if (response.success && response.data) {
+          setPatientsData(adaptPatientsForTable(response.data));
+        }
+      } catch (error) {
+        console.error('Error recargando pacientes:', error);
+      }
     };
-
-    // Actualizar al montar
-    onPatientsUpdated();
 
     // Suscribirse al evento del window
     if (typeof window !== 'undefined') {
@@ -290,7 +326,7 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
         window.removeEventListener('patients:updated', onPatientsUpdated as EventListener);
       }
     };
-  }, []);
+  }, [clinicId]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">

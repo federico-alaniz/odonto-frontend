@@ -19,17 +19,16 @@ import {
   XCircle,
   Droplets,
   Search,
-  UserPlus,
   Clock,
   MapPin,
   AlertTriangle,
   FileText,
-  UserCheck,
-  X
+  UserPlus
 } from 'lucide-react';
 import { SecretaryPatientFilters } from './SecretaryPatientsFilters';
 import { patientsService, Patient } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 // Interface adaptada para secretaria
 interface SecretaryPatient {
@@ -50,7 +49,6 @@ interface SecretaryPatient {
   fechaRegistro: string;
   requiereSeguimiento?: boolean;
   observaciones?: string;
-  doctorAsignado?: string;
 }
 
 interface SecretaryPatientsTableProps {
@@ -64,6 +62,7 @@ type SortOrder = 'asc' | 'desc';
 export default function SecretaryPatientsTable({ filters, showOnlyAssigned = false }: SecretaryPatientsTableProps) {
   const router = useRouter();
   const { showSuccess, showError, showWarning } = useToast();
+  const { currentUser } = useAuth();
   const [patientsData, setPatientsData] = useState<SecretaryPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,17 +76,14 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
   const [editModal, setEditModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
   const [appointmentModal, setAppointmentModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
-  const [assignDoctorModal, setAssignDoctorModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
-  
-  // Estados para asignación de doctor
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
 
   useEffect(() => {
     const loadPatientsData = async () => {
+      const clinicId = currentUser?.clinicId;
+      if (!clinicId) return;
+      
       try {
         setLoading(true);
-        const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
         
         const response = await patientsService.getPatients(clinicId, {
           page: currentPage,
@@ -112,8 +108,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
           estado: patient.estado as 'activo' | 'inactivo',
           fechaRegistro: patient.createdAt,
           requiereSeguimiento: false,
-          observaciones: undefined,
-          doctorAsignado: patient.doctorAsignado
+          observaciones: undefined
         }));
 
         setPatientsData(secretaryPatientsData);
@@ -128,87 +123,9 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
     loadPatientsData();
   }, [currentPage, itemsPerPage]);
 
-  // Cargar doctores
-  useEffect(() => {
-    const loadDoctors = async () => {
-      try {
-        const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
-        const { usersService } = await import('@/services/api/users.service');
-        const response = await usersService.getUsers(clinicId, { role: 'doctor' });
-        if (response.success) {
-          setDoctors(response.data);
-        }
-      } catch (error) {
-        console.error('Error loading doctors:', error);
-      }
-    };
-    loadDoctors();
-  }, []);
-
-  // Función para asignar doctor
-  const handleAssignDoctor = async () => {
-    if (!assignDoctorModal.patient || !selectedDoctorId) {
-      showWarning('Selección requerida', 'Por favor seleccione un doctor');
-      return;
-    }
-
-    try {
-      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
-      const userId = localStorage.getItem('userId') || 'system';
-      
-      const response = await patientsService.assignDoctor(
-        assignDoctorModal.patient.id,
-        selectedDoctorId,
-        clinicId,
-        userId
-      );
-
-      if (response.success) {
-        setPatientsData(prev => prev.map(p =>
-          p.id === assignDoctorModal.patient!.id
-            ? { ...p, doctorAsignado: selectedDoctorId }
-            : p
-        ));
-        setAssignDoctorModal({ open: false });
-        setSelectedDoctorId('');
-        showSuccess('Doctor asignado', 'El doctor se asignó exitosamente al paciente');
-      }
-    } catch (error: any) {
-      console.error('Error asignando doctor:', error);
-      showError('Error al asignar', error.message || 'Error al asignar doctor');
-    }
-  };
-
-  // Función para desasignar doctor
-  const handleUnassignDoctor = async (patientId: string) => {
-    // TODO: Implementar modal de confirmación en lugar de confirm()
-
-    try {
-      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
-      const userId = localStorage.getItem('userId') || 'system';
-      
-      const response = await patientsService.unassignDoctor(patientId, clinicId, userId);
-
-      if (response.success) {
-        setPatientsData(prev => prev.map(p =>
-          p.id === patientId ? { ...p, doctorAsignado: undefined } : p
-        ));
-        showSuccess('Doctor desasignado', 'El doctor se desasignó exitosamente');
-      }
-    } catch (error: any) {
-      console.error('Error desasignando doctor:', error);
-      showError('Error al desasignar', error.message || 'Error al desasignar doctor');
-    }
-  };
-
   // Filtrado
   const filteredPatients = useMemo(() => {
     let patients = patientsData;
-
-    // Filtro por pacientes asignados
-    if (showOnlyAssigned) {
-      patients = patients.filter(patient => patient.doctorAsignado);
-    }
 
     if (!filters) return patients;
 
@@ -435,9 +352,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                 </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Doctor Asignado
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Acciones
               </th>
             </tr>
@@ -516,36 +430,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      {patient.doctorAsignado ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2">
-                            <UserCheck className="w-4 h-4 text-green-600" />
-                            <span className="text-sm text-gray-900">
-                              {doctors.find(d => d.id === patient.doctorAsignado)?.nombres || 'Doctor asignado'}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleUnassignDoctor(patient.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Desasignar doctor"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setAssignDoctorModal({ open: true, patient });
-                            setSelectedDoctorId('');
-                          }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-purple-200"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          <span>Asignar Doctor</span>
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleViewPatient(patient)}
@@ -585,7 +469,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
               })
             ) : (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center">
+                <td colSpan={8} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center">
                     <Search className="w-12 h-12 text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -598,7 +482,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                       }
                     </p>
                     <button
-                      onClick={() => router.push('/secretary/patients/new')}
+                      onClick={() => router.push('/pacientes/nuevo')}
                       className="inline-flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <UserPlus className="w-5 h-5" />
@@ -660,70 +544,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
         </div>
       )}
 
-      {/* Modal de Asignación de Doctor */}
-      {assignDoctorModal.open && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Asignar Doctor
-                </h3>
-                <button
-                  onClick={() => setAssignDoctorModal({ open: false })}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-4">
-                  Seleccione el doctor que desea asignar a{' '}
-                  <span className="font-medium">
-                    {assignDoctorModal.patient?.nombres} {assignDoctorModal.patient?.apellidos}
-                  </span>
-                </p>
-
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Doctor
-                </label>
-                <select
-                  value={selectedDoctorId}
-                  onChange={(e) => setSelectedDoctorId(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">Seleccione un doctor...</option>
-                  {doctors.map((doctor) => (
-                    <option key={doctor.id} value={doctor.id}>
-                      Dr. {doctor.nombres} {doctor.apellidos}
-                      {doctor.especialidades && doctor.especialidades.length > 0 && 
-                        ` - ${doctor.especialidades[0]}`
-                      }
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setAssignDoctorModal({ open: false })}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAssignDoctor}
-                  disabled={!selectedDoctorId}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Asignar Doctor
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

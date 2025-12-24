@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   User, 
   Phone, 
@@ -16,7 +18,6 @@ import {
   getDepartamentosPorProvincia, 
   getCiudadesPorProvincia
 } from '../../../utils';
-import { useToast } from '@/components/ui/ToastProvider';
 import { patientsService, CreatePatientData } from '@/services/api/patients.service';
 
 interface PatientFormData {
@@ -60,6 +61,7 @@ interface FormErrors {
 export default function NewPatientForm() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
   
   const [formData, setFormData] = useState<PatientFormData>({
     nombres: '',
@@ -141,11 +143,8 @@ export default function NewPatientForm() {
     if (!formData.fechaNacimiento) newErrors.fechaNacimiento = 'La fecha de nacimiento es requerida';
     if (!formData.genero) newErrors.genero = 'El género es requerido';
     if (!formData.telefono.trim()) newErrors.telefono = 'El teléfono es requerido';
-    if (!formData.domicilio.trim()) newErrors.domicilio = 'El domicilio es requerido';
     if (!formData.ciudad.trim()) newErrors.ciudad = 'La ciudad es requerida';
     if (!formData.provincia.trim()) newErrors.provincia = 'La provincia es requerida';
-    if (!formData.contactoEmergenciaNombre.trim()) newErrors.contactoEmergenciaNombre = 'El contacto de emergencia es requerido';
-    if (!formData.contactoEmergenciaTelefono.trim()) newErrors.contactoEmergenciaTelefono = 'El teléfono de emergencia es requerido';
 
     // Validación de email
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
@@ -218,9 +217,14 @@ export default function NewPatientForm() {
     setIsSubmitting(true);
     
     try {
-      // TODO: Obtener estos valores del contexto de autenticación
-      const clinicId = 'clinic_001';
-      const userId = 'usr_000001';
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = (currentUser as any)?.id;
+      
+      if (!clinicId || !userId) {
+        showError('Error de autenticación', 'No se pudo obtener la información del usuario');
+        setIsSubmitting(false);
+        return;
+      }
       
       // Crear el objeto del paciente con el formato correcto
       const newPatientData: CreatePatientData = {
@@ -493,11 +497,10 @@ export default function NewPatientForm() {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Domicilio *
+              Domicilio
             </label>
             <input
               type="text"
-              required
               value={formData.domicilio}
               onChange={(e) => handleInputChange('domicilio', e.target.value)}
               className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
@@ -697,11 +700,10 @@ export default function NewPatientForm() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Nombre Completo *
+                Nombre Completo
               </label>
               <input
                 type="text"
-                required
                 value={formData.contactoEmergenciaNombre}
                 onChange={(e) => handleInputChange('contactoEmergenciaNombre', e.target.value)}
                 className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${
@@ -737,11 +739,10 @@ export default function NewPatientForm() {
             
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Teléfono *
+                Teléfono
               </label>
               <input
                 type="tel"
-                required
                 value={formData.contactoEmergenciaTelefono}
                 onChange={(e) => handleInputChange('contactoEmergenciaTelefono', e.target.value)}
                 className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors ${

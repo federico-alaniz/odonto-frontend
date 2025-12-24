@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { Users, UserPlus, Info, Calendar, ClipboardList, Stethoscope } from 'lucide-react';
 import SecretaryPatientsTable from './SecretaryPatientsTable';
 import SecretaryPatientsFilters, { SecretaryPatientFilters } from './SecretaryPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 
 export default function SecretaryPatientsPage() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'assigned'>('all');
   const [filters, setFilters] = useState<SecretaryPatientFilters>({
     search: '',
@@ -27,24 +29,47 @@ export default function SecretaryPatientsPage() {
     inactive: 0
   });
 
+  const [appointmentsToday, setAppointmentsToday] = useState(0);
+  const [requireFollowUp, setRequireFollowUp] = useState(0);
+
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // TODO: Obtener clinicId del contexto de autenticación
-        const clinicId = 'clinic_001';
+        const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+        if (!clinicId) return;
+        
+        // Cargar estadísticas de pacientes
         const response = await patientsService.getPatientStats(clinicId);
         setStats({
           total: response.data.total,
           active: response.data.active,
           inactive: response.data.inactive
         });
+
+        // Cargar citas de hoy
+        const today = new Date().toISOString().split('T')[0];
+        const { appointmentsService } = await import('@/services/api/appointments.service');
+        const appointmentsResponse = await appointmentsService.getAppointments(clinicId, {
+          fecha: today,
+          limit: 1000
+        });
+        setAppointmentsToday(appointmentsResponse.data?.length || 0);
+
+        // Cargar pacientes que requieren seguimiento
+        const patientsResponse = await patientsService.getPatients(clinicId, {
+          limit: 1000
+        });
+        const followUpCount = patientsResponse.data.filter((p: any) => 
+          p.requiereSeguimiento || p.estado === 'seguimiento'
+        ).length;
+        setRequireFollowUp(followUpCount);
       } catch (error) {
         console.error('Error loading stats:', error);
       }
     };
 
     loadStats();
-  }, []);
+  }, [currentUser]);
 
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
@@ -75,7 +100,7 @@ export default function SecretaryPatientsPage() {
               </Link>
               
               <Link
-                href="/secretary/patients/new"
+                href="/pacientes/nuevo"
                 className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 shadow-md inline-flex items-center space-x-2"
               >
                 <UserPlus className="w-5 h-5" />
@@ -168,7 +193,7 @@ export default function SecretaryPatientsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Con Turno Hoy</p>
-                <p className="text-3xl font-bold text-gray-900">23</p>
+                <p className="text-3xl font-bold text-gray-900">{appointmentsToday}</p>
                 <p className="text-sm text-blue-600">Ver agenda</p>
               </div>
               <div className="p-3 bg-orange-100 rounded-lg">
@@ -181,7 +206,7 @@ export default function SecretaryPatientsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Requieren Seguimiento</p>
-                <p className="text-3xl font-bold text-gray-900">7</p>
+                <p className="text-3xl font-bold text-gray-900">{requireFollowUp}</p>
                 <p className="text-sm text-red-600">Atención requerida</p>
               </div>
               <div className="p-3 bg-red-100 rounded-lg">

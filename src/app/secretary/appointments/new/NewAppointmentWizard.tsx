@@ -20,7 +20,9 @@ import {
 import { patientsService, Patient } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
 import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User, HorarioAtencion } from '@/types/roles';
+import { useAuth } from '@/hooks/useAuth';
 
 // Tipos
 interface Doctor {
@@ -51,6 +53,7 @@ export default function NewAppointmentWizard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showSuccess, showError, showWarning } = useToast();
+  const { currentUser } = useAuth();
   
   // Estados del wizard
   const [currentStep, setCurrentStep] = useState(1);
@@ -59,6 +62,7 @@ export default function NewAppointmentWizard() {
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingSpecialties, setLoadingSpecialties] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [bookedSlots, setBookedSlots] = useState<string[]>([]); // Horarios ocupados
   const [loadingSchedule, setLoadingSchedule] = useState(false);
@@ -71,11 +75,40 @@ export default function NewAppointmentWizard() {
   const [selectedTime, setSelectedTime] = useState('');
   const [motivo, setMotivo] = useState('');
 
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+
+  // Cargar especialidades desde configuración
+  useEffect(() => {
+    const loadSpecialties = async () => {
+      if (!clinicId) return;
+      
+      setLoadingSpecialties(true);
+      try {
+        const response = await clinicSettingsService.getSpecialties(clinicId);
+        
+        if (response.success && response.data) {
+          const activeSpecialties = response.data
+            .filter((esp: any) => esp.active)
+            .map((esp: any) => esp.name)
+            .sort();
+          setSpecialties(activeSpecialties);
+        }
+      } catch (error) {
+        console.error('Error cargando especialidades:', error);
+      } finally {
+        setLoadingSpecialties(false);
+      }
+    };
+
+    loadSpecialties();
+  }, [clinicId]);
+
   // Cargar pacientes y doctores
   useEffect(() => {
+    if (!clinicId) return;
     loadPatients();
     loadDoctors();
-  }, []);
+  }, [clinicId]);
 
   // Limpiar fecha y hora cuando cambia el doctor
   useEffect(() => {
@@ -92,11 +125,10 @@ export default function NewAppointmentWizard() {
   }, [selectedDate, selectedDoctor]);
 
   const loadDoctorSchedule = async () => {
-    if (!selectedDoctor || !selectedDate) return;
+    if (!selectedDoctor || !selectedDate || !clinicId) return;
     
     try {
       setLoadingSchedule(true);
-      const clinicId = 'clinic_001'; // TODO: obtener del contexto
       const response = await appointmentsService.getDoctorSchedule(
         clinicId,
         selectedDoctor.id,
@@ -115,11 +147,30 @@ export default function NewAppointmentWizard() {
   };
 
   const loadPatients = async () => {
+    if (!clinicId) {
+      console.log('No clinicId available for loading patients');
+      return;
+    }
+    
     try {
       setLoadingPatients(true);
-      const clinicId = 'clinic_001'; // TODO: obtener del contexto
-      const response = await patientsService.getPatients(clinicId, { limit: 100 });
-      setPatients(response.data);
+      console.log('🏥 Loading patients for clinicId:', clinicId);
+      console.log('👤 Current user:', currentUser);
+      
+      const response = await patientsService.getPatients(clinicId, {
+        limit: 1000
+      });
+      
+      console.log('📋 Patients API Response:', response);
+      console.log('📋 Patients data:', response.data);
+      console.log('📋 Patients count:', response.data?.length);
+      
+      if (response.success && response.data) {
+        console.log('📋 Setting patients state with:', response.data);
+        setPatients(response.data);
+      } else {
+        console.log('❌ Response not successful or no data');
+      }
     } catch (error) {
       console.error('Error loading patients:', error);
     } finally {
@@ -128,9 +179,10 @@ export default function NewAppointmentWizard() {
   };
 
   const loadDoctors = async () => {
+    if (!clinicId) return;
+    
     try {
       setLoadingDoctors(true);
-      const clinicId = 'clinic_001'; // TODO: obtener del contexto
       const response = await usersService.getUsers(clinicId, { 
         role: 'doctor',
         estado: 'activo',
@@ -149,12 +201,6 @@ export default function NewAppointmentWizard() {
       
       setDoctors(doctorsData);
       
-      // Extraer especialidades únicas
-      const uniqueSpecialties = Array.from(
-        new Set(doctorsData.flatMap(d => d.especialidades))
-      ).sort();
-      setSpecialties(uniqueSpecialties);
-      
     } catch (error) {
       console.error('Error loading doctors:', error);
     } finally {
@@ -171,6 +217,10 @@ export default function NewAppointmentWizard() {
       patient.numeroDocumento.includes(searchTerm)
     );
   });
+
+  console.log('🔍 Current patients state:', patients);
+  console.log('🔍 Filtered patients:', filteredPatients);
+  console.log('🔍 Search term:', searchTerm);
 
   // Filtrar doctores por especialidad
   const filteredDoctors = selectedSpecialty
@@ -289,8 +339,12 @@ export default function NewAppointmentWizard() {
     }
 
     try {
-      const clinicId = 'clinic_001'; // TODO: obtener del contexto
-      const userId = 'usr_000001'; // TODO: obtener del contexto
+      const userId = (currentUser as any)?.id;
+      
+      if (!clinicId || !userId) {
+        showError('Error de autenticación', 'No se pudo obtener la información del usuario');
+        return;
+      }
 
       // Calcular horaFin (30 minutos después de horaInicio)
       const [hour, min] = selectedTime.split(':').map(Number);

@@ -26,6 +26,7 @@ import {
 import { DoctorPatientFilters } from './DoctorPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 // Interface para pacientes del doctor con información adicional
 interface DoctorPatient {
@@ -65,6 +66,7 @@ type SortOrder = 'asc' | 'desc';
 export default function DoctorPatientsTable({ filters, showOnlyAssigned = false }: DoctorPatientsTableProps) {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
@@ -77,9 +79,12 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
   // Función para asignar doctor
   const handleAssignDoctor = async (patientId: string) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    if (!clinicId || !userId) return;
+    
     try {
-      const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
-      const userId = localStorage.getItem('userId') || 'system';
       
       const response = await patientsService.assignDoctor(patientId, currentDoctorId, clinicId, userId);
       
@@ -98,9 +103,12 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
   // Función para desasignar doctor
   const handleUnassignDoctor = async (patientId: string) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    if (!clinicId || !userId) return;
+    
     try {
-      const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
-      const userId = localStorage.getItem('userId') || 'system';
       
       const response = await patientsService.unassignDoctor(patientId, clinicId, userId);
       
@@ -123,7 +131,8 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
       try {
         setLoading(true);
         setError(null);
-        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+        const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+        if (!clinicId) return;
         
         const response = await patientsService.getPatients(clinicId, {
           page: 1,

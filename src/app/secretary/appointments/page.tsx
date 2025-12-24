@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Calendar as CalendarIcon, 
   List, 
@@ -26,6 +27,7 @@ import { DebugDateControl } from '@/components/DebugDateControl';
 type ViewMode = 'calendar' | 'agenda';
 
 export default function SecretaryAppointmentsPage() {
+  const { currentUser } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [selectedDate, setSelectedDate] = useState(dateHelper.now());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -38,29 +40,41 @@ export default function SecretaryAppointmentsPage() {
   const [agendaDate, setAgendaDate] = useState(dateHelper.now());
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales cuando currentUser esté disponible
   useEffect(() => {
-    loadData();
-  }, []);
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
 
   const loadData = async () => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    
+    if (!clinicId) {
+      console.log('No clinicId available');
+      return;
+    }
+
     try {
       setLoading(true);
-      const clinicId = 'clinic_001'; // TODO: obtener del contexto
 
       // Cargar citas, doctores y pacientes en paralelo
       const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId, { limit: 1000 }),
-        usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo', limit: 100 }),
+        usersService.getUsers(clinicId, { role: 'doctor', limit: 100 }),
         patientsService.getPatients(clinicId, { limit: 1000 })
       ]);
+
+      console.log(' Appointments loaded:', appointmentsRes.data.length);
+      console.log(' Doctors loaded:', doctorsRes.data.length);
+      console.log(' Patients loaded:', patientsRes.data.length);
 
       setAppointments(appointmentsRes.data);
       setDoctors(doctorsRes.data);
       setPatients(patientsRes.data);
 
     } catch (error) {
-      console.error('❌ Error loading data:', error);
+      console.error(' Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -100,6 +114,10 @@ export default function SecretaryAppointmentsPage() {
 
   const getDoctorName = (doctorId: string) => {
     const doctor = doctors.find(d => d.id === doctorId);
+    if (!doctor) {
+      console.log('Doctor not found for ID:', doctorId);
+      console.log('Available doctors:', doctors.map(d => ({ id: d.id, name: `${d.nombres} ${d.apellidos}` })));
+    }
     return doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Doctor no encontrado';
   };
 

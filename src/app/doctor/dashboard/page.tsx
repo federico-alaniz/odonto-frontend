@@ -20,6 +20,7 @@ import {
   type LucideIcon
 } from 'lucide-react';
 
+import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import { dateHelper } from '@/utils/date-helper';
@@ -27,6 +28,7 @@ import { DebugDateControl } from '@/components/DebugDateControl';
 
 export default function DoctorDashboard() {
   const router = useRouter();
+  const { currentUser } = useAuth();
   const [doctorName, setDoctorName] = useState('Doctor');
   const [doctorSpecialty, setDoctorSpecialty] = useState('');
   
@@ -77,12 +79,13 @@ export default function DoctorDashboard() {
   }, []);
 
   const loadDashboardData = async () => {
+    const currentDoctorId = (currentUser as any)?.id;
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const today = dateHelper.today();
+    
+    if (!currentDoctorId || !clinicId) return;
+    
     try {
-      // TODO: Obtener doctor ID del contexto de autenticación
-      const currentDoctorId = localStorage.getItem('userId') || 'usr_419812';
-      const today = dateHelper.today();
-      const clinicId = 'clinic_001';
-
       // Cargar citas y pacientes (solicitar más citas para cubrir todo el mes)
       const [appointmentsResponse, patientsResponse] = await Promise.all([
         appointmentsService.getAppointments(clinicId, { 

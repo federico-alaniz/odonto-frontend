@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Users, 
   Calendar, 
@@ -18,7 +20,6 @@ import {
   PieChart,
   Download
 } from 'lucide-react';
-import Link from 'next/link';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
@@ -44,6 +45,7 @@ interface DailyAppointment {
 }
 
 export default function AdminDashboard() {
+  const { currentUser } = useAuth();
   const [stats, setStats] = useState<StatCard[]>([]);
   const [appointmentsBySpecialty, setAppointmentsBySpecialty] = useState<AppointmentBySpecialty[]>([]);
   const [dailyAppointments, setDailyAppointments] = useState<DailyAppointment[]>([]);
@@ -67,9 +69,11 @@ export default function AdminDashboard() {
   }, [appointments, users, patients]);
 
   const loadDashboardData = async () => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    if (!clinicId) return;
+    
     try {
       setLoading(true);
-      const clinicId = localStorage.getItem('clinicId') || 'clinic_001';
       
       // Cargar datos en paralelo
       const [appointmentsRes, usersRes, patientsRes] = await Promise.all([

@@ -24,6 +24,7 @@ import {
   Filter
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, Appointment } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { patientsService, Patient } from '@/services/api/patients.service';
@@ -76,7 +77,8 @@ export default function ReceptionPage() {
   const [currentTime, setCurrentTime] = useState(dateHelper.now());
   const [showColon, setShowColon] = useState(true);
 
-  const clinicId = 'clinic_001'; // TODO: obtener del contexto
+  const { currentUser } = useAuth();
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
   // Actualizar hora actual cada minuto
   useEffect(() => {
@@ -95,10 +97,17 @@ export default function ReceptionPage() {
   }, []);
 
   useEffect(() => {
-    loadReceptionData();
-  }, []);
+    if (clinicId) {
+      loadReceptionData();
+    }
+  }, [clinicId]);
 
   const loadReceptionData = async () => {
+    if (!clinicId) {
+      console.log('⏳ Esperando clinicId...');
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -163,12 +172,34 @@ export default function ReceptionPage() {
           .sort((a, b) => a.time.localeCompare(b.time));
 
         // Calcular estadísticas
+        // Calcular tiempo promedio de espera real
+        const citasConEspera = todayCitas.filter(apt => apt.arrivalTime && (apt.status === 'esperando' || apt.status === 'en-curso' || apt.status === 'completada'));
+        let promedioEspera = 0;
+        
+        if (citasConEspera.length > 0) {
+          const tiemposEspera = citasConEspera.map(apt => {
+            if (!apt.arrivalTime) return 0;
+            try {
+              const [arrHours, arrMinutes] = apt.arrivalTime.split(':').map(Number);
+              const [aptHours, aptMinutes] = apt.time.split(':').map(Number);
+              const arrivalMinutes = arrHours * 60 + arrMinutes;
+              const appointmentMinutes = aptHours * 60 + aptMinutes;
+              return Math.max(0, arrivalMinutes - appointmentMinutes);
+            } catch {
+              return 0;
+            }
+          });
+          
+          const totalEspera = tiemposEspera.reduce((sum, time) => sum + time, 0);
+          promedioEspera = Math.round(totalEspera / citasConEspera.length);
+        }
+
         const newStats = {
           esperando: todayCitas.filter(apt => apt.status === 'esperando' || apt.status === 'confirmada' || apt.status === 'programada').length,
           enConsulta: todayCitas.filter(apt => apt.status === 'en-curso').length,
           completadas: todayCitas.filter(apt => apt.status === 'completada').length,
           noShow: todayCitas.filter(apt => apt.status === 'no-show').length,
-          promedio: 15
+          promedio: promedioEspera
         };
 
         setTodayAppointments(todayCitas);

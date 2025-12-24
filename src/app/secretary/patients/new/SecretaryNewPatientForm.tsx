@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   User, 
   Phone, 
@@ -20,7 +22,6 @@ import {
   getDepartamentosPorProvincia, 
   getCiudadesPorProvincia
 } from '../../../../utils';
-import { useToast } from '@/components/ui/ToastProvider';
 import { patientsService, CreatePatientData } from '@/services/api/patients.service';
 
 interface SecretaryPatientFormData {
@@ -70,6 +71,7 @@ interface FormErrors {
 export default function SecretaryNewPatientForm() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
   
   const [formData, setFormData] = useState<SecretaryPatientFormData>({
     nombres: '',
@@ -299,9 +301,14 @@ export default function SecretaryNewPatientForm() {
         `.trim()
       };
       
-      // TODO: Obtener estos valores del contexto de autenticación
-      const clinicId = 'clinic_001';
-      const userId = 'usr_000001';
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = (currentUser as any)?.id;
+      
+      if (!clinicId || !userId) {
+        showError('Error de autenticación', 'No se pudo obtener la información del usuario');
+        setIsSubmitting(false);
+        return;
+      }
       
       // Preparar datos para el servicio
       const patientData: CreatePatientData = {
