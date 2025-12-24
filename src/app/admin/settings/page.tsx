@@ -211,25 +211,40 @@ export default function AdminSettingsPage() {
     try {
       setIsSaving(true);
       
+      const settingsToSave = {
+        generalSettings: {
+          clinicName: generalSettings.clinicName,
+          address: generalSettings.clinicAddress,
+          clinicAddress: generalSettings.clinicAddress,
+          clinicCity: generalSettings.clinicCity,
+          clinicProvince: generalSettings.clinicProvince,
+          clinicPostalCode: generalSettings.clinicPostalCode,
+          phone: generalSettings.clinicPhone,
+          clinicPhone: generalSettings.clinicPhone,
+          email: generalSettings.clinicEmail,
+          clinicEmail: generalSettings.clinicEmail,
+          website: generalSettings.clinicWebsite,
+          clinicWebsite: generalSettings.clinicWebsite,
+          timezone: generalSettings.timezone,
+          language: generalSettings.language,
+          logo: generalSettings.clinicLogo || null,
+        } as any,
+        specialties,
+        consultingRooms,
+        operatingRooms
+      };
+      
+      console.log('📤 Guardando configuración:', {
+        specialtiesCount: specialties.length,
+        consultingRoomsCount: consultingRooms.length,
+        operatingRoomsCount: operatingRooms.length,
+        specialties: specialties
+      });
       
       // Guardar en el backend
       const response = await clinicSettingsService.updateSettings(
         clinicId,
-        {
-          generalSettings: {
-            clinicName: generalSettings.clinicName,
-            address: generalSettings.clinicAddress,
-            phone: generalSettings.clinicPhone,
-            email: generalSettings.clinicEmail,
-            website: generalSettings.clinicWebsite,
-            timezone: generalSettings.timezone,
-            language: generalSettings.language,
-            logo: generalSettings.clinicLogo || null,
-          } as any,
-          specialties,
-          consultingRooms,
-          operatingRooms
-        },
+        settingsToSave,
         userId
       );
       
