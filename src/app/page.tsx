@@ -104,8 +104,6 @@ export default function Home() {
           const patient = patients.find(p => p.id === apt.patientId);
           const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
           
-          console.log('Processing appointment:', apt.id, 'Patient:', patientName, 'Estado:', apt.estado);
-          
           // Determinar tipo y acción basado en estado
           let type, action, icon;
           switch (apt.estado) {
@@ -149,7 +147,6 @@ export default function Home() {
           };
         });
 
-      console.log('Recent activity data:', todayAppointments);
       setRecentActivity(todayAppointments);
     };
 

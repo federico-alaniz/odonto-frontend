@@ -4,8 +4,9 @@ import { getToken } from 'next-auth/jwt';
 import { getRoleConfig, getRolePermissions } from './utils/roleConfig';
 
 const AUTH_DEBUG = process.env.AUTH_DEBUG === '1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-const PUBLIC_ROUTES = ['/login'];
+const PUBLIC_ROUTES = ['/login', '/platform'];
 
 const ROLE_PREFIXES = {
   admin: '/admin',
@@ -27,7 +28,7 @@ const SHARED_ROUTE_RULES: Array<{ prefix: string; resource?: string; action?: 'c
   { prefix: '/shared' },
 ];
 
-const getTenantIdFromHost = (host?: string | null) => {
+const getSubdomainFromHost = (host?: string | null) => {
   if (!host) return 'clinic_001';
   const cleanHost = host.split(':')[0];
   const parts = cleanHost.split('.');
@@ -41,11 +42,36 @@ const getTenantIdFromHost = (host?: string | null) => {
   return 'clinic_001';
 };
 
+const resolveCache = new Map<string, string>();
+
+const resolveClinicIdFromSubdomain = async (subdomain: string) => {
+  if (!subdomain) return 'clinic_001';
+  if (subdomain === 'clinic_001') return 'clinic_001';
+  if (resolveCache.has(subdomain)) return resolveCache.get(subdomain) as string;
+
+  try {
+    const url = `${API_URL}/api/clinics/resolve?subdomain=${encodeURIComponent(subdomain)}`;
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json().catch(() => null);
+    const clinicId = data?.success ? data?.data?.clinicId : null;
+    if (clinicId) {
+      resolveCache.set(subdomain, clinicId);
+      return clinicId;
+    }
+  } catch {
+    // ignore
+  }
+
+  return 'clinic_001';
+};
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r)) || pathname.startsWith('/api/auth');
-  const tenantId = getTenantIdFromHost(req.headers.get('host'));
+  const tenantId = pathname.startsWith('/platform')
+    ? 'platform'
+    : await resolveClinicIdFromSubdomain(getSubdomainFromHost(req.headers.get('host')));
 
   const res = NextResponse.next();
   res.cookies.set('tenantId', tenantId, { path: '/' });
@@ -54,23 +80,10 @@ export async function middleware(req: NextRequest) {
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  if (AUTH_DEBUG) {
-    // eslint-disable-next-line no-console
-    console.log('[AUTH_DEBUG][middleware] request', {
-      pathname,
-      tenantId,
-      hasToken: Boolean(token),
-      tokenTenant: (token as any)?.tenantId,
-      role: (token as any)?.role,
-      sub: (token as any)?.sub,
-    });
-  }
+  
 
   if (!token) {
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[AUTH_DEBUG][middleware] redirect -> /login (no token)', { pathname });
-    }
+    
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);
@@ -78,28 +91,19 @@ export async function middleware(req: NextRequest) {
 
   const role = (token as any).role as keyof typeof ROLE_PREFIXES | undefined;
   if (pathname.startsWith('/admin') && role !== 'admin') {
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[AUTH_DEBUG][middleware] redirect -> role home (admin guard)', { pathname, role });
-    }
+    
     const url = req.nextUrl.clone();
     url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
     return NextResponse.redirect(url);
   }
   if (pathname.startsWith('/doctor') && role !== 'doctor') {
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[AUTH_DEBUG][middleware] redirect -> role home (doctor guard)', { pathname, role });
-    }
+    
     const url = req.nextUrl.clone();
     url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
     return NextResponse.redirect(url);
   }
   if (pathname.startsWith('/secretary') && role !== 'secretary') {
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[AUTH_DEBUG][middleware] redirect -> role home (secretary guard)', { pathname, role });
-    }
+    
     const url = req.nextUrl.clone();
     url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
     return NextResponse.redirect(url);
@@ -111,14 +115,7 @@ export async function middleware(req: NextRequest) {
       const perms = getRolePermissions(role as any);
       const allowed = perms.some((p) => p.resource === rule.resource && p.actions.includes(rule.action!));
       if (!allowed) {
-        if (AUTH_DEBUG) {
-          // eslint-disable-next-line no-console
-          console.log('[AUTH_DEBUG][middleware] redirect -> role home (shared rule denied)', {
-            pathname,
-            role,
-            rule,
-          });
-        }
+        
         const url = req.nextUrl.clone();
         url.pathname = getRoleConfig(role as any).defaultHomePage;
         return NextResponse.redirect(url);
@@ -128,14 +125,7 @@ export async function middleware(req: NextRequest) {
 
   const sessionTenant = (token as any).tenantId;
   if (sessionTenant && sessionTenant !== tenantId) {
-    if (AUTH_DEBUG) {
-      // eslint-disable-next-line no-console
-      console.log('[AUTH_DEBUG][middleware] redirect -> /login (tenant mismatch)', {
-        pathname,
-        tenantId,
-        sessionTenant,
-      });
-    }
+    
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('error', 'tenant_mismatch');

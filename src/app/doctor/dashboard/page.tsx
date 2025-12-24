@@ -83,8 +83,6 @@ export default function DoctorDashboard() {
       const today = dateHelper.today();
       const clinicId = 'clinic_001';
 
-      console.log('🔍 Dashboard Debug:', { currentDoctorId, today, clinicId });
-
       // Cargar citas y pacientes (solicitar más citas para cubrir todo el mes)
       const [appointmentsResponse, patientsResponse] = await Promise.all([
         appointmentsService.getAppointments(clinicId, { 
@@ -97,12 +95,6 @@ export default function DoctorDashboard() {
       const appointmentsData = appointmentsResponse.data;
       const patientsData = patientsResponse.data;
 
-      console.log('📊 Datos cargados:', {
-        totalAppointments: appointmentsData.length,
-        totalPatients: patientsData.length,
-        appointments: appointmentsData
-      });
-
       // Filtrar citas del doctor
       const doctorAppointments = appointmentsData.filter((apt: any) => 
         apt.doctorId === currentDoctorId && !apt.deletedAt
@@ -113,12 +105,9 @@ export default function DoctorDashboard() {
         apt.fecha === today
       );
 
-      console.log('📅 Filtrado:', {
-        doctorAppointmentsCount: doctorAppointments.length,
-        todayAppointmentsCount: todayAppointments.length,
-        today,
+      const stats = {
         doctorAppointmentsDates: doctorAppointments.map((a: any) => a.fecha)
-      });
+      };
 
       // Pacientes esperando (confirmadas o en espera)
       const waitingCount = doctorAppointments.filter((apt: any) => 

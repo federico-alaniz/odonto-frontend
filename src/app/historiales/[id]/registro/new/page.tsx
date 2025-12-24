@@ -119,7 +119,6 @@ export default function NewMedicalRecordPage() {
         status: 'missing' as const
       }));
       setCurrentOdontogram(missingTeeth);
-      console.log('Odontograma actual inicializado con dientes ausentes:', missingTeeth);
     }
   }, [extractedTeeth]);
 
@@ -183,9 +182,6 @@ export default function NewMedicalRecordPage() {
             .filter(condition => condition.status === 'extraction')
             .map(condition => condition.number);
           setExtractedTeeth(extracted);
-          
-          console.log('Odontograma histórico cargado:', historicalConditions);
-          console.log('Dientes extraídos (ausentes):', extracted);
         }
       } catch (error) {
         console.error('Error cargando odontograma histórico:', error);
@@ -272,8 +268,6 @@ export default function NewMedicalRecordPage() {
         documentos: [],
       };
 
-      console.log('Guardando registro médico:', recordData);
-      
       const response = await medicalRecordsService.create(recordData);
       
       if (response.success) {

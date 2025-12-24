@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/ToastProvider';
 import { 
   UserPlus,
   ArrowLeft,
@@ -26,7 +27,7 @@ import {
 import Link from 'next/link';
 import { UserFormData, HorarioAtencion } from '@/types/roles';
 import { usersService } from '@/services/api/users.service';
-import { useToast } from '@/components/ui/ToastProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 const INITIAL_FORM_DATA: UserFormData = {
   nombres: '',
@@ -110,15 +111,15 @@ const DIAS_SEMANA = [
 export default function NewUserForm() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState<UserFormData>(INITIAL_FORM_DATA);
   const [showPassword, setShowPassword] = useState(false);
   const [especialidades, setEspecialidades] = useState<Array<{ value: string; label: string }>>(ESPECIALIDADES_HARDCODED);
   const [isLoadingEspecialidades, setIsLoadingEspecialidades] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // TODO: Obtener estos valores del contexto de autenticación
-  const clinicId = 'clinic_001';
-  const currentUserId = 'usr_000001';
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const currentUserId = (currentUser as any)?.id;
 
   // Cargar especialidades desde la configuración del sistema
   useEffect(() => {

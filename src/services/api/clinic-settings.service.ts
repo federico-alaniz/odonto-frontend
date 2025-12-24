@@ -103,8 +103,6 @@ export const clinicSettingsService = {
       const url = `${API_BASE_URL}/api/clinic-settings`;
       const headers = getHeaders(clinicId);
 
-      console.log('🔍 Obteniendo configuración de la clínica...');
-
       const response = await fetch(url, {
         method: 'GET',
         headers: headers
@@ -116,7 +114,6 @@ export const clinicSettingsService = {
         throw new Error(responseData.error || 'Error al obtener configuración');
       }
 
-      console.log('✅ Configuración obtenida');
       return responseData;
     } catch (error: any) {
       console.error('❌ Error fetching clinic settings:', error);
@@ -136,8 +133,6 @@ export const clinicSettingsService = {
       const url = `${API_BASE_URL}/api/clinic-settings`;
       const headers = getHeaders(clinicId, userId);
 
-      console.log('💾 Actualizando configuración...');
-
       const response = await fetch(url, {
         method: 'PUT',
         headers: headers,
@@ -150,7 +145,6 @@ export const clinicSettingsService = {
         throw new Error(responseData.error || 'Error al actualizar configuración');
       }
 
-      console.log('✅ Configuración actualizada');
       return responseData;
     } catch (error: any) {
       console.error('❌ Error updating clinic settings:', error);
@@ -196,8 +190,6 @@ export const clinicSettingsService = {
       const url = `${API_BASE_URL}/api/clinic-settings/specialties`;
       const headers = getHeaders(clinicId, userId);
 
-      console.log('💾 Actualizando especialidades...');
-
       const response = await fetch(url, {
         method: 'PUT',
         headers: headers,
@@ -210,7 +202,6 @@ export const clinicSettingsService = {
         throw new Error(responseData.error || 'Error al actualizar especialidades');
       }
 
-      console.log('✅ Especialidades actualizadas');
       return responseData;
     } catch (error: any) {
       console.error('❌ Error updating specialties:', error);

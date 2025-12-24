@@ -156,14 +156,7 @@ export default function NewConsultationForm() {
     
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('Guardando consulta:', {
-      patientInfo,
-      appointmentInfo,
-      vitalSigns,
-      consultationData,
-      fechaConsulta: new Date().toISOString(),
-      doctorId: 'user_doc_001'
-    });
+    
 
     setSaving(false);
     

@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { appointmentsService, type Appointment } from '@/services/api/appointments.service';
+import { patientsService, type Patient } from '@/services/api/patients.service';
 import { 
   Stethoscope,
   Plus,
@@ -30,29 +33,104 @@ interface Consultation {
 }
 
 export default function ConsultationsPage() {
+  const { currentUser } = useAuth();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [filteredConsultations, setFilteredConsultations] = useState<Consultation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Cargar consultas reales desde el backend
-    // const fetchConsultations = async () => {
-    //   const data = await getConsultations();
-    //   setConsultations(data);
-    //   setFilteredConsultations(data);
-    //   setLoading(false);
-    // };
-    // fetchConsultations();
+    const fetchConsultations = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    // Por ahora, array vacío hasta integrar con backend
-    setTimeout(() => {
-      setConsultations([]);
-      setFilteredConsultations([]);
-      setLoading(false);
-    }, 500);
-  }, []);
+        const clinicId =
+          (typeof window !== 'undefined' ? window.localStorage.getItem('clinicId') : null) ||
+          ((currentUser as any)?.tenantId as string | undefined) ||
+          'clinic_001';
+
+        const doctorId =
+          (currentUser?.id as string | undefined) ||
+          (typeof window !== 'undefined' ? window.localStorage.getItem('userId') || undefined : undefined);
+
+        if (!doctorId) {
+          setConsultations([]);
+          setFilteredConsultations([]);
+          setError('No se pudo determinar el doctor logueado');
+          return;
+        }
+
+        const [appointmentsRes, patientsRes] = await Promise.all([
+          appointmentsService.getAppointments(clinicId, { doctorId, limit: 500 }),
+          patientsService.getPatients(clinicId, { limit: 2000 }),
+        ]);
+
+        const patientsById = new Map<string, Patient>();
+        (patientsRes.data ?? []).forEach((p) => patientsById.set(p.id, p));
+
+        const mapStatus = (estado: Appointment['estado']): Consultation['status'] => {
+          switch (estado) {
+            case 'completada':
+              return 'completed';
+            case 'en_curso':
+              return 'in-progress';
+            default:
+              return 'pending';
+          }
+        };
+
+        const mapType = (tipo: Appointment['tipo']): Consultation['type'] => {
+          switch (tipo) {
+            case 'control':
+              return 'follow-up';
+            case 'urgencia':
+              return 'emergency';
+            default:
+              return 'consultation';
+          }
+        };
+
+        const mapped: Consultation[] = (appointmentsRes.data ?? [])
+          .filter((apt) => apt.doctorId === doctorId)
+          .map((apt) => {
+            const patient = patientsById.get(apt.patientId);
+            const patientName = patient ? `${patient.nombres} ${patient.apellidos}`.trim() : 'Paciente desconocido';
+
+            const hasMotivo = Boolean(apt.motivo && apt.motivo.trim());
+            return {
+              id: apt.id,
+              patientName,
+              patientId: apt.patientId,
+              date: apt.fecha,
+              time: apt.horaInicio,
+              reason: hasMotivo ? apt.motivo : 'N/A',
+              diagnosis: 'N/A',
+              status: mapStatus(apt.estado),
+              type: mapType(apt.tipo),
+            };
+          })
+          .sort((a, b) => {
+            const aKey = `${a.date} ${a.time}`;
+            const bKey = `${b.date} ${b.time}`;
+            return bKey.localeCompare(aKey);
+          });
+
+        setConsultations(mapped);
+        setFilteredConsultations(mapped);
+      } catch (e: any) {
+        setConsultations([]);
+        setFilteredConsultations([]);
+        setError(e?.message || 'Error al cargar consultas');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchConsultations();
+  }, [currentUser?.id]);
 
   useEffect(() => {
     let filtered = consultations;
@@ -131,6 +209,19 @@ export default function ConsultationsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-gray-700 font-medium">{error}</p>
+            <p className="text-gray-500 text-sm mt-2">Intenta recargar la página.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -195,11 +286,10 @@ export default function ConsultationsPage() {
                 <option value="pending">Pendientes</option>
               </select>
             </div>
-
           </div>
         </div>
 
-        {/* Consultations List */}
+        {/* Consultations Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
@@ -217,78 +307,91 @@ export default function ConsultationsPage() {
 
           <div className="p-6">
             {filteredConsultations.length > 0 ? (
-              <div className="space-y-4">
-                {filteredConsultations.map((consultation) => (
-                  <div key={consultation.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50/30 transition-all">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-blue-100 rounded-full">
-                          <User className="w-6 h-6 text-blue-600" />
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {consultation.patientName}
-                            </h3>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusClasses(consultation.status)}`}>
-                              {getStatusText(consultation.status)}
-                            </span>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeClasses(consultation.type)}`}>
-                              {getTypeText(consultation.type)}
-                            </span>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Hora</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Paciente</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Motivo</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Tipo</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {filteredConsultations.map((consultation) => (
+                      <tr key={consultation.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-gray-900">
+                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <span>{consultation.date}</span>
                           </div>
-                          
-                          <div className="flex items-center gap-6 text-sm text-gray-600 mb-2">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {consultation.date}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {consultation.time}
-                            </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2 text-sm text-gray-900">
+                            <Clock className="w-4 h-4 text-gray-500" />
+                            <span>{consultation.time}</span>
                           </div>
-                          
-                          <div className="text-sm text-gray-700">
-                            <p><span className="font-medium">Motivo:</span> {consultation.reason}</p>
-                            <p><span className="font-medium">Diagnóstico:</span> {consultation.diagnosis}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{consultation.patientName}</div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">{consultation.reason}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusClasses(consultation.status)}`}>
+                            {getStatusText(consultation.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeClasses(consultation.type)}`}>
+                            {getTypeText(consultation.type)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              href={`/doctor/consultations/${consultation.id}`}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver detalles"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
 
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/doctor/consultations/${consultation.id}`}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Ver detalles"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        
-                        {consultation.status !== 'completed' && (
-                          <Link
-                            href={`/doctor/consultations/${consultation.id}/edit`}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Editar consulta"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                            {consultation.status !== 'completed' && (
+                              <Link
+                                href={`/doctor/consultations/${consultation.id}/edit`}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Editar consulta"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="text-center py-12">
                 <Stethoscope className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 font-medium text-lg">No se encontraron consultas</p>
                 <p className="text-sm text-gray-400 mt-2">
-                  {searchTerm || statusFilter !== 'all' 
+                  {searchTerm || statusFilter !== 'all'
                     ? 'Intenta ajustar los filtros de búsqueda'
-                    : 'Las consultas realizadas aparecerán aquí'
-                  }
+                    : 'Las consultas realizadas aparecerán aquí'}
                 </p>
               </div>
             )}

@@ -32,7 +32,6 @@ export const dateHelper = {
       // Formato esperado: YYYY-MM-DD
       const [year, month, day] = debugDate.split('-').map(Number);
       const date = new Date(year, month - 1, day, 12, 0, 0); // Usar mediodía para evitar cambios de día
-      console.log('🐛 DEBUG MODE: Usando fecha simulada:', debugDate);
       return date;
     }
     
@@ -112,8 +111,6 @@ export const dateHelper = {
     if (!isClient) return;
     
     localStorage.setItem('DEBUG_DATE', dateString);
-    console.log('🐛 DEBUG MODE activado. Fecha simulada:', dateString);
-    console.log('Para desactivar: dateHelper.clearDebugDate()');
   },
 
   /**
@@ -123,7 +120,6 @@ export const dateHelper = {
     if (!isClient) return;
     
     localStorage.removeItem('DEBUG_DATE');
-    console.log('✅ DEBUG MODE desactivado. Usando fecha real.');
   },
 
   /**
@@ -160,11 +156,4 @@ export const dateHelper = {
 if (typeof window !== 'undefined') {
   (window as any).dateHelper = dateHelper;
   
-  // Mostrar info si está en modo debug
-  if (dateHelper.isDebugMode()) {
-    console.log('🐛 DEBUG MODE ACTIVO');
-    console.log('📅 Fecha simulada:', localStorage.getItem('DEBUG_DATE'));
-    console.log('📅 Fecha real:', dateHelper.formatDate(new Date()));
-    console.log('Para desactivar: dateHelper.clearDebugDate()');
-  }
 }

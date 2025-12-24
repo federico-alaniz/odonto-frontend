@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN;
 const AUTH_DEBUG = process.env.AUTH_DEBUG === '1';
 
-const getTenantIdFromHost = (host?: string | null) => {
+const getSubdomainFromHost = (host?: string | null) => {
   if (!host) return 'clinic_001';
   const cleanHost = host.split(':')[0];
   const parts = cleanHost.split('.');
@@ -15,6 +15,29 @@ const getTenantIdFromHost = (host?: string | null) => {
     const subdomain = parts[0];
     if (subdomain === 'clinic1') return 'clinic_001';
     return subdomain;
+  }
+
+  return 'clinic_001';
+};
+
+const resolveCache = new Map<string, string>();
+
+const resolveClinicIdFromSubdomain = async (subdomain: string) => {
+  if (!subdomain) return 'clinic_001';
+  if (subdomain === 'clinic_001') return 'clinic_001';
+  if (resolveCache.has(subdomain)) return resolveCache.get(subdomain) as string;
+
+  try {
+    const url = `${API_URL}/api/clinics/resolve?subdomain=${encodeURIComponent(subdomain)}`;
+    const res = await fetch(url, { method: 'GET' });
+    const data = await res.json().catch(() => null);
+    const clinicId = data?.success ? data?.data?.clinicId : null;
+    if (clinicId) {
+      resolveCache.set(subdomain, clinicId);
+      return clinicId;
+    }
+  } catch {
+    // ignore
   }
 
   return 'clinic_001';
@@ -76,18 +99,10 @@ export const authOptions: NextAuthOptions = {
 
         // App Router passes a Web Request-like object
         const host = (req as any)?.headers?.get?.('host') || (req as any)?.headers?.host;
-        const tenantId = getTenantIdFromHost(host);
+        const subdomain = getSubdomainFromHost(host);
+        const tenantId = await resolveClinicIdFromSubdomain(subdomain);
 
-        if (AUTH_DEBUG) {
-          // eslint-disable-next-line no-console
-          console.log('[AUTH_DEBUG][nextauth][authorize] start', {
-            host,
-            tenantId,
-            email,
-            cookieDomain: COOKIE_DOMAIN,
-          });
-        }
-
+        
         const response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: {
@@ -99,15 +114,7 @@ export const authOptions: NextAuthOptions = {
 
         const data = await response.json().catch(() => null);
 
-        if (AUTH_DEBUG) {
-          // eslint-disable-next-line no-console
-          console.log('[AUTH_DEBUG][nextauth][authorize] backend response', {
-            ok: response.ok,
-            status: response.status,
-            success: data?.success,
-            hasUser: Boolean(data?.data),
-          });
-        }
+        
 
         if (!response.ok || !data?.success || !data?.data) return null;
 
@@ -132,14 +139,7 @@ export const authOptions: NextAuthOptions = {
         token.tenantId = (user as any).tenantId;
         token.role = (user as any).role;
 
-        if (AUTH_DEBUG) {
-          // eslint-disable-next-line no-console
-          console.log('[AUTH_DEBUG][nextauth][jwt] issued', {
-            sub: token.sub,
-            role: (token as any).role,
-            tenantId: (token as any).tenantId,
-          });
-        }
+        
       }
       return token;
     },
@@ -155,14 +155,7 @@ export const authOptions: NextAuthOptions = {
         tenantId: (token as any).tenantId,
       };
 
-      if (AUTH_DEBUG) {
-        // eslint-disable-next-line no-console
-        console.log('[AUTH_DEBUG][nextauth][session] built', {
-          sub: token.sub,
-          role: (token as any).role,
-          tenantId: (token as any).tenantId,
-        });
-      }
+      
       return session;
     },
   },

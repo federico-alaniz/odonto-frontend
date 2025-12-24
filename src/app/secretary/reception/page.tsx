@@ -101,7 +101,6 @@ export default function ReceptionPage() {
   const loadReceptionData = async () => {
     try {
       setLoading(true);
-      console.log('📊 Cargando datos de recepción...');
 
       // Cargar datos en paralelo
       const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
@@ -110,11 +109,6 @@ export default function ReceptionPage() {
         patientsService.getPatients(clinicId)
       ]);
 
-      console.log('🔍 Respuestas del backend:');
-      console.log('  - Appointments:', appointmentsRes);
-      console.log('  - Doctors:', doctorsRes);
-      console.log('  - Patients:', patientsRes);
-
       if (appointmentsRes.success && doctorsRes.success && patientsRes.success) {
         setAppointments(appointmentsRes.data);
         setDoctors(doctorsRes.data);
@@ -122,22 +116,10 @@ export default function ReceptionPage() {
 
         // Obtener fecha de hoy (respeta modo debug)
         const today = dateHelper.today();
-        console.log('📅 Filtrando citas del día:', today);
-        console.log('📊 Total de citas en el backend:', appointmentsRes.data?.length || 0);
         
-        if (appointmentsRes.data && appointmentsRes.data.length > 0) {
-          console.log('📋 Fechas disponibles:', [...new Set(appointmentsRes.data.map(a => a.fecha))]);
-          console.log('📋 Primera cita como ejemplo:', appointmentsRes.data[0]);
-        } else {
-          console.warn('⚠️ No hay citas en appointmentsRes.data');
-        }
-
         // Filtrar citas de hoy y procesarlas
         const todayCitas = (appointmentsRes.data || [])
-          .filter(apt => {
-            console.log(`  Comparando: "${apt.fecha}" === "${today}" = ${apt.fecha === today}`);
-            return apt.fecha === today;
-          })
+          .filter(apt => apt.fecha === today)
           .map(apt => {
             const patient = patientsRes.data.find(p => p.id === apt.patientId);
             const doctor = doctorsRes.data.find(d => d.id === apt.doctorId);
@@ -180,9 +162,6 @@ export default function ReceptionPage() {
           })
           .sort((a, b) => a.time.localeCompare(b.time));
 
-        console.log(`✅ ${todayCitas.length} citas encontradas para hoy`);
-        console.log('📋 Citas procesadas:', todayCitas);
-
         // Calcular estadísticas
         const newStats = {
           esperando: todayCitas.filter(apt => apt.status === 'esperando' || apt.status === 'confirmada' || apt.status === 'programada').length,
@@ -191,8 +170,6 @@ export default function ReceptionPage() {
           noShow: todayCitas.filter(apt => apt.status === 'no-show').length,
           promedio: 15
         };
-
-        console.log('📊 Estadísticas:', newStats);
 
         setTodayAppointments(todayCitas);
         setStats(newStats);
@@ -309,11 +286,9 @@ export default function ReceptionPage() {
     );
 
     // Notificar cambio (aquí se integraría con el backend)
-    console.log(`Cita ${appointmentId} cambió a estado: ${newStatus}`);
   };
 
   const handleNotifyDoctor = (appointment: ReceptionAppointment) => {
-    console.log(`Notificando al ${appointment.doctorName} que ${appointment.patientName} está listo`);
     // Aquí se enviaría notificación al doctor
   };
 

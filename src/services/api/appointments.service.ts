@@ -112,20 +112,13 @@ class AppointmentsService {
       const url = `${API_BASE_URL}/api/appointments`;
       const headers = getHeaders(clinicId, userId);
 
-      console.log('🚀 Creando cita...');
-      console.log('URL:', url);
-      console.log('Data:', data);
-
       const response = await fetch(url, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(data)
       });
 
-      console.log('📡 Response status:', response.status);
-
       const responseData = await response.json();
-      console.log('📦 Response data:', responseData);
 
       if (!response.ok) {
         const errorMessage = responseData.error || 'Error al crear cita';
@@ -161,19 +154,12 @@ class AppointmentsService {
       const url = `${API_BASE_URL}/api/appointments${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const headers = getHeaders(clinicId);
 
-      console.log('🔍 Obteniendo citas...');
-      console.log('URL:', url);
-      console.log('Headers:', headers);
-
       const response = await fetch(url, {
         method: 'GET',
         headers: headers
       });
 
-      console.log('📡 Response status:', response.status);
-
       const responseData = await response.json();
-      console.log('📦 Citas obtenidas:', responseData.data?.length || 0);
 
       if (!response.ok) {
         throw new Error(responseData.error || 'Error al obtener citas');

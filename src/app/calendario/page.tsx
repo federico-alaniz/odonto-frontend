@@ -97,7 +97,6 @@ export default function CalendarioPage() {
         isOpen={showNewAppointmentModal}
         onClose={() => setShowNewAppointmentModal(false)}
         onSave={(appointment) => {
-          console.log('Nueva cita:', appointment);
           // Aquí se integraría con la lógica de guardar en la base de datos
           setShowNewAppointmentModal(false);
         }}
