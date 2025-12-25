@@ -100,7 +100,18 @@ export default function SecretaryAppointmentsPage() {
     setFilteredAppointments(filtered);
   }, [filterDoctor, filterStatus, showTodayOnly, agendaDate, appointments]);
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
+    // Si es un string en formato YYYY-MM-DD, parsearlo manualmente para evitar conversión UTC
+    if (typeof date === 'string') {
+      const [year, month, day] = date.split('-').map(Number);
+      const localDate = new Date(year, month - 1, day);
+      return localDate.toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+    
     return date.toLocaleDateString('es-AR', {
       day: '2-digit',
       month: '2-digit',
@@ -609,7 +620,7 @@ export default function SecretaryAppointmentsPage() {
                           <tr key={appointment.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
-                                {formatDate(new Date(appointment.fecha))}
+                                {formatDate(appointment.fecha)}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {appointment.horaInicio} - {appointment.horaFin}

@@ -237,7 +237,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
   };
 
   const handleEditPatient = (patient: SecretaryPatient) => {
-    setEditModal({ open: true, patient });
+    router.push(`/secretary/patients/${patient.id}/edit`);
   };
 
   const handleDeletePatient = (patient: SecretaryPatient) => {

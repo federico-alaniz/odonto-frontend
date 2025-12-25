@@ -325,10 +325,13 @@ export default function SecretaryPatientDetailPage() {
                 <span>Nuevo Turno</span>
               </Link>
               
-              <button className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors inline-flex items-center space-x-2">
+              <Link
+                href={`/secretary/patients/${patient.id}/edit`}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors inline-flex items-center space-x-2"
+              >
                 <Edit3 className="w-5 h-5" />
                 <span>Editar</span>
-              </button>
+              </Link>
             </div>
           </div>
         </div>
