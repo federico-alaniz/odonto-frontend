@@ -21,14 +21,18 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useConsultation } from '@/contexts/ConsultationContext';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import { dateHelper } from '@/utils/date-helper';
 import { DebugDateControl } from '@/components/DebugDateControl';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function DoctorDashboard() {
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { startConsultation } = useConsultation();
+  const { showSuccess, showError } = useToast();
   const [doctorName, setDoctorName] = useState('Doctor');
   const [doctorSpecialty, setDoctorSpecialty] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -213,9 +217,39 @@ export default function DoctorDashboard() {
     return `${day}/${month}/${year}`;
   };
 
-  const handleStartConsultation = (appointmentId: string, patientId: string) => {
-    // Navegar a la historia clínica del paciente
-    router.push(`/doctor/patients/${patientId}/medical-record?appointmentId=${appointmentId}`);
+  const handleStartConsultation = async (appointmentId: string, patientId: string, patientName: string) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    if (!clinicId || !userId) {
+      showError('Error', 'No se pudo obtener la información del usuario');
+      return;
+    }
+
+    try {
+      // Cambiar el estado de la cita a 'en_curso'
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        appointmentId,
+        { estado: 'en_curso' }
+      );
+
+      if (response.success) {
+        // Activar el temporizador de consulta
+        startConsultation(appointmentId, patientId, patientName);
+        
+        // Navegar a la historia clínica del paciente
+        router.push(`/doctor/patients/${patientId}/medical-record?appointmentId=${appointmentId}`);
+        
+        showSuccess('Consulta iniciada', 'El temporizador de consulta está activo');
+      } else {
+        throw new Error(response.message || 'Error al iniciar la consulta');
+      }
+    } catch (error: any) {
+      console.error('Error iniciando consulta:', error);
+      showError('Error', error.message || 'No se pudo iniciar la consulta');
+    }
   };
 
   return (
@@ -370,7 +404,7 @@ export default function DoctorDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {canStartConsultation ? (
                             <button
-                              onClick={() => handleStartConsultation(appointment.id, appointment.patientId)}
+                              onClick={() => handleStartConsultation(appointment.id, appointment.patientId, appointment.patientName)}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium"
                             >
                               <PlayCircle className="w-4 h-4" />
