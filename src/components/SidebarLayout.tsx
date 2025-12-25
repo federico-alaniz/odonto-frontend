@@ -6,6 +6,7 @@ import { Building2, Menu } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
+import ConsultationTimerWrapper from './ConsultationTimerWrapper';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -151,6 +152,9 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Consultation Timer - Flotante en todas las páginas */}
+      <ConsultationTimerWrapper />
     </div>
   );
 }
