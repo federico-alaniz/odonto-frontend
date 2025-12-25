@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { patientsService, Patient } from '@/services/api/patients.service';
+import { usersService } from '@/services/api/users.service';
+import { User as UserType } from '@/types/roles';
+import { dateHelper } from '@/utils/date-helper';
+import { ConfirmArrivalModal } from '@/components/ConfirmArrivalModal';
 import { 
   Users, 
   Calendar, 
@@ -22,14 +29,6 @@ import {
   PhoneCall
 } from 'lucide-react';
 
-// TODO: Reemplazar con llamadas al backend
-// import { appointments } from '../../../utils/fake-appointments';
-// import { patients } from '../../../utils/fake-patients';
-
-// Datos temporales vacíos hasta integrar con backend
-const appointments: any[] = [];
-const patients: any[] = [];
-
 interface SecretaryStats {
   citasHoy: number;
   pacientesEsperando: number;
@@ -39,6 +38,7 @@ interface SecretaryStats {
 
 interface TodayAppointment {
   id: string;
+  patientId: string;
   patientName: string;
   patientPhone: string;
   doctorName: string;
@@ -51,7 +51,16 @@ interface TodayAppointment {
   isNewPatient: boolean;
 }
 
+interface Reminder {
+  id: string;
+  type: 'waiting' | 'confirm' | 'urgent';
+  title: string;
+  description: string;
+  count?: number;
+}
+
 export default function SecretaryDashboard() {
+  const { currentUser } = useAuth();
   const [stats, setStats] = useState<SecretaryStats>({
     citasHoy: 0,
     pacientesEsperando: 0,
@@ -60,46 +69,67 @@ export default function SecretaryDashboard() {
   });
   
   const [todayAppointments, setTodayAppointments] = useState<TodayAppointment[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<TodayAppointment | null>(null);
+  const [confirmingArrival, setConfirmingArrival] = useState(false);
 
   useEffect(() => {
-    const loadSecretaryData = () => {
-      const today = '2025-10-20'; // Fecha actual
+    if (currentUser) {
+      loadSecretaryData();
+    }
+  }, [currentUser]);
+
+  const loadSecretaryData = async () => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    
+    if (!clinicId) {
+      console.log('No clinicId available');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const today = dateHelper.now();
+      const todayString = today.toISOString().split('T')[0];
+      
+      // Cargar datos en paralelo
+      const [appointmentsRes, patientsRes, doctorsRes] = await Promise.all([
+        appointmentsService.getAppointments(clinicId, { limit: 1000 }),
+        patientsService.getPatients(clinicId, { limit: 1000 }),
+        usersService.getUsers(clinicId, { role: 'doctor', limit: 100 })
+      ]);
+
+      const allAppointments = appointmentsRes.data;
+      const patients = patientsRes.data;
+      const doctors = doctorsRes.data;
       
       // Filtrar citas de hoy
-      const todayCitas = appointments.filter(apt => apt.fecha === today);
+      const todayCitas = allAppointments.filter(apt => apt.fecha === todayString);
       
-      // Procesar citas para el dashboard de secretaria
+      // Procesar citas para el dashboard
       const processedAppointments: TodayAppointment[] = todayCitas.map(apt => {
         const patient = patients.find(p => p.id === apt.patientId);
+        const doctor = doctors.find(d => d.id === apt.doctorId);
         const patientName = patient ? `${patient.nombres} ${patient.apellidos}` : 'Paciente desconocido';
-        
-        // Simular doctor names basado en ID
-        const doctorNames: Record<string, string> = {
-          'user_doc_001': 'Dr. Juan Pérez',
-          'user_doc_002': 'Dra. María González', 
-          'user_doc_003': 'Dr. Carlos Rodríguez'
-        };
-        
-        const specialties: Record<string, string> = {
-          'clinica-medica': 'Clínica Médica',
-          'cardiologia': 'Cardiología',
-          'pediatria': 'Pediatría',
-          'dermatologia': 'Dermatología'
-        };
+        const doctorName = doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Doctor no asignado';
+        const specialty = doctor?.especialidades?.[0] || doctor?.specialization || 'Sin especialidad';
 
         return {
           id: apt.id,
+          patientId: apt.patientId,
           patientName,
           patientPhone: patient?.telefono || 'N/A',
-          doctorName: doctorNames[apt.doctorId] || 'Doctor no asignado',
-          specialty: specialties[apt.especialidad] || apt.especialidad,
+          doctorName,
+          specialty,
           time: apt.horaInicio,
           status: apt.estado as TodayAppointment['status'],
-          consultorio: apt.consultorio,
+          consultorio: doctor?.consultorio || 'Sin consultorio',
           motivo: apt.motivo,
-          priority: Math.random() > 0.8 ? 'urgent' as const : 'normal' as const,
-          isNewPatient: Math.random() > 0.7
+          priority: 'normal' as const,
+          isNewPatient: false
         };
       }).sort((a, b) => a.time.localeCompare(b.time));
 
@@ -111,13 +141,69 @@ export default function SecretaryDashboard() {
         consultasCompletadas: todayCitas.filter(apt => apt.estado === 'completada').length
       };
 
+      // Generar recordatorios
+      const newReminders: Reminder[] = [];
+      
+      const waitingCount = todayCitas.filter(apt => apt.estado === 'confirmada').length;
+      if (waitingCount > 0) {
+        newReminders.push({
+          id: 'waiting',
+          type: 'waiting',
+          title: `${waitingCount} paciente${waitingCount > 1 ? 's' : ''} esperando`,
+          description: 'Confirmar llegadas pendientes',
+          count: waitingCount
+        });
+      }
+
+      // Citas de mañana para confirmar
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowString = tomorrow.toISOString().split('T')[0];
+      const tomorrowAppointments = allAppointments.filter(
+        apt => apt.fecha === tomorrowString && apt.estado === 'programada'
+      );
+      
+      if (tomorrowAppointments.length > 0) {
+        newReminders.push({
+          id: 'confirm',
+          type: 'confirm',
+          title: 'Confirmar citas de mañana',
+          description: `${tomorrowAppointments.length} llamada${tomorrowAppointments.length > 1 ? 's' : ''} pendiente${tomorrowAppointments.length > 1 ? 's' : ''}`,
+          count: tomorrowAppointments.length
+        });
+      }
+
+      // Próxima cita urgente (próxima en las siguientes 2 horas)
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+      const twoHoursLaterTime = `${twoHoursLater.getHours().toString().padStart(2, '0')}:${twoHoursLater.getMinutes().toString().padStart(2, '0')}`;
+      
+      const upcomingAppointment = todayCitas.find(
+        apt => apt.horaInicio >= currentTime && apt.horaInicio <= twoHoursLaterTime && apt.estado === 'programada'
+      );
+      
+      if (upcomingAppointment) {
+        const doctor = doctors.find(d => d.id === upcomingAppointment.doctorId);
+        const doctorName = doctor ? `Dr. ${doctor.apellidos}` : 'Doctor';
+        newReminders.push({
+          id: 'urgent',
+          type: 'urgent',
+          title: 'Próxima cita',
+          description: `${doctorName} - ${upcomingAppointment.horaInicio}`
+        });
+      }
+
       setStats(newStats);
       setTodayAppointments(processedAppointments);
-      setLoading(false);
-    };
+      setReminders(newReminders);
 
-    setTimeout(loadSecretaryData, 1000); // Simular carga
-  }, []);
+    } catch (error) {
+      console.error('Error loading secretary data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusClasses = (status: string) => {
     switch (status) {
@@ -165,13 +251,66 @@ export default function SecretaryDashboard() {
   };
 
   const handleConfirmArrival = (appointmentId: string) => {
-    setTodayAppointments(prev => 
-      prev.map(apt => 
-        apt.id === appointmentId 
-          ? { ...apt, status: 'confirmada' as const }
-          : apt
-      )
-    );
+    const appointment = todayAppointments.find(apt => apt.id === appointmentId);
+    if (appointment) {
+      setSelectedAppointment(appointment);
+      setConfirmModalOpen(true);
+    }
+  };
+
+  const handleConfirmWithPayment = async (paymentData: {
+    sena: number;
+    complemento: number;
+    total: number;
+    pagado: boolean;
+  }) => {
+    if (!selectedAppointment || !currentUser) return;
+
+    try {
+      setConfirmingArrival(true);
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = currentUser.id;
+
+      // Actualizar el estado de la cita a 'confirmada'
+      await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        selectedAppointment.id,
+        { 
+          estado: 'confirmada',
+          notas: `Pago registrado - Seña: $${paymentData.sena.toFixed(2)}, Complemento: $${paymentData.complemento.toFixed(2)}, Total: $${paymentData.total.toFixed(2)}, Pagado: ${paymentData.pagado ? 'Sí' : 'No'}`
+        }
+      );
+
+      // Actualizar el estado local
+      setTodayAppointments(prev => 
+        prev.map(apt => 
+          apt.id === selectedAppointment.id 
+            ? { ...apt, status: 'confirmada' as const }
+            : apt
+        )
+      );
+
+      // Actualizar estadísticas
+      setStats(prev => ({
+        ...prev,
+        pacientesEsperando: prev.pacientesEsperando + 1,
+        citasPendientes: prev.citasPendientes - 1
+      }));
+
+      // Cerrar modal
+      setConfirmModalOpen(false);
+      setSelectedAppointment(null);
+
+      // Recargar datos para reflejar cambios
+      await loadSecretaryData();
+
+    } catch (error) {
+      console.error('Error confirming arrival:', error);
+      alert('Error al confirmar llegada. Por favor intente nuevamente.');
+    } finally {
+      setConfirmingArrival(false);
+    }
   };
 
   const handleCallPatient = (patientPhone: string) => {
@@ -365,9 +504,9 @@ export default function SecretaryDashboard() {
                             </button>
                             
                             <Link
-                              href={`/secretary/appointments/${appointment.id}`}
+                              href={`/secretary/patients/${appointment.patientId}`}
                               className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                              title="Ver detalles"
+                              title="Ver paciente"
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
@@ -467,29 +606,31 @@ export default function SecretaryDashboard() {
               </div>
               
               <div className="p-6 space-y-3">
-                <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">3 pacientes esperando</div>
-                    <div className="text-xs text-gray-600">Confirmar llegadas pendientes</div>
+                {reminders.length > 0 ? (
+                  reminders.map(reminder => {
+                    const bgColor = reminder.type === 'waiting' ? 'bg-yellow-50' : 
+                                   reminder.type === 'confirm' ? 'bg-blue-50' : 'bg-red-50';
+                    const iconColor = reminder.type === 'waiting' ? 'text-yellow-600' : 
+                                     reminder.type === 'confirm' ? 'text-blue-600' : 'text-red-600';
+                    const Icon = reminder.type === 'waiting' ? Clock : 
+                                reminder.type === 'confirm' ? Phone : AlertTriangle;
+                    
+                    return (
+                      <div key={reminder.id} className={`flex items-start gap-3 p-3 ${bgColor} rounded-lg`}>
+                        <Icon className={`w-5 h-5 ${iconColor} mt-0.5`} />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{reminder.title}</div>
+                          <div className="text-xs text-gray-600">{reminder.description}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4">
+                    <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No hay recordatorios pendientes</p>
                   </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                  <Phone className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Confirmar citas de mañana</div>
-                    <div className="text-xs text-gray-600">5 llamadas pendientes</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">Cita urgente</div>
-                    <div className="text-xs text-gray-600">Dr. Pérez - 15:30</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -497,6 +638,21 @@ export default function SecretaryDashboard() {
         </div>
 
       </div>
+
+      {/* Modal de confirmación de llegada */}
+      {selectedAppointment && (
+        <ConfirmArrivalModal
+          isOpen={confirmModalOpen}
+          onClose={() => {
+            setConfirmModalOpen(false);
+            setSelectedAppointment(null);
+          }}
+          onConfirm={handleConfirmWithPayment}
+          patientName={selectedAppointment.patientName}
+          appointmentTime={selectedAppointment.time}
+          loading={confirmingArrival}
+        />
+      )}
     </div>
   );
 }
