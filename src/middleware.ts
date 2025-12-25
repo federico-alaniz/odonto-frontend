@@ -33,9 +33,26 @@ const getSubdomainFromHost = (host?: string | null) => {
   const cleanHost = host.split(':')[0];
   const parts = cleanHost.split('.');
 
+  // Desarrollo local con localtest.me
   if (parts.length >= 3 && cleanHost.endsWith('localtest.me')) {
     const subdomain = parts[0];
     if (subdomain === 'clinic1') return 'clinic_001';
+    return subdomain;
+  }
+
+  // Producción con Vercel: subdomain.odontoapp.vercel.app
+  if (parts.length >= 4 && cleanHost.endsWith('.vercel.app')) {
+    const subdomain = parts[0];
+    // Si es solo "odontoapp.vercel.app" sin subdominio, usar default
+    if (subdomain === 'odontoapp') return 'clinic_001';
+    return subdomain;
+  }
+
+  // Dominios personalizados: subdomain.customdomain.com
+  if (parts.length >= 3) {
+    const subdomain = parts[0];
+    // Evitar usar 'www' como subdominio
+    if (subdomain === 'www') return 'clinic_001';
     return subdomain;
   }
 
