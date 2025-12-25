@@ -25,17 +25,12 @@ import {
   Pill
 } from 'lucide-react';
 import Link from 'next/link';
-
-// TODO: Reemplazar con llamadas al backend
-// import { patients } from '../../../../utils/fake-patients';
-// import { appointments } from '../../../../utils/fake-appointments';
-// import { bills } from '../../../../utils/fake-billing';
+import { patientsService } from '@/services/api/patients.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { usersService } from '@/services/api/users.service';
+import { useAuth } from '@/hooks/useAuth';
 
 // Datos temporales vacíos hasta integrar con backend
-const patients: any[] = [];
-const appointments: any[] = [];
-const bills: any[] = [];
-
 interface PatientDetails {
   id: string;
   nombres: string;
@@ -71,6 +66,7 @@ interface PatientAppointment {
   motivo: string;
   estado: string;
   consultorio: string;
+  notas?: string;
 }
 
 interface PatientBill {
@@ -86,71 +82,98 @@ export default function SecretaryPatientDetailPage() {
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
+  const { currentUser } = useAuth();
   
   const [patient, setPatient] = useState<PatientDetails | null>(null);
   const [patientAppointments, setPatientAppointments] = useState<PatientAppointment[]>([]);
   const [patientBills, setPatientBills] = useState<PatientBill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('info');
+  const [selectedAppointment, setSelectedAppointment] = useState<PatientAppointment | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    const loadPatientData = () => {
-      // Buscar paciente
-      const foundPatient = patients.find(p => p.id === patientId);
-      if (!foundPatient) {
+    const loadPatientData = async () => {
+      const clinicId = currentUser?.clinicId;
+      if (!clinicId || !patientId) {
         router.push('/secretary/patients');
         return;
       }
 
-      setPatient(foundPatient as PatientDetails);
+      try {
+        setLoading(true);
 
-      // Buscar citas del paciente
-      const patientAppts = appointments
-        .filter(apt => apt.patientId === patientId)
-        .map(apt => {
-          const doctorNames: Record<string, string> = {
-            'user_doc_001': 'Dr. Juan Pérez',
-            'user_doc_002': 'Dra. María González', 
-            'user_doc_003': 'Dr. Carlos Rodríguez'
-          };
-          
-          const specialties: Record<string, string> = {
-            'clinica-medica': 'Clínica Médica',
-            'cardiologia': 'Cardiología',
-            'pediatria': 'Pediatría',
-            'dermatologia': 'Dermatología'
-          };
+        // Cargar datos en paralelo
+        const [patientResponse, appointmentsData, doctorsData] = await Promise.all([
+          patientsService.getPatientById(patientId, clinicId),
+          appointmentsService.getAppointments(clinicId, { patientId }),
+          usersService.getUsers(clinicId, { role: 'doctor' })
+        ]);
 
-          return {
-            ...apt,
-            doctorName: doctorNames[apt.doctorId] || 'Doctor no asignado',
-            especialidad: specialties[apt.especialidad] || apt.especialidad
-          };
-        })
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        if (!patientResponse?.data) {
+          router.push('/secretary/patients');
+          return;
+        }
 
-      setPatientAppointments(patientAppts);
+        const patientData = patientResponse.data;
 
-      // Buscar facturas del paciente
-      const patientBillsData = bills
-        .filter(bill => bill.patientId === patientId)
-        .map(bill => ({
-          id: bill.id,
-          fecha: bill.fecha,
-          conceptos: bill.conceptos,
-          total: bill.total,
-          estado: bill.estado,
-          metodoPago: bill.metodoPago
-        }))
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-      
-      setPatientBills(patientBillsData);
+        // Transformar datos del paciente
+        const patientDetails: PatientDetails = {
+          id: patientData.id,
+          nombres: patientData.nombres,
+          apellidos: patientData.apellidos,
+          tipoDocumento: patientData.tipoDocumento,
+          numeroDocumento: patientData.numeroDocumento,
+          fechaNacimiento: patientData.fechaNacimiento,
+          genero: patientData.genero,
+          telefono: patientData.telefono,
+          email: patientData.email || '',
+          direccion: patientData.direccion || {},
+          tipoSangre: patientData.tipoSangre || '',
+          contactoEmergencia: patientData.contactoEmergencia || {},
+          seguroMedico: patientData.seguroMedico,
+          alergias: patientData.alergias || [],
+          medicamentosActuales: patientData.medicamentosActuales || [],
+          antecedentesPersonales: patientData.antecedentesPersonales || [],
+          antecedentesFamiliares: patientData.antecedentesFamiliares || [],
+          estado: patientData.estado,
+          fechaRegistro: patientData.createdAt
+        };
 
-      setLoading(false);
+        setPatient(patientDetails);
+
+        // Transformar datos de citas con información de doctores
+        const patientAppts: PatientAppointment[] = appointmentsData.data
+          .map(apt => {
+            const doctor = doctorsData.data.find(d => d.id === apt.doctorId);
+            return {
+              id: apt.id,
+              fecha: apt.fecha,
+              horaInicio: apt.horaInicio,
+              doctorId: apt.doctorId,
+              doctorName: doctor ? `${doctor.nombres} ${doctor.apellidos}` : 'Doctor no asignado',
+              especialidad: doctor?.especialidades?.[0] || doctor?.specialization || 'No especificada',
+              motivo: apt.motivo || 'Sin motivo especificado',
+              estado: apt.estado,
+              consultorio: doctor?.consultorio || 'Consultorio 1',
+              notas: apt.notas
+            };
+          })
+          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+        setPatientAppointments(patientAppts);
+        setPatientBills([]);
+
+      } catch (error) {
+        console.error('Error loading patient data:', error);
+        router.push('/secretary/patients');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(loadPatientData, 800);
-  }, [patientId, router]);
+    loadPatientData();
+  }, [patientId, currentUser, router]);
 
   const calculateAge = (birthDate: string) => {
     const birth = new Date(birthDate);
@@ -332,7 +355,7 @@ export default function SecretaryPatientDetailPage() {
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-6">
               {[
-                { id: 'overview', label: 'Resumen General', icon: Eye },
+                { id: 'info', label: 'Información General', icon: Eye },
                 { id: 'appointments', label: 'Turnos', icon: Calendar },
                 { id: 'billing', label: 'Facturación', icon: CreditCard }
               ].map(tab => {
@@ -357,7 +380,7 @@ export default function SecretaryPatientDetailPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'overview' && (
+        {activeTab === 'info' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Información Personal */}
@@ -678,7 +701,7 @@ export default function SecretaryPatientDetailPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${estadoConfig.color}`}>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${estadoConfig.color}`}>
                               {estadoConfig.text}
                             </span>
                           </td>
@@ -689,12 +712,23 @@ export default function SecretaryPatientDetailPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex items-center space-x-2">
-                              <button className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Ver detalle">
+                              <button 
+                                onClick={() => {
+                                  setSelectedAppointment(appointment);
+                                  setShowDetailModal(true);
+                                }}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                title="Ver detalle"
+                              >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors" title="Editar turno">
+                              <Link
+                                href={`/secretary/appointments/${appointment.id}/edit`}
+                                className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                                title="Editar turno"
+                              >
                                 <Edit3 className="w-4 h-4" />
-                              </button>
+                              </Link>
                               {canRescheduleAppointment(appointment) ? (
                                 <Link
                                   href={`/secretary/appointments/new?appointmentId=${appointment.id}`}
@@ -796,6 +830,105 @@ export default function SecretaryPatientDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Detalle del Turno */}
+      {showDetailModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">Detalle del Turno</h3>
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedAppointment(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Información del Turno</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500">Fecha</label>
+                    <p className="text-sm font-medium text-gray-900">{formatDate(selectedAppointment.fecha)}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Hora</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedAppointment.horaInicio}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Estado</label>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoConfig(selectedAppointment.estado).color}`}>
+                      {getEstadoConfig(selectedAppointment.estado).text}
+                    </span>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Consultorio</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedAppointment.consultorio}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Paciente</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-900">{patient.nombres} {patient.apellidos}</p>
+                  <p className="text-xs text-gray-600 mt-1">{patient.tipoDocumento.toUpperCase()}: {patient.numeroDocumento}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Doctor</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-900">{selectedAppointment.doctorName}</p>
+                  <p className="text-xs text-gray-600 mt-1">{selectedAppointment.especialidad}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">Motivo de la Consulta</h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-900">{selectedAppointment.motivo}</p>
+                </div>
+              </div>
+
+              {selectedAppointment.notas && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500 mb-3">Notas</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-900">{selectedAppointment.notas}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedAppointment(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Cerrar
+              </button>
+              <Link
+                href={`/secretary/appointments/${selectedAppointment.id}/edit`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" />
+                Editar Turno
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
