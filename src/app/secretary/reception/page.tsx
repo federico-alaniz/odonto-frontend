@@ -45,6 +45,7 @@ interface ReceptionAppointment {
   motivo: string;
   status: 'programada' | 'confirmada' | 'esperando' | 'en-curso' | 'completada' | 'no-show' | 'cancelada';
   arrivalTime?: string;
+  consultationStartTime?: string;
   priority: 'normal' | 'urgent';
   isNewPatient: boolean;
   estimatedDuration: number; // en minutos
@@ -163,7 +164,8 @@ export default function ReceptionPage() {
               consultorio,
               motivo: apt.motivo || 'Consulta general',
               status: apt.estado as any,
-              arrivalTime: apt.estado === 'confirmada' ? '08:45' : undefined,
+              arrivalTime: undefined,
+              consultationStartTime: undefined,
               priority: 'normal' as any,
               isNewPatient: false,
               estimatedDuration: duration
@@ -172,26 +174,29 @@ export default function ReceptionPage() {
           .sort((a, b) => a.time.localeCompare(b.time));
 
         // Calcular estadísticas
-        // Calcular tiempo promedio de espera real
-        const citasConEspera = todayCitas.filter(apt => apt.arrivalTime && (apt.status === 'esperando' || apt.status === 'en-curso' || apt.status === 'completada'));
+        // Calcular tiempo promedio de espera real (desde confirmación hasta inicio de consulta)
+        const citasConEsperaCompleta = todayCitas.filter(apt => 
+          apt.arrivalTime && apt.consultationStartTime && 
+          (apt.status === 'en-curso' || apt.status === 'completada')
+        );
         let promedioEspera = 0;
         
-        if (citasConEspera.length > 0) {
-          const tiemposEspera = citasConEspera.map(apt => {
-            if (!apt.arrivalTime) return 0;
+        if (citasConEsperaCompleta.length > 0) {
+          const tiemposEspera = citasConEsperaCompleta.map(apt => {
+            if (!apt.arrivalTime || !apt.consultationStartTime) return 0;
             try {
               const [arrHours, arrMinutes] = apt.arrivalTime.split(':').map(Number);
-              const [aptHours, aptMinutes] = apt.time.split(':').map(Number);
+              const [startHours, startMinutes] = apt.consultationStartTime.split(':').map(Number);
               const arrivalMinutes = arrHours * 60 + arrMinutes;
-              const appointmentMinutes = aptHours * 60 + aptMinutes;
-              return Math.max(0, arrivalMinutes - appointmentMinutes);
+              const consultationStartMinutes = startHours * 60 + startMinutes;
+              return Math.max(0, consultationStartMinutes - arrivalMinutes);
             } catch {
               return 0;
             }
           });
           
           const totalEspera = tiemposEspera.reduce((sum, time) => sum + time, 0);
-          promedioEspera = Math.round(totalEspera / citasConEspera.length);
+          promedioEspera = Math.round(totalEspera / citasConEsperaCompleta.length);
         }
 
         const newStats = {
@@ -300,14 +305,21 @@ export default function ReceptionPage() {
         if (apt.id === appointmentId) {
           const updatedApt = { ...apt, status: newStatus as any };
           
+          const currentTime = new Date().toLocaleTimeString('es-AR', { 
+            timeZone: 'America/Argentina/Buenos_Aires',
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false
+          });
+          
           // Si se confirma llegada, agregar hora de llegada
-          if (newStatus === 'esperando') {
-            updatedApt.arrivalTime = new Date().toLocaleTimeString('es-AR', { 
-              timeZone: 'America/Argentina/Buenos_Aires',
-              hour: '2-digit', 
-              minute: '2-digit',
-              hour12: false
-            });
+          if (newStatus === 'esperando' && !apt.arrivalTime) {
+            updatedApt.arrivalTime = currentTime;
+          }
+          
+          // Si pasa a consulta, agregar hora de inicio de consulta
+          if (newStatus === 'en-curso' && !apt.consultationStartTime) {
+            updatedApt.consultationStartTime = currentTime;
           }
           
           return updatedApt;
@@ -327,21 +339,38 @@ export default function ReceptionPage() {
     if (!appointment.arrivalTime) return '';
     
     try {
-      const timeParts = appointment.arrivalTime.split(':');
-      if (timeParts.length !== 2) return '';
+      const arrTimeParts = appointment.arrivalTime.split(':');
+      if (arrTimeParts.length !== 2) return '';
       
-      const arrHours = parseInt(timeParts[0], 10);
-      const arrMinutes = parseInt(timeParts[1], 10);
+      const arrHours = parseInt(arrTimeParts[0], 10);
+      const arrMinutes = parseInt(arrTimeParts[1], 10);
       
       // Validar que sean números válidos
       if (isNaN(arrHours) || isNaN(arrMinutes)) return '';
       
-      const nowHours = currentTime.getHours();
-      const nowMinutes = currentTime.getMinutes();
-      
       const arrivalTotalMinutes = arrHours * 60 + arrMinutes;
-      const nowTotalMinutes = nowHours * 60 + nowMinutes;
-      const waitingMinutes = nowTotalMinutes - arrivalTotalMinutes;
+      let endTotalMinutes: number;
+      
+      // Si la cita ya está en curso o completada, usar el tiempo de inicio de consulta
+      if (appointment.consultationStartTime) {
+        const startTimeParts = appointment.consultationStartTime.split(':');
+        if (startTimeParts.length !== 2) return '';
+        
+        const startHours = parseInt(startTimeParts[0], 10);
+        const startMinutes = parseInt(startTimeParts[1], 10);
+        
+        if (isNaN(startHours) || isNaN(startMinutes)) return '';
+        endTotalMinutes = startHours * 60 + startMinutes;
+      } else if (appointment.status === 'esperando') {
+        // Si está esperando, usar la hora actual
+        const nowHours = currentTime.getHours();
+        const nowMinutes = currentTime.getMinutes();
+        endTotalMinutes = nowHours * 60 + nowMinutes;
+      } else {
+        return '';
+      }
+      
+      const waitingMinutes = endTotalMinutes - arrivalTotalMinutes;
       
       if (waitingMinutes < 0) return '';
       if (waitingMinutes < 60) return `${waitingMinutes}m`;

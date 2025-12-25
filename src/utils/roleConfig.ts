@@ -210,36 +210,6 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
               iconBg: 'bg-gray-100',
               iconText: 'hover:text-blue-600'
             }
-          },
-          {
-            label: 'Prescripciones',
-            href: '/doctor/prescriptions',
-            icon: 'FileText',
-            description: 'Recetas y medicamentos',
-            roles: ['doctor'],
-            color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
-              active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
-            }
-          },
-          {
-            label: 'Laboratorios',
-            href: '/doctor/lab-results',
-            icon: 'TestTube',
-            description: 'Resultados de laboratorio',
-            roles: ['doctor'],
-            color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
-              active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
-            }
           }
         ]
       }

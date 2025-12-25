@@ -31,6 +31,7 @@ export default function DoctorDashboard() {
   const { currentUser } = useAuth();
   const [doctorName, setDoctorName] = useState('Doctor');
   const [doctorSpecialty, setDoctorSpecialty] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   const [stats, setStats] = useState([
     { label: 'Mis Pacientes Hoy', value: '0', icon: Users, color: 'blue' },
@@ -76,6 +77,14 @@ export default function DoctorDashboard() {
     setDoctorSpecialty(userSpecialty);
     
     loadDashboardData();
+  }, []);
+
+  // Actualizar hora actual cada minuto para recalcular tiempos de espera
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Actualizar cada minuto
+    return () => clearInterval(interval);
   }, []);
 
   const loadDashboardData = async () => {
@@ -156,6 +165,32 @@ export default function DoctorDashboard() {
     }
   };
 
+  const calculateWaitingTime = (appointment: any): string => {
+    // Extraer información de pago de las notas para obtener el timestamp de confirmación
+    if (!appointment.notas || !appointment.notas.includes('Pago registrado')) {
+      return '0 min';
+    }
+
+    // El updatedAt de la cita es cuando se confirmó la llegada
+    // Usar la hora actual para calcular el tiempo transcurrido
+    try {
+      const updatedAt = new Date(appointment.updatedAt);
+      const now = currentTime;
+      const diffMs = now.getTime() - updatedAt.getTime();
+      const diffMinutes = Math.floor(diffMs / 60000);
+
+      if (diffMinutes < 0) return '0 min';
+      if (diffMinutes < 60) return `${diffMinutes} min`;
+      
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours}h ${minutes}m`;
+    } catch (error) {
+      console.error('Error calculando tiempo de espera:', error);
+      return '0 min';
+    }
+  };
+
   const calculateWaitingPatients = (appointments: any[], patients: any[]) => {
     const waiting = appointments
       .filter((apt: any) => apt.estado === 'confirmada' || apt.estado === 'esperando')
@@ -171,7 +206,7 @@ export default function DoctorDashboard() {
           time: apt.horaInicio,
           specialty: apt.tipo || 'Consulta',
           reason: apt.motivo,
-          waitingTime: '0 min',
+          waitingTime: calculateWaitingTime(apt),
           priority: 'normal' as const,
           consultorio: apt.consultorio || 'Consultorio 1'
         };
