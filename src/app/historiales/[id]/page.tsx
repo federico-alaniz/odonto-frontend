@@ -6,10 +6,12 @@ import { UserCircle, ArrowLeft, Filter, Plus, Calendar, FileText } from 'lucide-
 import { patientsService } from '@/services/api/patients.service';
 import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
 import historiaClinicaService, { HistoriaClinica } from '@/services/historiaClinica';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function HistoryDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { currentUser } = useAuth();
   const patientId = params.id as string;
   
   const [patient, setPatient] = useState<any>(null);
@@ -30,9 +32,15 @@ export default function HistoryDetailPage() {
 
   useEffect(() => {
     const loadPatientData = async () => {
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      
+      if (!clinicId) {
+        console.log('⏳ Esperando clinicId...');
+        return;
+      }
+
       try {
         setLoading(true);
-        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
         
         // Load patient data
         const patientResponse = await patientsService.getPatientById(patientId, clinicId);
@@ -40,14 +48,12 @@ export default function HistoryDetailPage() {
           setPatient(patientResponse.data);
         }
         
-        // Load historia clínica
-        const historiaResponse = await historiaClinicaService.getByPatientId(patientId);
-        if (historiaResponse.success && historiaResponse.data) {
-          setHistoriaClinica(historiaResponse.data);
-        }
+        // TODO: Load historia clínica cuando el endpoint esté implementado en el backend
+        // El endpoint /api/patients/:id/historia-clinica aún no existe
+        setHistoriaClinica(null);
         
         // Load medical records
-        const recordsResponse = await medicalRecordsService.getByPatient(patientId);
+        const recordsResponse = await medicalRecordsService.getByPatient(patientId, 1, 50, clinicId);
         if (recordsResponse.success) {
           setMedicalRecords(recordsResponse.data || []);
         }
@@ -58,8 +64,10 @@ export default function HistoryDetailPage() {
       }
     };
 
-    loadPatientData();
-  }, [patientId]);
+    if (currentUser) {
+      loadPatientData();
+    }
+  }, [patientId, currentUser]);
 
   const handleNewRecord = () => {
     router.push(`/historiales/${patientId}/registro/new`);
@@ -159,8 +167,8 @@ export default function HistoryDetailPage() {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-ES', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      month: '2-digit',
+      day: '2-digit'
     }).format(date);
   };
 
@@ -171,6 +179,15 @@ export default function HistoryDetailPage() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
@@ -501,7 +518,7 @@ export default function HistoryDetailPage() {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{formatDate(record.fecha)}</div>
-                      <div className="text-xs text-gray-500">{formatDateTime(record.createdAt)}</div>
+                      <div className="text-xs text-gray-500">{formatTime(record.fecha)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getConsultaTypeColor(record.tipoConsulta)}`}>

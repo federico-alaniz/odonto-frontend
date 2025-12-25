@@ -28,13 +28,12 @@ export interface HistoriaClinica {
 class HistoriaClinicaService {
   private baseUrl = `${API_BASE_URL}/api/patients`;
 
-  private async fetchWithHeaders(url: string, options: RequestInit = {}) {
-    const clinicId = (localStorage.getItem('clinicId') || 'clinic_001').toLowerCase();
+  private async fetchWithHeaders(url: string, clinicId: string, options: RequestInit = {}) {
     const userId = localStorage.getItem('userId') || 'system';
     
     const headers = {
       'Content-Type': 'application/json',
-      'X-Clinic-Id': clinicId,
+      'X-Clinic-Id': clinicId.toLowerCase(),
       'X-User-Id': userId,
       ...options.headers,
     };
@@ -60,8 +59,8 @@ class HistoriaClinicaService {
   /**
    * Get historia clínica for a specific patient
    */
-  async getByPatientId(patientId: string): Promise<{ success: boolean; data?: HistoriaClinica; errors?: string[] }> {
-    return this.fetchWithHeaders(`${this.baseUrl}/${patientId}/historia-clinica`);
+  async getByPatientId(patientId: string, clinicId: string): Promise<{ success: boolean; data?: HistoriaClinica; errors?: string[] }> {
+    return this.fetchWithHeaders(`${this.baseUrl}/${patientId}/historia-clinica`, clinicId);
   }
 }
 

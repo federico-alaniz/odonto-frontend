@@ -168,8 +168,7 @@ export interface PatientSummary {
 class MedicalRecordsService {
   private baseUrl = `${API_BASE_URL}/api/medical-records`;
 
-  private async fetchWithHeaders(url: string, options: RequestInit = {}) {
-    const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
+  private async fetchWithHeaders(url: string, clinicId: string, options: RequestInit = {}) {
     const userId = localStorage.getItem('userId') || 'system';
     
     const headers = {
@@ -200,7 +199,7 @@ class MedicalRecordsService {
   /**
    * Get all medical records with optional filters
    */
-  async getAll(filters?: MedicalRecordFilters) {
+  async getAll(clinicId: string, filters?: MedicalRecordFilters) {
     const params = new URLSearchParams();
     
     if (filters) {
@@ -216,35 +215,37 @@ class MedicalRecordsService {
     const queryString = params.toString();
     const url = queryString ? `${this.baseUrl}?${queryString}` : this.baseUrl;
     
-    return this.fetchWithHeaders(url);
+    return this.fetchWithHeaders(url, clinicId);
   }
 
   /**
    * Get a specific medical record by ID
    */
-  async getById(recordId: string) {
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`);
+  async getById(recordId: string, clinicId?: string) {
+    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic);
   }
 
   /**
    * Get all medical records for a specific patient
    */
-  async getByPatient(patientId: string, page = 1, limit = 50) {
-    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}?page=${page}&limit=${limit}`);
+  async getByPatient(patientId: string, page = 1, limit = 50, clinicId?: string) {
+    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
+    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}?page=${page}&limit=${limit}`, clinic);
   }
 
   /**
    * Get patient medical records summary
    */
-  async getPatientSummary(patientId: string): Promise<{ success: boolean; data: PatientSummary }> {
-    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}/summary`);
+  async getPatientSummary(patientId: string, clinicId: string): Promise<{ success: boolean; data: PatientSummary }> {
+    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}/summary`, clinicId);
   }
 
   /**
    * Create a new medical record
    */
-  async create(data: CreateMedicalRecordData) {
-    return this.fetchWithHeaders(this.baseUrl, {
+  async create(data: CreateMedicalRecordData, clinicId: string) {
+    return this.fetchWithHeaders(this.baseUrl, clinicId, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -253,8 +254,9 @@ class MedicalRecordsService {
   /**
    * Update a medical record
    */
-  async update(recordId: string, data: Partial<CreateMedicalRecordData>) {
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, {
+  async update(recordId: string, data: Partial<CreateMedicalRecordData>, clinicId?: string) {
+    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -263,8 +265,9 @@ class MedicalRecordsService {
   /**
    * Delete a medical record (soft delete)
    */
-  async delete(recordId: string) {
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, {
+  async delete(recordId: string, clinicId?: string) {
+    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic, {
       method: 'DELETE',
     });
   }

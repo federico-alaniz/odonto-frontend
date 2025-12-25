@@ -7,6 +7,7 @@ import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, Pill, Clipboard
 import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
 import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
+import { useAuth } from '@/hooks/useAuth';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
 
@@ -23,12 +24,14 @@ import ImageViewerModal from '../../../modals/ImageViewerModal';
 export default function RegistroDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { currentUser } = useAuth();
   const patientId = params.id as string;
   const registroId = params.registroId as string;
   
   const [registro, setRegistro] = useState<MedicalRecord | null>(null);
   const [patient, setPatient] = useState<any>(null);
   const [doctorName, setDoctorName] = useState<string>('');
+  const [doctorLicense, setDoctorLicense] = useState<string>('');
   const [loading, setLoading] = useState(true);
   
   // Estados para el visor de imágenes
@@ -37,9 +40,15 @@ export default function RegistroDetailPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      
+      if (!clinicId) {
+        console.log('⏳ Esperando clinicId...');
+        return;
+      }
+
       try {
         setLoading(true);
-        const clinicId = (localStorage.getItem('clinicId') || 'clinic_001').toLowerCase();
         
         // Load patient data
         const patientResponse = await patientsService.getPatientById(patientId, clinicId);
@@ -48,45 +57,74 @@ export default function RegistroDetailPage() {
         }
         
         // Load medical record
-        const recordResponse = await medicalRecordsService.getById(registroId);
+        const recordResponse = await medicalRecordsService.getById(registroId, clinicId);
         if (recordResponse.success && recordResponse.data) {
           setRegistro(recordResponse.data);
           
           // Load doctor information if doctorId exists, otherwise use createdBy
           const userIdToLoad = recordResponse.data.doctorId || recordResponse.data.createdBy;
+          console.log('🔍 Cargando información del doctor:', {
+            doctorId: recordResponse.data.doctorId,
+            createdBy: recordResponse.data.createdBy,
+            userIdToLoad
+          });
           
           if (userIdToLoad) {
             try {
               if (userIdToLoad === 'system') {
+                console.log('⚠️ Usuario es system');
                 setDoctorName('N/A');
+                setDoctorLicense('');
               } else if (userIdToLoad.includes('@')) {
+                console.log('📧 Buscando doctor por email:', userIdToLoad);
                 const doctorResponse = await usersService.authenticateByEmail(userIdToLoad, clinicId);
+                console.log('📧 Respuesta authenticateByEmail:', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
+                  console.log('✅ Nombre del doctor encontrado:', fullName);
                   setDoctorName(fullName || 'N/A');
+                  setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
+                } else {
+                  console.log('❌ No se pudo obtener datos del doctor por email');
+                  setDoctorName('N/A');
                 }
               } else {
+                console.log('🆔 Buscando doctor por ID:', userIdToLoad);
                 const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
+                console.log('🆔 Respuesta getUserById:', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
+                  console.log('✅ Nombre del doctor encontrado:', fullName);
                   setDoctorName(fullName || 'N/A');
+                  setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
+                } else {
+                  console.log('❌ No se pudo obtener datos del doctor por ID');
+                  setDoctorName('N/A');
                 }
               }
             } catch (error) {
+              console.error('❌ Error al cargar información del doctor:', error);
               setDoctorName('N/A');
+              setDoctorLicense('');
             }
+          } else {
+            console.log('⚠️ No hay userIdToLoad disponible');
+            setDoctorName('N/A');
           }
         }
       } catch (error) {
+        console.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, [registroId, patientId]);
+    if (currentUser) {
+      loadData();
+    }
+  }, [patientId, registroId, currentUser]);
 
   const handleBack = () => {
     router.push(`/historiales/${patientId}`);
@@ -759,7 +797,12 @@ export default function RegistroDetailPage() {
                   <label className="block text-sm font-medium text-gray-500">Odontólogo</label>
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-gray-400" />
-                    <p className="text-lg font-semibold text-gray-900">{doctorName}</p>
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{doctorName}</p>
+                      {doctorLicense && (
+                        <p className="text-sm text-gray-600">Matrícula: {doctorLicense}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

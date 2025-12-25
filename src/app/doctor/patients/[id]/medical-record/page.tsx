@@ -25,11 +25,13 @@ import {
 } from 'lucide-react';
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function MedicalRecordPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { currentUser } = useAuth();
   
   const patientId = params.id as string;
   const appointmentId = searchParams.get('appointmentId');
@@ -44,13 +46,21 @@ export default function MedicalRecordPage() {
   const doctorSpecialty = 'Odontología';
 
   useEffect(() => {
-    loadData();
-  }, [patientId, appointmentId]);
+    if (currentUser) {
+      loadData();
+    }
+  }, [patientId, appointmentId, currentUser]);
 
   const loadData = async () => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    
+    if (!clinicId) {
+      console.log('⏳ Esperando clinicId...');
+      return;
+    }
+
     try {
       setLoading(true);
-      const clinicId = 'clinic_001';
 
       // Cargar datos del paciente
       const patientsResponse = await patientsService.getPatients(clinicId);
@@ -70,72 +80,45 @@ export default function MedicalRecordPage() {
         }
       }
 
-      // TODO: Cargar historial médico del paciente filtrado por especialidad
-      // Por ahora, datos de ejemplo
-      const mockHistory = [
-        {
-          id: '1',
-          fecha: '2025-11-10',
-          doctor: 'Dr. Federico Alaniz',
-          especialidad: 'Odontología',
-          motivo: 'Limpieza dental y control',
-          diagnostico: 'Higiene bucal adecuada. Presencia de sarro leve en molares inferiores',
-          tratamiento: 'Limpieza dental profesional realizada. Indicación de cepillado 3 veces al día y uso de hilo dental',
-          presionArterial: 'N/A',
-          peso: 'N/A'
-        },
-        {
-          id: '2',
-          fecha: '2025-09-15',
-          doctor: 'Dr. Federico Alaniz',
-          especialidad: 'Odontología',
-          motivo: 'Dolor en muela superior derecha',
-          diagnostico: 'Caries profunda en pieza 16 (primer molar superior derecho)',
-          tratamiento: 'Obturación con resina compuesta. Indicación de analgésicos (Ibuprofeno 400mg cada 8hs por 3 días)',
-          presionArterial: 'N/A',
-          peso: 'N/A'
-        },
-        {
-          id: '3',
-          fecha: '2025-08-05',
-          doctor: 'Dr. Federico Alaniz',
-          especialidad: 'Odontología',
-          motivo: 'Control post-extracción',
-          diagnostico: 'Cicatrización normal post-extracción pieza 38 (muela del juicio)',
-          tratamiento: 'Evolución favorable. Alta del tratamiento',
-          presionArterial: 'N/A',
-          peso: 'N/A'
-        },
-        {
-          id: '4',
-          fecha: '2025-07-20',
-          doctor: 'Dr. Juan Pérez',
-          especialidad: 'Cardiología',
-          motivo: 'Control de presión arterial',
-          diagnostico: 'Hipertensión arterial controlada',
-          tratamiento: 'Enalapril 10mg - 1 comprimido cada 12hs',
-          presionArterial: '130/85',
-          peso: '75 kg'
-        },
-        {
-          id: '5',
-          fecha: '2025-06-10',
-          doctor: 'Dra. María González',
-          especialidad: 'Medicina General',
-          motivo: 'Chequeo anual',
-          diagnostico: 'Estado general bueno',
-          tratamiento: 'Continuar con medicación habitual',
-          presionArterial: '135/88',
-          peso: '77 kg'
-        }
-      ];
-
-      // Filtrar por especialidad del médico actual
-      const filteredHistory = mockHistory.filter(
-        record => record.especialidad === doctorSpecialty
-      );
+      // TODO: Cargar historial médico real del paciente cuando el endpoint esté disponible
+      // Por ahora, mostrar array vacío hasta que se implemente el endpoint en el backend
+      // El endpoint /api/patients/:id/historia-clinica aún no existe
       
-      setMedicalHistory(filteredHistory);
+      /* 
+      try {
+        const historiaClinicaResponse = await patientsService.getHistoriaClinica(patientId, clinicId);
+        
+        if (historiaClinicaResponse.success && historiaClinicaResponse.data) {
+          const historiaClinica = historiaClinicaResponse.data;
+          
+          const consultasFormateadas = (historiaClinica.consultas || []).map((consulta: any) => ({
+            id: consulta.id,
+            fecha: consulta.fecha,
+            doctor: consulta.doctorNombre || 'Doctor no especificado',
+            especialidad: consulta.especialidad || 'General',
+            motivo: consulta.motivo || 'No especificado',
+            diagnostico: consulta.diagnostico || '',
+            tratamiento: consulta.tratamiento || '',
+            presionArterial: consulta.presionArterial || 'N/A',
+            peso: consulta.peso || 'N/A'
+          }));
+          
+          const filteredHistory = consultasFormateadas.filter(
+            (record: any) => record.especialidad === doctorSpecialty
+          );
+          
+          setMedicalHistory(filteredHistory);
+        } else {
+          setMedicalHistory([]);
+        }
+      } catch (error) {
+        console.error('Error cargando historial médico:', error);
+        setMedicalHistory([]);
+      }
+      */
+      
+      // Mientras tanto, mostrar array vacío
+      setMedicalHistory([]);
     } catch (error) {
       console.error('Error cargando datos:', error);
     } finally {
@@ -196,13 +179,15 @@ export default function MedicalRecordPage() {
             <div className="p-3 bg-blue-100 rounded-full">
               <User className="w-6 h-6 text-blue-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Datos del Paciente</h2>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Datos del Paciente</h2>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{patient.nombreCompleto || `${patient.nombres} ${patient.apellidos}`}</p>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-              <p className="text-2xl font-bold text-gray-900">{patient.name}</p>
-              <p className="text-sm text-gray-600 mt-1">DNI: {patient.numeroDocumento}</p>
+              <p className="text-sm text-gray-600">DNI: {patient.numeroDocumento}</p>
             </div>
             
             <div className="space-y-2">
@@ -212,7 +197,7 @@ export default function MedicalRecordPage() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <User className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">Sexo: {patient.sexo === 'M' ? 'Masculino' : 'Femenino'}</span>
+                <span className="text-gray-600">Sexo: {patient.genero === 'masculino' ? 'Masculino' : patient.genero === 'femenino' ? 'Femenino' : 'Otro'}</span>
               </div>
             </div>
 
@@ -223,14 +208,20 @@ export default function MedicalRecordPage() {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">{patient.email}</span>
+                <span className="text-gray-600">{patient.email || 'N/A'}</span>
               </div>
             </div>
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Obra Social</p>
-              <p className="text-sm text-gray-900 font-semibold">{patient.obraSocial}</p>
-              <p className="text-xs text-gray-600 mt-1">N° {patient.numeroAfiliado}</p>
+              {patient.seguroMedico ? (
+                <>
+                  <p className="text-sm text-gray-900 font-semibold">{patient.seguroMedico.empresa}</p>
+                  <p className="text-xs text-gray-600 mt-1">N° {patient.seguroMedico.numeroPoliza}</p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">N/A</p>
+              )}
             </div>
           </div>
 
@@ -259,29 +250,34 @@ export default function MedicalRecordPage() {
         </div>
         
         {/* Historial Médico */}
-        {medicalHistory.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <History className="w-6 h-6 text-purple-600" />
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Historial Médico - {doctorSpecialty}</h3>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {medicalHistory.length} consulta{medicalHistory.length !== 1 ? 's' : ''} previa{medicalHistory.length !== 1 ? 's' : ''} de esta especialidad
-                    </p>
-                  </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <History className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Historial Médico - {doctorSpecialty}</h3>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    {medicalHistory.length} consulta{medicalHistory.length !== 1 ? 's' : ''} previa{medicalHistory.length !== 1 ? 's' : ''} de esta especialidad
+                  </p>
                 </div>
-                <button
-                  onClick={() => router.push(`/historiales/${patientId}/registro/new`)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium shadow-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  Nuevo Registro
-                </button>
               </div>
+              <button
+                onClick={() => {
+                  const url = appointmentId 
+                    ? `/historiales/${patientId}/registro/new?appointmentId=${appointmentId}`
+                    : `/historiales/${patientId}/registro/new`;
+                  router.push(url);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+              >
+                <FileText className="w-4 h-4" />
+                Nuevo Registro
+              </button>
             </div>
-            
+          </div>
+          
+          {medicalHistory.length > 0 ? (
             <div className="divide-y divide-gray-200">
               {medicalHistory.map((record) => (
                 <div key={record.id} className="p-6 hover:bg-gray-50 transition-colors">
@@ -296,7 +292,7 @@ export default function MedicalRecordPage() {
                           <User className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-600">{record.doctor}</span>
                         </div>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                           {record.especialidad}
                         </span>
                       </div>
@@ -356,8 +352,28 @@ export default function MedicalRecordPage() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="p-12 text-center">
+              <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros médicos previos</h3>
+              <p className="text-gray-600 mb-6">
+                Este paciente no tiene consultas registradas en {doctorSpecialty}
+              </p>
+              <button
+                onClick={() => {
+                  const url = appointmentId 
+                    ? `/historiales/${patientId}/registro/new?appointmentId=${appointmentId}`
+                    : `/historiales/${patientId}/registro/new`;
+                  router.push(url);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <FileText className="w-4 h-4" />
+                Crear Primer Registro
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

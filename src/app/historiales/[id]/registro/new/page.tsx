@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Odontogram, { ToothCondition } from '../../../components/Odontogram';
 import medicalRecordsService from '@/services/medicalRecords';
 import { patientsService } from '@/services/api/patients.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   ArrowLeft, 
   Save, 
@@ -29,7 +31,10 @@ import { useToast } from '@/components/ui/ToastProvider';
 export default function NewMedicalRecordPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { currentUser } = useAuth();
   const patientId = params.id as string;
+  const appointmentId = searchParams.get('appointmentId');
   const { showSuccess, showError } = useToast();
 
   // Estados del formulario
@@ -77,17 +82,24 @@ export default function NewMedicalRecordPage() {
   // Tipo de consulta
   const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('general');
   
-  // Estado para paciente
+  // Estado para paciente y cita
   const [patient, setPatient] = useState<any>(null);
+  const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // Cargar datos del paciente
   useEffect(() => {
     const loadPatient = async () => {
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      
+      if (!clinicId) {
+        console.log('⏳ Esperando clinicId...');
+        return;
+      }
+
       try {
         setLoading(true);
-        const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
         const response = await patientsService.getPatientById(patientId, clinicId);
         if (response.success) {
           setPatient(response.data);
@@ -108,8 +120,58 @@ export default function NewMedicalRecordPage() {
       }
     };
 
-    loadPatient();
-  }, [patientId]);
+    if (currentUser) {
+      loadPatient();
+    }
+  }, [patientId, currentUser]);
+
+  // Cargar datos de la cita si existe appointmentId
+  useEffect(() => {
+    const loadAppointment = async () => {
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const doctorId = (currentUser as any)?.id;
+      
+      if (!clinicId || !appointmentId || !doctorId) {
+        return;
+      }
+
+      try {
+        const appointmentsResponse = await appointmentsService.getAppointments(clinicId);
+        const appointmentData = appointmentsResponse.data.find((a: any) => a.id === appointmentId);
+        
+        if (appointmentData) {
+          setAppointment(appointmentData);
+          
+          // Configurar automáticamente el tipo de consulta basado en la especialidad del doctor actual
+          // Obtener la especialidad del doctor desde currentUser
+          const doctorSpecialties = (currentUser as any)?.especialidades || [];
+          const doctorSpecialty = doctorSpecialties[0] || '';
+          
+          if (doctorSpecialty.toLowerCase().includes('odonto')) {
+            setConsultationType('odontologia');
+            setShowDatosOdonto(true);
+            setShowOdontogramas(true);
+          } else {
+            setConsultationType('general');
+          }
+          
+          // Pre-llenar el motivo de consulta con el motivo de la cita
+          if (appointmentData.motivo) {
+            setFormData(prev => ({
+              ...prev,
+              motivoConsulta: appointmentData.motivo
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando cita:', error);
+      }
+    };
+
+    if (currentUser && appointmentId) {
+      loadAppointment();
+    }
+  }, [appointmentId, currentUser]);
 
   // Inicializar odontograma actual con dientes extraídos como ausentes
   useEffect(() => {
@@ -226,7 +288,7 @@ export default function NewMedicalRecordPage() {
       // Preparar datos para enviar
       const recordData = {
         pacienteId: patientId,
-        doctorId: localStorage.getItem('userId') || undefined,
+        doctorId: (currentUser as any)?.id || undefined,
         fecha: formData.fecha,
         tipoConsulta: consultationType,
         motivoConsulta: formData.motivoConsulta,
@@ -268,7 +330,12 @@ export default function NewMedicalRecordPage() {
         documentos: [],
       };
 
-      const response = await medicalRecordsService.create(recordData);
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      if (!clinicId) {
+        throw new Error('No se pudo obtener el clinicId');
+      }
+
+      const response = await medicalRecordsService.create(recordData, clinicId);
       
       if (response.success) {
         showSuccess('Registro guardado', 'El registro médico se guardó exitosamente');
