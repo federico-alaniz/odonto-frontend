@@ -32,6 +32,12 @@ const getTenantFromCallbackUrl = (callbackUrl?: string): string => {
 };
 
 export const authOptions: NextAuthOptions = {
+  debug: false,
+  logger: {
+    error: () => {},
+    warn: () => {},
+    debug: () => {},
+  },
   session: {
     strategy: 'jwt',
     maxAge: 60 * 60 * 2,
