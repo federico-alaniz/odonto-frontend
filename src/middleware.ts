@@ -58,11 +58,16 @@ const getTenantFromPath = (pathname: string): { tenantId: string | null; pathWit
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Permitir todas las rutas de API de NextAuth sin procesamiento
+  if (pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
+  }
+
   // Extraer tenant del path
   const { tenantId, pathWithoutTenant } = getTenantFromPath(pathname);
 
   // Rutas públicas (sin tenant)
-  const isPublic = !tenantId || pathname.startsWith('/api/auth');
+  const isPublic = !tenantId;
   
   const res = NextResponse.next();
   
