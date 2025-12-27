@@ -27,18 +27,23 @@ const readCookie = (name: string) => {
   return '';
 };
 
-const getSubdomainFromHost = (host?: string | null) => {
-  if (!host) return '';
-  const cleanHost = host.split(':')[0];
-  const parts = cleanHost.split('.');
-
-  if (parts.length >= 3 && cleanHost.endsWith('localtest.me')) {
-    const subdomain = parts[0];
-    if (subdomain === 'clinic1') return '';
-    return subdomain;
-  }
-
-  return '';
+/**
+ * Extrae el tenant_id del path de la URL
+ * Formato esperado: /login?tenant=[tenant_id] o directamente de la URL
+ */
+const getTenantFromUrl = (): string => {
+  if (typeof window === 'undefined') return 'clinic_001';
+  
+  // Intentar obtener de query params
+  const params = new URLSearchParams(window.location.search);
+  const tenantParam = params.get('tenant');
+  if (tenantParam) return tenantParam;
+  
+  // Intentar obtener de cookie
+  const cookieTenant = readCookie('tenantId');
+  if (cookieTenant) return cookieTenant;
+  
+  return 'clinic_001';
 };
 
 export default function LoginPage() {
@@ -56,39 +61,25 @@ export default function LoginPage() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     const role = (session as any)?.user?.role as UserRole | undefined;
-    if (!role) return;
-    const redirectPath = getRoleRedirectPath(role);
+    const tenantId = (session as any)?.user?.tenantId; // Usar siempre el tenant de la sesión
+    if (!role || !tenantId) return;
+    const redirectPath = getRoleRedirectPath(role, tenantId);
 
+    console.log('🔐 [LOGIN] Redirecting to:', redirectPath);
     router.push(redirectPath);
   }, [session, status, router]);
 
   useEffect(() => {
     const loadClinicName = async () => {
       try {
-        const cookieClinicId = readCookie('tenantId');
-        let clinicId = cookieClinicId;
-        let resolvedClinicName = '';
-
-        const subdomain = getSubdomainFromHost(window.location.host);
-        if (subdomain) {
-          const url = `${API_URL}/api/clinics/resolve?subdomain=${encodeURIComponent(subdomain)}`;
-          const res = await fetch(url, { method: 'GET' });
-          const data = await res.json().catch(() => null);
-
-          const resolvedClinicId = data?.success ? data?.data?.clinicId : '';
-          resolvedClinicName = data?.success ? (data?.data?.name || '') : '';
-
-          if (resolvedClinicId) {
-            clinicId = resolvedClinicId;
-          }
-        }
-
-        if (!clinicId) {
+        const tenantId = getTenantFromUrl();
+        
+        if (!tenantId || tenantId === 'clinic_001') {
           setClinicName('MediCore');
           return;
         }
 
-        const clinicMetaStorageKey = clinicId ? `${clinicId}_clinic_meta` : 'clinic_meta';
+        const clinicMetaStorageKey = `${tenantId}_clinic_meta`;
         const raw = window.localStorage.getItem(clinicMetaStorageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
@@ -97,12 +88,6 @@ export default function LoginPage() {
             setClinicName(name);
             return;
           }
-        }
-
-        if (resolvedClinicName) {
-          setClinicName(resolvedClinicName);
-          window.localStorage.setItem(clinicMetaStorageKey, JSON.stringify({ clinicName: resolvedClinicName }));
-          return;
         }
 
         setClinicName('MediCore');
@@ -114,14 +99,14 @@ export default function LoginPage() {
     loadClinicName();
   }, []);
 
-  // Función para obtener la ruta según el rol
-  const getRoleRedirectPath = (role: UserRole): string => {
+  // Función para obtener la ruta según el rol con tenant
+  const getRoleRedirectPath = (role: UserRole, tenantId: string): string => {
     const roleRoutes: Record<UserRole, string> = {
-      admin: '/admin',
-      doctor: '/doctor',
-      secretary: '/secretary'
+      admin: `/${tenantId}/admin/dashboard`,
+      doctor: `/${tenantId}/doctor/dashboard`,
+      secretary: `/${tenantId}/secretary/dashboard`
     };
-    return roleRoutes[role] || '/';
+    return roleRoutes[role] || `/${tenantId}/admin/dashboard`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,6 +127,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      // No especificar callbackUrl con tenant, dejar que el backend determine el tenant
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
@@ -154,7 +140,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Session will update and useEffect above will redirect.
+      // Session will update and useEffect above will redirect using tenant from backend
       setIsLoading(false);
       
     } catch (err) {

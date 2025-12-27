@@ -6,7 +6,7 @@ import { getRoleConfig, getRolePermissions } from './utils/roleConfig';
 const AUTH_DEBUG = process.env.AUTH_DEBUG === '1';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-const PUBLIC_ROUTES = ['/login', '/platform'];
+const PUBLIC_ROUTES = ['/login', '/platform', '/'];
 
 const ROLE_PREFIXES = {
   admin: '/admin',
@@ -28,70 +28,48 @@ const SHARED_ROUTE_RULES: Array<{ prefix: string; resource?: string; action?: 'c
   { prefix: '/shared' },
 ];
 
-const getSubdomainFromHost = (host?: string | null) => {
-  if (!host) return 'clinic_001';
-  const cleanHost = host.split(':')[0];
-  const parts = cleanHost.split('.');
-
-  // Desarrollo local con localtest.me
-  if (parts.length >= 3 && cleanHost.endsWith('localtest.me')) {
-    const subdomain = parts[0];
-    if (subdomain === 'clinic1') return 'clinic_001';
-    return subdomain;
+/**
+ * Extrae el tenant_id del path
+ * Formato esperado: /[tenant_id]/admin/... o /[tenant_id]/doctor/...
+ * Retorna: { tenantId: string | null, pathWithoutTenant: string }
+ */
+const getTenantFromPath = (pathname: string): { tenantId: string | null; pathWithoutTenant: string } => {
+  // Rutas públicas sin tenant
+  if (pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/platform') || pathname.startsWith('/api/')) {
+    return { tenantId: null, pathWithoutTenant: pathname };
   }
 
-  // Producción con Vercel: subdomain.odontoapp.vercel.app
-  if (parts.length >= 4 && cleanHost.endsWith('.vercel.app')) {
-    const subdomain = parts[0];
-    // Si es solo "odontoapp.vercel.app" sin subdominio, usar default
-    if (subdomain === 'odontoapp') return 'clinic_001';
-    return subdomain;
+  const segments = pathname.split('/').filter(Boolean);
+  
+  // Si no hay segmentos, no hay tenant
+  if (segments.length === 0) {
+    return { tenantId: null, pathWithoutTenant: pathname };
   }
 
-  // Dominios personalizados: subdomain.customdomain.com
-  if (parts.length >= 3) {
-    const subdomain = parts[0];
-    // Evitar usar 'www' como subdominio
-    if (subdomain === 'www') return 'clinic_001';
-    return subdomain;
-  }
-
-  return 'clinic_001';
-};
-
-const resolveCache = new Map<string, string>();
-
-const resolveClinicIdFromSubdomain = async (subdomain: string) => {
-  if (!subdomain) return 'clinic_001';
-  if (subdomain === 'clinic_001') return 'clinic_001';
-  if (resolveCache.has(subdomain)) return resolveCache.get(subdomain) as string;
-
-  try {
-    const url = `${API_URL}/api/clinics/resolve?subdomain=${encodeURIComponent(subdomain)}`;
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json().catch(() => null);
-    const clinicId = data?.success ? data?.data?.clinicId : null;
-    if (clinicId) {
-      resolveCache.set(subdomain, clinicId);
-      return clinicId;
-    }
-  } catch {
-    // ignore
-  }
-
-  return 'clinic_001';
+  // El primer segmento es el tenant_id
+  const tenantId = segments[0];
+  
+  // Reconstruir el path sin el tenant
+  const pathWithoutTenant = segments.length > 1 ? '/' + segments.slice(1).join('/') : '/';
+  
+  return { tenantId, pathWithoutTenant };
 };
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r)) || pathname.startsWith('/api/auth');
-  const tenantId = pathname.startsWith('/platform')
-    ? 'platform'
-    : await resolveClinicIdFromSubdomain(getSubdomainFromHost(req.headers.get('host')));
+  // Extraer tenant del path
+  const { tenantId, pathWithoutTenant } = getTenantFromPath(pathname);
 
+  // Rutas públicas (sin tenant)
+  const isPublic = !tenantId || pathname.startsWith('/api/auth');
+  
   const res = NextResponse.next();
-  res.cookies.set('tenantId', tenantId, { path: '/' });
+  
+  // Si hay tenant, establecer cookie
+  if (tenantId) {
+    res.cookies.set('tenantId', tenantId, { path: '/' });
+  }
 
   if (isPublic) return res;
 
@@ -107,42 +85,43 @@ export async function middleware(req: NextRequest) {
   }
 
   const role = (token as any).role as keyof typeof ROLE_PREFIXES | undefined;
-  if (pathname.startsWith('/admin') && role !== 'admin') {
-    
+  
+  // Verificar permisos de rol usando el path sin tenant
+  if (pathWithoutTenant.startsWith('/admin') && role !== 'admin') {
     const url = req.nextUrl.clone();
-    url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    const defaultHome = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    url.pathname = tenantId ? `/${tenantId}${defaultHome}` : defaultHome;
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith('/doctor') && role !== 'doctor') {
-    
+  if (pathWithoutTenant.startsWith('/doctor') && role !== 'doctor') {
     const url = req.nextUrl.clone();
-    url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    const defaultHome = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    url.pathname = tenantId ? `/${tenantId}${defaultHome}` : defaultHome;
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith('/secretary') && role !== 'secretary') {
-    
+  if (pathWithoutTenant.startsWith('/secretary') && role !== 'secretary') {
     const url = req.nextUrl.clone();
-    url.pathname = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    const defaultHome = role ? getRoleConfig(role as any).defaultHomePage : '/login';
+    url.pathname = tenantId ? `/${tenantId}${defaultHome}` : defaultHome;
     return NextResponse.redirect(url);
   }
 
   if (role) {
-    const rule = SHARED_ROUTE_RULES.find((r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`));
+    const rule = SHARED_ROUTE_RULES.find((r) => pathWithoutTenant === r.prefix || pathWithoutTenant.startsWith(`${r.prefix}/`));
     if (rule && rule.resource && rule.action) {
       const perms = getRolePermissions(role as any);
       const allowed = perms.some((p) => p.resource === rule.resource && p.actions.includes(rule.action!));
       if (!allowed) {
-        
         const url = req.nextUrl.clone();
-        url.pathname = getRoleConfig(role as any).defaultHomePage;
+        const defaultHome = getRoleConfig(role as any).defaultHomePage;
+        url.pathname = tenantId ? `/${tenantId}${defaultHome}` : defaultHome;
         return NextResponse.redirect(url);
       }
     }
   }
 
   const sessionTenant = (token as any).tenantId;
-  if (sessionTenant && sessionTenant !== tenantId) {
-    
+  if (sessionTenant && tenantId && sessionTenant !== tenantId) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('error', 'tenant_mismatch');

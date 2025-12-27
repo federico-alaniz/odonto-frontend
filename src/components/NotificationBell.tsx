@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, CheckCheck, X, Clock, AlertCircle, Calendar, Trash2 } from 'lucide-react';
 import { notificationsService, Notification } from '@/services/api/notifications.service';
 import { useRouter } from 'next/navigation';
+import { useTenant } from '@/hooks/useTenant';
 
 interface NotificationBellProps {
   clinicId: string;
@@ -18,6 +19,7 @@ export function NotificationBell({ clinicId, userId, userRole }: NotificationBel
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { buildPath } = useTenant();
 
   // Cargar contador de no leídas cada 30 segundos
   useEffect(() => {
@@ -260,7 +262,7 @@ export function NotificationBell({ clinicId, userId, userRole }: NotificationBel
             <div className="p-3 border-t border-gray-200 text-center">
               <button
                 onClick={() => {
-                  router.push('/doctor/notifications');
+                  router.push(buildPath('/doctor/notifications'));
                   setIsOpen(false);
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"

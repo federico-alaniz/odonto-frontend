@@ -32,6 +32,7 @@ import {
 
 // Importar hooks de autenticación y roles
 import { useCurrentRole, useAuth } from '../hooks/useAuth';
+import { useTenant } from '../hooks/useTenant';
 
 // Mapeo de iconos por nombre de string
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -205,6 +206,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   const currentRole = useCurrentRole();
   const { currentUser, logout } = useAuth();
   const pathname = usePathname();
+  const { buildPath } = useTenant();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -375,12 +377,13 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             )}
             <ul className={`space-y-1 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
               {section.items.map((item, itemIndex) => {
-                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                const itemHref = buildPath(item.href);
+                const isActive = pathname === itemHref || (itemHref !== '/' && pathname.startsWith(itemHref));
                 const IconComponent = item.icon;
                 return (
                   <li key={itemIndex}>
                     <Link
-                      href={item.href}
+                      href={itemHref}
                       className={getItemClasses(item, isActive, isCollapsed)}
                       title={isCollapsed ? item.label : ''}
                     >
@@ -459,7 +462,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </div>
 
                 <Link
-                  href="/profile"
+                  href={buildPath("/profile")}
                   className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
@@ -468,7 +471,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </Link>
 
                 <Link
-                  href="/configuracion"
+                  href={buildPath("/configuracion")}
                   className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
@@ -477,7 +480,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </Link>
 
                 <Link
-                  href="/notificaciones"
+                  href={buildPath("/notificaciones")}
                   className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
@@ -486,7 +489,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </Link>
 
                 <Link
-                  href="/seguridad"
+                  href={buildPath("/seguridad")}
                   className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >
@@ -495,7 +498,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </Link>
 
                 <Link
-                  href="/ayuda"
+                  href={buildPath("/ayuda")}
                   className="flex items-center space-x-3 px-4 py-3 text-sm text-gray-900 font-medium hover:bg-gray-100 hover:text-gray-950 transition-colors duration-200"
                   onClick={() => setIsUserDropdownOpen(false)}
                 >

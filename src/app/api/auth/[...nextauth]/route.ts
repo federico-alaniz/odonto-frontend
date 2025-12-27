@@ -5,41 +5,29 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN;
 const AUTH_DEBUG = process.env.AUTH_DEBUG === '1';
 
-const getSubdomainFromHost = (host?: string | null) => {
-  if (!host) return 'clinic_001';
-  const cleanHost = host.split(':')[0];
-  const parts = cleanHost.split('.');
-
-  // clinic1.localtest.me -> clinic1
-  if (parts.length >= 3 && cleanHost.endsWith('localtest.me')) {
-    const subdomain = parts[0];
-    if (subdomain === 'clinic1') return 'clinic_001';
-    return subdomain;
-  }
-
-  return 'clinic_001';
-};
-
-const resolveCache = new Map<string, string>();
-
-const resolveClinicIdFromSubdomain = async (subdomain: string) => {
-  if (!subdomain) return 'clinic_001';
-  if (subdomain === 'clinic_001') return 'clinic_001';
-  if (resolveCache.has(subdomain)) return resolveCache.get(subdomain) as string;
-
+/**
+ * Extrae el tenant_id del path del callback URL
+ * Formato esperado: /[tenant_id]/... en el callbackUrl
+ */
+const getTenantFromCallbackUrl = (callbackUrl?: string): string => {
+  if (!callbackUrl) return 'clinic_001';
+  
   try {
-    const url = `${API_URL}/api/clinics/resolve?subdomain=${encodeURIComponent(subdomain)}`;
-    const res = await fetch(url, { method: 'GET' });
-    const data = await res.json().catch(() => null);
-    const clinicId = data?.success ? data?.data?.clinicId : null;
-    if (clinicId) {
-      resolveCache.set(subdomain, clinicId);
-      return clinicId;
+    const url = new URL(callbackUrl, 'http://localhost');
+    const segments = url.pathname.split('/').filter(Boolean);
+    
+    // Si hay segmentos y el primero no es una ruta pública
+    if (segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'platform' && segments[0] !== 'api') {
+      return segments[0];
     }
   } catch {
-    // ignore
+    // Si falla el parsing, intentar extraer directamente
+    const segments = callbackUrl.split('/').filter(Boolean);
+    if (segments.length > 0 && segments[0] !== 'login' && segments[0] !== 'platform' && segments[0] !== 'api') {
+      return segments[0];
+    }
   }
-
+  
   return 'clinic_001';
 };
 
@@ -97,24 +85,58 @@ export const authOptions: NextAuthOptions = {
 
         if (!email || !password) return null;
 
-        // App Router passes a Web Request-like object
-        const host = (req as any)?.headers?.get?.('host') || (req as any)?.headers?.host;
-        const subdomain = getSubdomainFromHost(host);
-        const tenantId = await resolveClinicIdFromSubdomain(subdomain);
+        // Extraer tenant del callbackUrl si está disponible
+        const callbackUrl = (req as any)?.body?.callbackUrl || (req as any)?.query?.callbackUrl;
+        let tenantId = getTenantFromCallbackUrl(callbackUrl);
 
-        
-        const response = await fetch(`${API_URL}/api/auth/login`, {
+        // Fallback: intentar obtener de cookies
+        if (!tenantId || tenantId === 'clinic_001') {
+          const cookies = (req as any)?.cookies;
+          const cookieTenant = cookies?.get?.('tenantId')?.value || cookies?.tenantId;
+          if (cookieTenant && cookieTenant !== 'clinic_001') {
+            tenantId = cookieTenant;
+          }
+        }
+
+        console.log('🔐 [AUTH] Login attempt:', {
+          email,
+          callbackUrl,
+          tenantId,
+          willTryWithoutTenant: !tenantId || tenantId === 'clinic_001',
+        });
+
+        // Intentar login con tenant específico si lo tenemos
+        let response = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Clinic-Id': tenantId,
+            ...(tenantId && tenantId !== 'clinic_001' ? { 'X-Clinic-Id': tenantId } : {}),
           },
           body: JSON.stringify({ email, password }),
         });
 
-        const data = await response.json().catch(() => null);
+        let data = await response.json().catch(() => null);
 
-        
+        // Si falla y usamos clinic_001, intentar sin especificar tenant
+        // para que el backend busque al usuario en todas las clínicas
+        if (!response.ok && (!tenantId || tenantId === 'clinic_001')) {
+          console.log('🔐 [AUTH] First attempt failed, trying without tenant header...');
+          response = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+          data = await response.json().catch(() => null);
+        }
+
+        console.log('🔐 [AUTH] Backend response:', {
+          ok: response.ok,
+          status: response.status,
+          success: data?.success,
+          userTenant: data?.data?.clinicId,
+        });
 
         if (!response.ok || !data?.success || !data?.data) return null;
 
@@ -124,7 +146,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name || `${user.nombres ?? ''} ${user.apellidos ?? ''}`.trim(),
           email: user.email,
-          tenantId: user.clinicId || tenantId,
+          tenantId: user.clinicId, // Usar siempre el tenant que retorna el backend
           role: user.role,
         } as any;
       },
