@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Calendar as CalendarIcon, List, Plus, Info } from 'lucide-react';
-import Calendar from '@/app/calendario/Calendar';
+import Calendar from './Calendar';
 import DailyAgenda from './DailyAgenda';
 import NewAppointmentModal from './modals/NewAppointmentModal';
 

@@ -19,13 +19,11 @@ import { patientsService, Patient } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
 import { User } from '@/types/roles';
 import Link from 'next/link';
-import { useTenant } from '@/hooks/useTenant';
 
 export default function EditAppointmentPage() {
   const router = useRouter();
   const params = useParams();
   const { buildPath } = useTenant();
-  const { buildPath: buildPathHook } = useTenant();
   const appointmentId = params.id as string;
   const { showSuccess, showError } = useToast();
   const { currentUser } = useAuth();

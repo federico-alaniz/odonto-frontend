@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Users, UserPlus, Info } from 'lucide-react';
-import PatientsTable from "@/app/pacientes/PatientsTable";
-import PatientsFilters, { PatientFilters } from "@/app/pacientes/PatientsFilters";
+import PatientsTable from "./PatientsTable";
+import PatientsFilters, { PatientFilters } from "./PatientsFilters";
 
 export default function PatientsPage() {
   const [filters, setFilters] = useState<PatientFilters>({

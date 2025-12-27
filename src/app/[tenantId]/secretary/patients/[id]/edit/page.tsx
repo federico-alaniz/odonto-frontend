@@ -24,7 +24,7 @@ import {
   getProvincias, 
   getDepartamentosPorProvincia, 
   getCiudadesPorProvincia
-} from '../../../../../utils';
+} from '@/utils';
 import { patientsService, UpdatePatientData } from '@/services/api/patients.service';
 
 interface EditPatientFormData {

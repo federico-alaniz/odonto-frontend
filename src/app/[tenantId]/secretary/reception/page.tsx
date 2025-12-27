@@ -81,7 +81,6 @@ export default function ReceptionPage() {
   const [currentTime, setCurrentTime] = useState(dateHelper.now());
   const [showColon, setShowColon] = useState(true);
 
-  const { currentUser } = useAuth();
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
   // Actualizar hora actual cada minuto
