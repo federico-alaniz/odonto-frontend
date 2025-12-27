@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { ClipboardList, Info, Plus, FileText, Filter, Download, Users, Search } from 'lucide-react';
 import PatientHistoryList from './components/PatientHistoryList';

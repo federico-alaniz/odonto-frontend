@@ -18,11 +18,11 @@ import {
   Clock,
   Calendar
 } from 'lucide-react';
-import { 
-  getProvincias, 
-  getDepartamentosPorProvincia, 
-  getCiudadesPorProvincia
-} from '../../../../utils';
+// import { 
+//   getProvincias, 
+//   getDepartamentosPorProvincia, 
+//   getCiudadesPorProvincia
+// } from '../../../../utils';
 import { patientsService, CreatePatientData } from '@/services/api/patients.service';
 
 interface SecretaryPatientFormData {

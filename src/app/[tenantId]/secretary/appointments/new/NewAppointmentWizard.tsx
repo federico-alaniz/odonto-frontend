@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
 import { 
