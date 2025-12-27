@@ -48,7 +48,8 @@ const getTenantFromUrl = (): string => {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  // Deshabilitar useSession temporalmente para evitar error en producción
+  // const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -58,16 +59,16 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [clinicName, setClinicName] = useState('');
 
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    const role = (session as any)?.user?.role as UserRole | undefined;
-    const tenantId = (session as any)?.user?.tenantId; // Usar siempre el tenant de la sesión
-    if (!role || !tenantId) return;
-    const redirectPath = getRoleRedirectPath(role, tenantId);
-
-    console.log('🔐 [LOGIN] Redirecting to:', redirectPath);
-    router.push(redirectPath);
-  }, [session, status, router]);
+  // Deshabilitar redirección automática basada en sesión
+  // useEffect(() => {
+  //   if (status !== 'authenticated') return;
+  //   const role = (session as any)?.user?.role as UserRole | undefined;
+  //   const tenantId = (session as any)?.user?.tenantId;
+  //   if (!role || !tenantId) return;
+  //   const redirectPath = getRoleRedirectPath(role, tenantId);
+  //   console.log('🔐 [LOGIN] Redirecting to:', redirectPath);
+  //   router.push(redirectPath);
+  // }, [session, status, router]);
 
   useEffect(() => {
     const loadClinicName = async () => {
