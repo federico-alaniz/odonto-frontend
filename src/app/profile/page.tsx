@@ -128,6 +128,8 @@ export default function ProfilePage() {
     reader.onloadend = () => {
       const localUrl = reader.result as string;
       setAvatarPreview(localUrl);
+      // Agregar el avatar al formData para enviarlo al backend
+      setFormData(prev => ({ ...prev, avatar: localUrl }));
     };
     reader.readAsDataURL(file);
 
