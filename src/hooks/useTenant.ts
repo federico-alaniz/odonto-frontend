@@ -1,46 +1,27 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useMemo } from 'react';
 
 /**
- * Hook para obtener el tenantId del path actual
- * Formato esperado: /[tenantId]/admin/... o /[tenantId]/doctor/...
+ * Hook para obtener el tenantId de la sesión del usuario
+ * El tenant ya no se expone en la URL, se maneja internamente por sesión
  */
 export function useTenant() {
-  const pathname = usePathname();
+  const { data: session } = useSession();
 
   const tenantId = useMemo(() => {
-    // Rutas públicas sin tenant
-    if (!pathname || pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/platform') || pathname.startsWith('/api/')) {
-      return null;
-    }
-
-    const segments = pathname.split('/').filter(Boolean);
-    
-    // Si no hay segmentos, no hay tenant
-    if (segments.length === 0) {
-      return null;
-    }
-
-    // El primer segmento es el tenant_id
-    return segments[0];
-  }, [pathname]);
+    return (session as any)?.tenantId || null;
+  }, [session]);
 
   /**
-   * Construye una ruta con el tenant_id incluido
-   * @param path - Ruta sin tenant (ej: '/admin/dashboard')
-   * @returns Ruta completa con tenant (ej: '/clinic_001/admin/dashboard')
+   * Construye una ruta (sin tenant en el path)
+   * @param path - Ruta (ej: '/admin/dashboard')
+   * @returns La misma ruta (ej: '/admin/dashboard')
    */
   const buildPath = (path: string): string => {
-    if (!tenantId) return path;
-    
-    // Si el path ya incluye el tenant, devolverlo tal cual
-    if (path.startsWith(`/${tenantId}/`)) return path;
-    
-    // Agregar el tenant al inicio del path
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `/${tenantId}${cleanPath}`;
+    // Ya no agregamos tenant al path, solo retornamos el path tal cual
+    return path.startsWith('/') ? path : `/${path}`;
   };
 
   return {
