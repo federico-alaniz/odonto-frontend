@@ -7,16 +7,25 @@ import MedicalFormSection from '@/components/forms/MedicalFormSection';
 import MedicalInputField from '@/components/forms/MedicalInputField';
 import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
 import MedicalButton from '@/components/forms/MedicalButton';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
+import { useTenant } from '@/hooks/useTenant';
 
 export default function SeguridadPage() {
+  const { currentUser } = useAuth();
+  const { tenantId } = useTenant();
+  const { showSuccess, showError } = useToast();
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
+  const [passwordError, setPasswordError] = useState('');
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const handlePasswordChange = (field: string, value: string) => {
     setPasswordForm(prev => ({
@@ -26,16 +35,66 @@ export default function SeguridadPage() {
   };
 
   const handleChangePassword = async () => {
+    setPasswordError('');
+
+    // Validaciones
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    // Validar requisitos de contraseña
+    const hasUpperCase = /[A-Z]/.test(passwordForm.newPassword);
+    const hasLowerCase = /[a-z]/.test(passwordForm.newPassword);
+    const hasNumber = /[0-9]/.test(passwordForm.newPassword);
+    const hasSpecialChar = /[!@#$%^&*]/.test(passwordForm.newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+      setPasswordError('La contraseña no cumple con los requisitos de seguridad');
+      return;
+    }
+
     setSaving(true);
-    // Simular cambio de contraseña
-    setTimeout(() => {
-      setSaving(false);
-      setPasswordForm({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+
+    try {
+      const response = await fetch(`${API_URL}/api/users/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Clinic-Id': tenantId || '',
+          'X-User-Id': currentUser?.id || ''
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
       });
-    }, 1000);
+
+      const data = await response.json();
+
+      if (data.success) {
+        showSuccess('Contraseña actualizada exitosamente');
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+      } else {
+        setPasswordError(data.error || 'Error al cambiar la contraseña');
+        showError(data.error || 'Error al cambiar la contraseña');
+      }
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
+      setPasswordError('Error de conexión. Intenta nuevamente.');
+      showError('Error de conexión. Intenta nuevamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggle2FA = async () => {
@@ -121,6 +180,12 @@ export default function SeguridadPage() {
                   required
                 />
               </MedicalFieldGroup>
+
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-medium text-red-800">{passwordError}</p>
+                </div>
+              )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-blue-800 mb-2">Requisitos de la contraseña:</h4>
