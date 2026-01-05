@@ -61,9 +61,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (status !== 'authenticated') return;
     const role = (session as any)?.user?.role as UserRole | undefined;
-    const tenantId = (session as any)?.user?.tenantId;
-    if (!role || !tenantId) return;
-    const redirectPath = getRoleRedirectPath(role, tenantId);
+    if (!role) return;
+    const redirectPath = getRoleRedirectPath(role);
     console.log('🔐 [LOGIN] Redirecting to:', redirectPath);
     router.push(redirectPath);
   }, [session, status, router]);
@@ -98,14 +97,14 @@ export default function LoginPage() {
     loadClinicName();
   }, []);
 
-  // Función para obtener la ruta según el rol con tenant
-  const getRoleRedirectPath = (role: UserRole, tenantId: string): string => {
+  // Función para obtener la ruta según el rol (sin tenant en URL)
+  const getRoleRedirectPath = (role: UserRole): string => {
     const roleRoutes: Record<UserRole, string> = {
-      admin: `/${tenantId}/admin/dashboard`,
-      doctor: `/${tenantId}/doctor/dashboard`,
-      secretary: `/${tenantId}/secretary/dashboard`
+      admin: '/admin/dashboard',
+      doctor: '/doctor/dashboard',
+      secretary: '/secretary/dashboard'
     };
-    return roleRoutes[role] || `/${tenantId}/admin/dashboard`;
+    return roleRoutes[role] || '/admin/dashboard';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

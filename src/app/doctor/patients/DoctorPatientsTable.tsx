@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTenant } from '@/hooks/useTenant';
 import { 
   Eye, 
   Calendar, 
@@ -65,6 +66,7 @@ type SortOrder = 'asc' | 'desc';
 
 export default function DoctorPatientsTable({ filters, showOnlyAssigned = false }: DoctorPatientsTableProps) {
   const router = useRouter();
+  const { buildPath } = useTenant();
   const { showSuccess, showError } = useToast();
   const { currentUser } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
@@ -554,21 +556,21 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                         ) : null}
                         
                         <button
-                          onClick={() => router.push(`/historiales/${patient.id}`)}
+                          onClick={() => router.push(buildPath(`/historiales/${patient.id}`))}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Ver historial médico"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => router.push(`/calendario?patient=${patient.id}`)}
+                          onClick={() => router.push(buildPath(`/calendario?patient=${patient.id}`))}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                           title="Programar cita"
                         >
                           <Calendar className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => router.push(`/historiales/${patient.id}/registro/new`)}
+                          onClick={() => router.push(buildPath(`/historiales/${patient.id}/registro/new`))}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Nuevo registro médico"
                         >
