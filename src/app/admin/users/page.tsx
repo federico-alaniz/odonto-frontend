@@ -210,6 +210,17 @@ export default function AdminUsersPage() {
     });
   };
 
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const clearFilters = () => {
     setFilters({
       search: '',
@@ -616,7 +627,7 @@ export default function AdminUsersPage() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2 text-sm text-gray-700">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          {user.lastLogin ? formatDate(user.lastLogin.toString()) : 'Nunca'}
+                          {user.lastLogin ? formatDateTime(user.lastLogin.toString()) : 'Nunca'}
                         </div>
                       </td>
                       <td className="px-4 py-4 relative">

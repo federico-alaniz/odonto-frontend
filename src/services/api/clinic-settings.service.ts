@@ -8,6 +8,13 @@ export interface MedicalSpecialty {
   active: boolean;
 }
 
+export interface SecretaryArea {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
 export interface ConsultingRoom {
   id: string;
   number: string;
@@ -61,6 +68,7 @@ export interface ClinicSettings {
   clinicId: string;
   generalSettings: GeneralSettings;
   specialties: MedicalSpecialty[];
+  secretaryAreas: SecretaryArea[];
   consultingRooms: ConsultingRoom[];
   operatingRooms: OperatingRoom[];
   notifications: NotificationSettings;
@@ -205,6 +213,63 @@ export const clinicSettingsService = {
       return responseData;
     } catch (error: any) {
       console.error('❌ Error updating specialties:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get secretary areas
+   */
+  async getSecretaryAreas(clinicId: string): Promise<{ success: boolean; data: SecretaryArea[] }> {
+    try {
+      const url = `${API_BASE_URL}/api/clinic-settings/secretary-areas`;
+      const headers = getHeaders(clinicId);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Error al obtener áreas de secretaría');
+      }
+
+      return responseData;
+    } catch (error: any) {
+      console.error('❌ Error fetching secretary areas:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update secretary areas
+   */
+  async updateSecretaryAreas(
+    clinicId: string,
+    areas: SecretaryArea[],
+    userId: string
+  ): Promise<ClinicSettingsResponse> {
+    try {
+      const url = `${API_BASE_URL}/api/clinic-settings/secretary-areas`;
+      const headers = getHeaders(clinicId, userId);
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify(areas)
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Error al actualizar áreas de secretaría');
+      }
+
+      return responseData;
+    } catch (error: any) {
+      console.error('❌ Error updating secretary areas:', error);
       throw error;
     }
   },

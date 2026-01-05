@@ -121,6 +121,8 @@ export default function NewUserForm() {
   const [isLoadingEspecialidades, setIsLoadingEspecialidades] = useState(true);
   const [consultorios, setConsultorios] = useState<Array<{ value: string; label: string }>>([]);
   const [isLoadingConsultorios, setIsLoadingConsultorios] = useState(true);
+  const [areas, setAreas] = useState<Array<{ value: string; label: string }>>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
@@ -208,7 +210,42 @@ export default function NewUserForm() {
       }
     };
 
+    const loadAreas = async () => {
+      if (!clinicId) {
+        setIsLoadingAreas(false);
+        return;
+      }
+
+      try {
+        const secretaryAreasStorageKey = clinicId ? `${clinicId}_secretary_areas` : 'clinic_secretary_areas';
+        const savedAreas = localStorage.getItem(secretaryAreasStorageKey);
+        
+        if (savedAreas) {
+          const parsed = JSON.parse(savedAreas);
+          const areasActivas = parsed.filter((area: any) => area.active);
+          
+          if (areasActivas.length > 0) {
+            const formattedAreas = areasActivas.map((area: any) => ({
+              value: area.id,
+              label: area.name
+            }));
+            setAreas(formattedAreas);
+          } else {
+            setAreas([]);
+          }
+        } else {
+          setAreas([]);
+        }
+      } catch (error) {
+        console.error('Error cargando áreas:', error);
+        setAreas([]);
+      } finally {
+        setIsLoadingAreas(false);
+      }
+    };
+
     loadConsultorios();
+    loadAreas();
   }, [clinicId]);
 
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -908,15 +945,15 @@ export default function NewUserForm() {
                         <select
                           value={formData.turno}
                           onChange={(e) => updateField('turno', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                             errors.turno ? 'border-red-500' : 'border-gray-300'
                           }`}
                         >
                           <option value="">Seleccione...</option>
+                          <option value="tiempo_completo">Tiempo completo</option>
                           <option value="mañana">Mañana</option>
                           <option value="tarde">Tarde</option>
                           <option value="noche">Noche</option>
-                          <option value="completo">Completo</option>
                         </select>
                         {errors.turno && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -927,19 +964,37 @@ export default function NewUserForm() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Área *</label>
-                        <input
-                          type="text"
+                        <select
                           value={formData.area}
                           onChange={(e) => updateField('area', e.target.value)}
-                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          disabled={isLoadingAreas}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                             errors.area ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: Recepción, Facturación"
-                        />
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          <option value="">
+                            {isLoadingAreas 
+                              ? 'Cargando áreas...' 
+                              : areas.length === 0 
+                                ? 'No hay áreas configuradas'
+                                : 'Seleccione un área'
+                            }
+                          </option>
+                          {areas.map((area) => (
+                            <option key={area.value} value={area.label}>
+                              {area.label}
+                            </option>
+                          ))}
+                        </select>
                         {errors.area && (
                           <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                             <AlertCircle className="w-4 h-4" />
                             {errors.area}
+                          </p>
+                        )}
+                        {!isLoadingAreas && areas.length === 0 && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            Configure áreas en Configuración → Recursos Clínicos
                           </p>
                         )}
                       </div>

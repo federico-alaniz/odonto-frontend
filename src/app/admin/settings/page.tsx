@@ -25,7 +25,8 @@ import {
   X,
   Upload,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Briefcase
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +34,13 @@ import { useAuth } from '@/hooks/useAuth';
 type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations';
 
 interface MedicalSpecialty {
+  id: string;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
+interface SecretaryArea {
   id: string;
   name: string;
   description: string;
@@ -71,12 +79,14 @@ export default function AdminSettingsPage() {
   const userId = (currentUser as any)?.id;
 
   const specialtiesStorageKey = clinicId ? `${clinicId}_specialties` : 'clinic_specialties';
+  const secretaryAreasStorageKey = clinicId ? `${clinicId}_secretary_areas` : 'clinic_secretary_areas';
   const consultingRoomsStorageKey = clinicId ? `${clinicId}_consulting_rooms` : 'clinic_consulting_rooms';
   const operatingRoomsStorageKey = clinicId ? `${clinicId}_operating_rooms` : 'clinic_operating_rooms';
   const clinicMetaStorageKey = clinicId ? `${clinicId}_clinic_meta` : 'clinic_meta';
 
   // Estados para recursos clínicos
   const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
+  const [secretaryAreas, setSecretaryAreas] = useState<SecretaryArea[]>([]);
   const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
   const [operatingRooms, setOperatingRooms] = useState<OperatingRoom[]>([]);
 
@@ -120,12 +130,14 @@ export default function AdminSettingsPage() {
         }
 
         setSpecialties(response.data.specialties || []);
+        setSecretaryAreas(response.data.secretaryAreas || []);
         setConsultingRooms(response.data.consultingRooms || []);
         setOperatingRooms(response.data.operatingRooms as any || []);
         
         
         // También guardar en localStorage como cache
         localStorage.setItem(specialtiesStorageKey, JSON.stringify(response.data.specialties || []));
+        localStorage.setItem(secretaryAreasStorageKey, JSON.stringify(response.data.secretaryAreas || []));
         localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(response.data.consultingRooms || []));
         localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(response.data.operatingRooms || []));
       }
@@ -138,6 +150,7 @@ export default function AdminSettingsPage() {
   };
 
   const [showSpecialtyModal, setShowSpecialtyModal] = useState(false);
+  const [showAreaModal, setShowAreaModal] = useState(false);
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [showOperatingRoomModal, setShowOperatingRoomModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -337,6 +350,58 @@ export default function AdminSettingsPage() {
       showError('Error al actualizar', 'No se pudo actualizar la especialidad');
       // Revertir cambio en caso de error
       setSpecialties(specialties);
+    }
+  };
+
+  const handleAddArea = async (area: Omit<SecretaryArea, 'id'>) => {
+    const newArea = { ...area, id: Date.now().toString() };
+    const updatedAreas = [...secretaryAreas, newArea];
+    setSecretaryAreas(updatedAreas);
+    setShowAreaModal(false);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSecretaryAreas(clinicId, updatedAreas, userId);
+      localStorage.setItem(secretaryAreasStorageKey, JSON.stringify(updatedAreas));
+      showSuccessToast('Área agregada', 'El área se ha guardado exitosamente');
+    } catch (error) {
+      console.error('Error guardando área:', error);
+      showError('Error al guardar', 'No se pudo guardar el área');
+      // Revertir cambio en caso de error
+      setSecretaryAreas(secretaryAreas);
+    }
+  };
+
+  const handleDeleteArea = async (id: string) => {
+    const updatedAreas = secretaryAreas.filter(a => a.id !== id);
+    setSecretaryAreas(updatedAreas);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSecretaryAreas(clinicId, updatedAreas, userId);
+      localStorage.setItem(secretaryAreasStorageKey, JSON.stringify(updatedAreas));
+      showSuccessToast('Área eliminada', 'El área se ha eliminado exitosamente');
+    } catch (error) {
+      console.error('Error eliminando área:', error);
+      showError('Error al eliminar', 'No se pudo eliminar el área');
+      // Revertir cambio en caso de error
+      setSecretaryAreas(secretaryAreas);
+    }
+  };
+
+  const handleToggleArea = async (id: string) => {
+    const updatedAreas = secretaryAreas.map(a => a.id === id ? { ...a, active: !a.active } : a);
+    setSecretaryAreas(updatedAreas);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateSecretaryAreas(clinicId, updatedAreas, userId);
+      localStorage.setItem(secretaryAreasStorageKey, JSON.stringify(updatedAreas));
+    } catch (error) {
+      console.error('Error actualizando área:', error);
+      showError('Error al actualizar', 'No se pudo actualizar el área');
+      // Revertir cambio en caso de error
+      setSecretaryAreas(secretaryAreas);
     }
   };
 
@@ -774,6 +839,64 @@ export default function AdminSettingsPage() {
                       )}
                     </div>
 
+                    {/* Áreas de Secretaría */}
+                    <div className="space-y-4 pt-6 border-t border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Briefcase className="w-5 h-5 text-blue-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Áreas de Secretaría</h3>
+                        </div>
+                        <button
+                          onClick={() => setShowAreaModal(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Agregar Área
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {secretaryAreas.map((area) => (
+                          <div key={area.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h4 className="font-semibold text-gray-900">{area.name}</h4>
+                                  <span className={`px-2 py-0.5 text-xs rounded-full ${area.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
+                                    {area.active ? 'Activa' : 'Inactiva'}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600">{area.description}</p>
+                              </div>
+                              <div className="flex items-center gap-2 ml-4">
+                                <button
+                                  onClick={() => handleToggleArea(area.id)}
+                                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                  title={area.active ? 'Desactivar' : 'Activar'}
+                                >
+                                  <Activity className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteArea(area.id)}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {secretaryAreas.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <Briefcase className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                          <p>No hay áreas configuradas</p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Consultorios */}
                     <div className="space-y-4 pt-6 border-t border-gray-200">
                       <div className="flex items-center justify-between mb-4">
@@ -1047,6 +1170,9 @@ export default function AdminSettingsPage() {
         {/* Modal para Agregar Especialidad */}
         {showSpecialtyModal && <SpecialtyModal onClose={() => setShowSpecialtyModal(false)} onSave={handleAddSpecialty} />}
 
+        {/* Modal para Agregar Área de Secretaría */}
+        {showAreaModal && <SecretaryAreaModal onClose={() => setShowAreaModal(false)} onSave={handleAddArea} />}
+
         {/* Modal para Agregar Consultorio */}
         {showRoomModal && <ConsultingRoomModal onClose={() => setShowRoomModal(false)} onSave={handleAddRoom} />}
 
@@ -1134,7 +1260,93 @@ function SpecialtyModal({ onClose, onSave }: { onClose: () => void; onSave: (dat
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Modal Component para Áreas de Secretaría
+function SecretaryAreaModal({ onClose, onSave }: { onClose: () => void; onSave: (data: Omit<SecretaryArea, 'id'>) => void }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    active: true
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-900">Agregar Área de Secretaría</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Nombre del Área *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Ej: Recepción"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Descripción *
+            </label>
+            <textarea
+              required
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+              placeholder="Breve descripción del área"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="area-active"
+              checked={formData.active}
+              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="area-active" className="text-sm text-gray-700">
+              Área activa
+            </label>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Guardar
             </button>

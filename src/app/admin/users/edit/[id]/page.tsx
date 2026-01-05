@@ -53,6 +53,7 @@ export default function EditUserPage() {
   const [showEspecialidadesDropdown, setShowEspecialidadesDropdown] = useState(false);
   const [especialidadSearch, setEspecialidadSearch] = useState('');
   const [consultorios, setConsultorios] = useState<Array<{ id: string; name: string; number: string }>>([]);
+  const [areas, setAreas] = useState<Array<{ id: string; name: string; description: string }>>([]);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
   const currentUserId = (currentUser as any)?.id;
@@ -63,6 +64,7 @@ export default function EditUserPage() {
     loadUser();
     loadEspecialidades();
     loadConsultorios();
+    loadAreas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, clinicId]);
 
@@ -143,6 +145,21 @@ export default function EditUserPage() {
       }
     } catch (error) {
       console.error('Error loading consultorios:', error);
+    }
+  };
+
+  const loadAreas = async () => {
+    try {
+      const secretaryAreasStorageKey = clinicId ? `${clinicId}_secretary_areas` : 'clinic_secretary_areas';
+      const savedAreas = localStorage.getItem(secretaryAreasStorageKey);
+      
+      if (savedAreas) {
+        const parsed = JSON.parse(savedAreas);
+        const areasActivas = parsed.filter((area: any) => area.active);
+        setAreas(areasActivas);
+      }
+    } catch (error) {
+      console.error('Error loading areas:', error);
     }
   };
 
@@ -776,6 +793,7 @@ export default function EditUserPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Seleccionar turno</option>
+                      <option value="tiempo_completo">Tiempo completo</option>
                       <option value="mañana">Mañana</option>
                       <option value="tarde">Tarde</option>
                       <option value="noche">Noche</option>
@@ -789,12 +807,18 @@ export default function EditUserPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Área *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.area || ''}
                       onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    >
+                      <option value="">Seleccionar área...</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.name}>
+                          {area.name}
+                        </option>
+                      ))}
+                    </select>
                     {errors.area && (
                       <p className="mt-1 text-sm text-red-600">{errors.area}</p>
                     )}
