@@ -52,6 +52,7 @@ export default function EditUserPage() {
   const [especialidades, setEspecialidades] = useState<Array<{ value: string; label: string }>>([]);
   const [showEspecialidadesDropdown, setShowEspecialidadesDropdown] = useState(false);
   const [especialidadSearch, setEspecialidadSearch] = useState('');
+  const [consultorios, setConsultorios] = useState<Array<{ id: string; name: string; number: string }>>([]);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
   const currentUserId = (currentUser as any)?.id;
@@ -61,6 +62,7 @@ export default function EditUserPage() {
     if (!clinicId) return;
     loadUser();
     loadEspecialidades();
+    loadConsultorios();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, clinicId]);
 
@@ -90,6 +92,7 @@ export default function EditUserPage() {
           horariosAtencion: response.data.horariosAtencion,
           turno: response.data.turno,
           area: response.data.area,
+          notificacionesConfig: response.data.notificacionesConfig,
         });
       }
     } catch (error) {
@@ -103,7 +106,8 @@ export default function EditUserPage() {
 
   const loadEspecialidades = async () => {
     try {
-      const savedSpecialties = localStorage.getItem('clinic_specialties');
+      const specialtiesStorageKey = clinicId ? `${clinicId}_specialties` : 'clinic_specialties';
+      const savedSpecialties = localStorage.getItem(specialtiesStorageKey);
       
       if (savedSpecialties) {
         const parsed = JSON.parse(savedSpecialties);
@@ -116,6 +120,29 @@ export default function EditUserPage() {
       }
     } catch (error) {
       console.error('Error loading especialidades:', error);
+    }
+  };
+
+  const loadConsultorios = async () => {
+    try {
+      const consultingRoomsStorageKey = clinicId ? `${clinicId}_consulting_rooms` : 'clinic_consulting_rooms';
+      const savedConsultorios = localStorage.getItem(consultingRoomsStorageKey);
+      
+      if (savedConsultorios) {
+        const parsed = JSON.parse(savedConsultorios);
+        const consultoriosActivos = parsed.filter((cons: any) => cons.active);
+        
+        // Ordenar por número de forma ascendente
+        const consultoriosOrdenados = consultoriosActivos.sort((a: any, b: any) => {
+          const numA = parseInt(a.number) || 0;
+          const numB = parseInt(b.number) || 0;
+          return numA - numB;
+        });
+        
+        setConsultorios(consultoriosOrdenados);
+      }
+    } catch (error) {
+      console.error('Error loading consultorios:', error);
     }
   };
 
@@ -189,6 +216,9 @@ export default function EditUserPage() {
         ? (prev.especialidades || []).filter(e => e !== especialidad)
         : [...(prev.especialidades || []), especialidad]
     }));
+    // Cerrar el dropdown después de seleccionar
+    setShowEspecialidadesDropdown(false);
+    setEspecialidadSearch('');
   };
 
   const removeEspecialidad = (especialidad: string) => {
@@ -410,12 +440,18 @@ export default function EditUserPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Consultorio *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.consultorio || ''}
                       onChange={(e) => setFormData({ ...formData, consultorio: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    >
+                      <option value="">Seleccionar consultorio...</option>
+                      {consultorios.map((consultorio) => (
+                        <option key={consultorio.id} value={consultorio.name}>
+                          {consultorio.number} - {consultorio.name}
+                        </option>
+                      ))}
+                    </select>
                     {errors.consultorio && (
                       <p className="mt-1 text-sm text-red-600">{errors.consultorio}</p>
                     )}
@@ -768,10 +804,10 @@ export default function EditUserPage() {
             )}
 
             {/* Botones */}
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-8">
+            <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 mt-8">
               <Link
                 href="/admin/users"
-                className="px-6 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                className="px-6 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors border border-gray-300"
               >
                 Cancelar
               </Link>

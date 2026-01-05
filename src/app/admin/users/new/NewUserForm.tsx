@@ -234,6 +234,9 @@ export default function NewUserForm() {
         ? (prev.especialidades || []).filter(e => e !== especialidad)
         : [...(prev.especialidades || []), especialidad]
     }));
+    // Cerrar el dropdown después de seleccionar
+    setShowEspecialidadesDropdown(false);
+    setEspecialidadSearch('');
   };
 
   const toggleDiaAtencion = (dia: number) => {
