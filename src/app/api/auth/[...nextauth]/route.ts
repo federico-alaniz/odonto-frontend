@@ -80,7 +80,20 @@ export const authOptions: NextAuthOptions = {
 
         const data = await response.json().catch(() => null);
 
-        if (!response.ok || !data?.success || !data?.data) return null;
+        // Logs de diagnóstico para producción (Vercel)
+        console.log('🔐 [AUTH] Login attempt (server-side)', {
+          apiUrl: API_URL,
+          email,
+          ok: response.ok,
+          status: response.status,
+          success: data?.success,
+          hasData: !!data?.data,
+          errors: data?.errors,
+        });
+
+        if (!response.ok || !data?.success || !data?.data) {
+          return null;
+        }
 
         const user = data.data;
 
