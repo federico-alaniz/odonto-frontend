@@ -185,14 +185,29 @@ export default function NewAppointmentWizard() {
     
     try {
       setLoadingDoctors(true);
-      const response = await usersService.getUsers(clinicId, { 
-        role: 'doctor',
-        estado: 'activo',
-        limit: 100
-      });
+      
+      // Cargar doctores y admins que también son doctores
+      const [doctorsResponse, adminsResponse] = await Promise.all([
+        usersService.getUsers(clinicId, { 
+          role: 'doctor',
+          estado: 'activo',
+          limit: 100
+        }),
+        usersService.getUsers(clinicId, { 
+          role: 'admin',
+          estado: 'activo',
+          limit: 100
+        })
+      ]);
+      
+      // Filtrar admins que tienen isDoctor = true
+      const adminDoctors = adminsResponse.data.filter((user: any) => user.isDoctor === true);
+      
+      // Combinar doctores y admin-doctores
+      const allDoctors = [...doctorsResponse.data, ...adminDoctors];
       
       // Transformar usuarios a formato Doctor
-      const doctorsData: Doctor[] = response.data.map((user: User) => ({
+      const doctorsData: Doctor[] = allDoctors.map((user: User) => ({
         id: user.id,
         name: `${user.nombres} ${user.apellidos}`,
         specialty: user.especialidades?.[0] || 'General',

@@ -155,6 +155,10 @@ export interface SidebarItem {
   icon: string; // Nombre del icono de Lucide
   description?: string;
   roles: UserRole[]; // Roles que pueden ver este item
+  requiredPermission?: {
+    resource: string;
+    action: 'create' | 'read' | 'update' | 'delete';
+  }; // Permiso requerido para ver este item
   color: {
     bg: string;
     text: string;

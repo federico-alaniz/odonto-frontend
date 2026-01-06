@@ -106,10 +106,11 @@ export default function SecretaryPatientDetailPage() {
         setLoading(true);
 
         // Cargar datos en paralelo
-        const [patientResponse, appointmentsData, doctorsData] = await Promise.all([
+        const [patientResponse, appointmentsData, doctorsData, adminsData] = await Promise.all([
           patientsService.getPatientById(patientId, clinicId),
           appointmentsService.getAppointments(clinicId, { patientId }),
-          usersService.getUsers(clinicId, { role: 'doctor' })
+          usersService.getUsers(clinicId, { role: 'doctor' }),
+          usersService.getUsers(clinicId, { role: 'admin' })
         ]);
 
         if (!patientResponse?.data) {
@@ -144,10 +145,14 @@ export default function SecretaryPatientDetailPage() {
 
         setPatient(patientDetails);
 
+        // Combinar doctores y admin-doctores
+        const adminDoctors = adminsData.data.filter((user: any) => user.isDoctor === true);
+        const allDoctors = [...doctorsData.data, ...adminDoctors];
+
         // Transformar datos de citas con información de doctores
         const patientAppts: PatientAppointment[] = appointmentsData.data
           .map(apt => {
-            const doctor = doctorsData.data.find(d => d.id === apt.doctorId);
+            const doctor = allDoctors.find(d => d.id === apt.doctorId);
             return {
               id: apt.id,
               fecha: apt.fecha,
