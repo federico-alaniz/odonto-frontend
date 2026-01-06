@@ -29,9 +29,10 @@ import {
   Briefcase
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
+import { rolePermissionsService, RoleConfig, RolePermissions } from '@/services/api/role-permissions.service';
 import { useAuth } from '@/hooks/useAuth';
 
-type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'billing' | 'integrations';
+type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'permissions' | 'billing' | 'integrations';
 
 interface MedicalSpecialty {
   id: string;
@@ -89,6 +90,11 @@ export default function AdminSettingsPage() {
   const [secretaryAreas, setSecretaryAreas] = useState<SecretaryArea[]>([]);
   const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
   const [operatingRooms, setOperatingRooms] = useState<OperatingRoom[]>([]);
+  
+  // Estados para roles y permisos
+  const [roles, setRoles] = useState<RoleConfig[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, RolePermissions>>({});
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
   // Cargar configuración al montar
   useEffect(() => {
@@ -146,6 +152,90 @@ export default function AdminSettingsPage() {
       showError('Error al cargar configuración', 'No se pudo cargar la configuración de la clínica');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Cargar roles y permisos
+  const loadRoles = async () => {
+    if (!clinicId || !userId) return;
+    
+    try {
+      setIsLoadingRoles(true);
+      const rolesData = await rolePermissionsService.getAllRoles(clinicId, userId);
+      
+      // Si no hay roles, inicializarlos automáticamente
+      if (!rolesData || rolesData.length === 0) {
+        console.log('No roles found, initializing default roles...');
+        await rolePermissionsService.initializeDefaultRoles(clinicId, userId);
+        // Volver a cargar después de inicializar
+        const newRolesData = await rolePermissionsService.getAllRoles(clinicId, userId);
+        setRoles(newRolesData);
+        
+        const permissionsMap: Record<string, RolePermissions> = {};
+        newRolesData.forEach(role => {
+          permissionsMap[role.role] = role.permissions;
+        });
+        setRolePermissions(permissionsMap);
+      } else {
+        setRoles(rolesData);
+        
+        // Convertir array de roles a objeto para fácil acceso
+        const permissionsMap: Record<string, RolePermissions> = {};
+        rolesData.forEach(role => {
+          permissionsMap[role.role] = role.permissions;
+        });
+        setRolePermissions(permissionsMap);
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      showError('Error al cargar roles', 'No se pudieron cargar los roles y permisos. Verifica que el backend esté corriendo.');
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
+
+  // Cargar roles cuando se cambia a la pestaña de permisos
+  useEffect(() => {
+    if (activeTab === 'permissions' && roles.length === 0) {
+      loadRoles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Manejar cambio de permiso individual con guardado automático
+  const handlePermissionChange = async (role: string, resource: keyof RolePermissions, action: string, value: boolean) => {
+    if (!clinicId || !userId) return;
+    
+    // Actualizar estado local inmediatamente
+    const updatedPermissions = {
+      ...rolePermissions[role],
+      [resource]: {
+        ...rolePermissions[role]?.[resource],
+        [action]: value
+      }
+    };
+    
+    setRolePermissions(prev => ({
+      ...prev,
+      [role]: updatedPermissions
+    }));
+    
+    // Guardar en el backend automáticamente
+    try {
+      await rolePermissionsService.updateRolePermissions(
+        role, 
+        { permissions: updatedPermissions }, 
+        clinicId, 
+        userId
+      );
+    } catch (error) {
+      console.error('Error updating permission:', error);
+      // Revertir el cambio en caso de error
+      setRolePermissions(prev => ({
+        ...prev,
+        [role]: rolePermissions[role]
+      }));
+      showError('Error al actualizar permiso', 'No se pudo guardar el cambio');
     }
   };
 
@@ -216,8 +306,9 @@ export default function AdminSettingsPage() {
     { id: 'resources' as SettingsTab, label: 'Recursos Clínicos', icon: Stethoscope, color: 'teal' },
     { id: 'notifications' as SettingsTab, label: 'Notificaciones', icon: Bell, color: 'yellow' },
     { id: 'security' as SettingsTab, label: 'Seguridad', icon: Shield, color: 'red' },
+    { id: 'permissions' as SettingsTab, label: 'Permisos', icon: Shield, color: 'indigo' },
     { id: 'billing' as SettingsTab, label: 'Facturación', icon: DollarSign, color: 'green' },
-    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' }
+    { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' },
   ];
 
   const handleSaveSettings = async () => {
@@ -294,6 +385,7 @@ export default function AdminSettingsPage() {
       teal: 'text-blue-600 bg-blue-50 border-blue-200',
       yellow: 'text-yellow-600 bg-yellow-50 border-yellow-200',
       red: 'text-red-600 bg-red-50 border-red-200',
+      indigo: 'text-blue-600 bg-blue-50 border-blue-200',
       green: 'text-blue-600 bg-blue-50 border-blue-200',
       purple: 'text-blue-600 bg-blue-50 border-blue-200',
       pink: 'text-gray-600 bg-gray-50 border-gray-200'
@@ -1085,6 +1177,216 @@ export default function AdminSettingsPage() {
                         Esta sección incluirá: autenticación 2FA, tiempo de sesión, expiración de contraseñas, requisitos de contraseña, intentos de login
                       </p>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Permissions Settings */}
+              {activeTab === 'permissions' && (
+                <div>
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-gray-200 px-6 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Shield className="w-5 h-5 text-blue-700" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-gray-900">Permisos</h2>
+                        <p className="text-sm text-gray-600 mt-1">Gestión de permisos y roles de usuario</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    {isLoadingRoles ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        <span className="ml-3 text-gray-600">Cargando roles y permisos...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Permisos por Rol */}
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">Permisos por Rol</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Configure los permisos específicos para cada rol de usuario en el sistema.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => loadRoles()}
+                              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              Recargar
+                            </button>
+                          </div>
+
+                          <div className="space-y-4">
+                            {roles.map((roleConfig) => {
+                              const perms = rolePermissions[roleConfig.role] || roleConfig.permissions;
+                              const isAdmin = roleConfig.role === 'admin';
+                              
+                              return (
+                                <div key={roleConfig.role} className={`border border-gray-200 rounded-lg p-4 ${isAdmin ? 'bg-gray-50' : ''}`}>
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                      <h4 className="font-semibold text-gray-900">{roleConfig.displayName}</h4>
+                                      <p className="text-xs text-gray-500">{roleConfig.description}</p>
+                                    </div>
+                                    {isAdmin && (
+                                      <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                        Todos los permisos
+                                      </span>
+                                    )}
+                                  </div>
+                                  
+                                  {!isAdmin && perms && (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                                      {/* Pacientes */}
+                                      {perms.patients && (
+                                        <>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.patients.view || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'patients', 'view', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Ver pacientes</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.patients.create || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'patients', 'create', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Crear pacientes</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.patients.edit || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'patients', 'edit', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Editar pacientes</span>
+                                          </label>
+                                        </>
+                                      )}
+                                      
+                                      {/* Citas */}
+                                      {perms.appointments && (
+                                        <>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.appointments.view || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'appointments', 'view', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Ver turnos</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.appointments.create || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'appointments', 'create', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Crear turnos</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.appointments.edit || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'appointments', 'edit', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Editar turnos</span>
+                                          </label>
+                                        </>
+                                      )}
+                                      
+                                      {/* Registros Médicos */}
+                                      {perms.medicalRecords && (
+                                        <>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.medicalRecords.view || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'medicalRecords', 'view', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Ver historiales</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.medicalRecords.create || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'medicalRecords', 'create', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Crear registros</span>
+                                          </label>
+                                        </>
+                                      )}
+                                      
+                                      {/* Facturación */}
+                                      {perms.billing && (
+                                        <>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.billing.view || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'billing', 'view', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Ver facturación</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.billing.create || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'billing', 'create', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Crear facturas</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 text-sm">
+                                            <input 
+                                              type="checkbox" 
+                                              checked={perms.billing.edit || false}
+                                              onChange={(e) => handlePermissionChange(roleConfig.role, 'billing', 'edit', e.target.checked)}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                                            />
+                                            <span className="text-gray-700">Editar facturas</span>
+                                          </label>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Nota informativa */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex gap-3">
+                            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="font-medium text-blue-900 mb-1">Gestión de Permisos</h4>
+                              <p className="text-sm text-blue-700">
+                                Los cambios en los permisos se aplicarán a todos los usuarios con el rol correspondiente. 
+                                Los administradores siempre tienen acceso completo al sistema. Los registros médicos NO pueden editarse por normativa legal.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -16,12 +16,16 @@ import {
   Briefcase,
   FileText,
   Clock,
-  Building2
+  Building2,
+  Stethoscope,
+  CheckSquare,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usersService } from '@/services/api/users.service';
 import { useToast } from '@/components/ui/ToastProvider';
-import { UserFormData } from '@/types/roles';
+import { UserFormData, HorarioAtencion } from '@/types/roles';
+import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -33,6 +37,9 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [especialidades, setEspecialidades] = useState<Array<{ value: string; label: string }>>([]);
+  const [consultorios, setConsultorios] = useState<Array<{ value: string; label: string }>>([]);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
   
   const [formData, setFormData] = useState<Partial<UserFormData>>({
     nombres: '',
@@ -45,27 +52,87 @@ export default function ProfilePage() {
     ciudad: '',
     provincia: '',
     codigoPostal: '',
+    isDoctor: false,
+    especialidades: [],
+    consultorio: '',
+    matricula: '',
+    horariosAtencion: [
+      { dia: 1, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+      { dia: 2, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+      { dia: 3, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+      { dia: 4, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+      { dia: 5, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+      { dia: 6, activo: false, horaInicio: '08:00', horaFin: '18:00' }
+    ]
   });
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
   useEffect(() => {
     if (currentUser) {
+      const user = currentUser as any;
       setFormData({
-        nombres: currentUser.nombres || '',
-        apellidos: currentUser.apellidos || '',
-        email: currentUser.email || '',
-        telefono: currentUser.telefono || '',
-        fechaNacimiento: currentUser.fechaNacimiento || '',
-        genero: currentUser.genero || '',
-        direccion: currentUser.direccion || '',
-        ciudad: currentUser.ciudad || '',
-        provincia: currentUser.provincia || '',
-        codigoPostal: currentUser.codigoPostal || '',
+        nombres: user.nombres || '',
+        apellidos: user.apellidos || '',
+        email: user.email || '',
+        telefono: user.telefono || '',
+        fechaNacimiento: user.fechaNacimiento || '',
+        genero: user.genero || '',
+        direccion: user.direccion || '',
+        ciudad: user.ciudad || '',
+        provincia: user.provincia || '',
+        codigoPostal: user.codigoPostal || '',
+        isDoctor: user.isDoctor || false,
+        especialidades: user.especialidades || [],
+        consultorio: user.consultorio || '',
+        matricula: user.matricula || '',
+        horariosAtencion: user.horariosAtencion || [
+          { dia: 1, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+          { dia: 2, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+          { dia: 3, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+          { dia: 4, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+          { dia: 5, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+          { dia: 6, activo: false, horaInicio: '08:00', horaFin: '18:00' }
+        ]
       });
-      setAvatarPreview(currentUser.avatar || null);
+      setAvatarPreview(user.avatar || null);
     }
   }, [currentUser]);
+
+  // Cargar especialidades y consultorios si es admin
+  useEffect(() => {
+    if (!clinicId || currentUser?.role !== 'admin') return;
+
+    void (async () => {
+      setIsLoadingSettings(true);
+      try {
+        const [especialidadesRes, consultoriosRes] = await Promise.all([
+          clinicSettingsService.getSpecialties(clinicId),
+          clinicSettingsService.getConsultingRooms(clinicId)
+        ]);
+
+        if (especialidadesRes.success && especialidadesRes.data) {
+          const especialidadesActivas = especialidadesRes.data.filter((esp: any) => esp.active);
+          setEspecialidades(especialidadesActivas.map((esp: any) => ({
+            value: esp.id,
+            label: esp.name
+          })));
+        }
+
+        if (consultoriosRes.success && consultoriosRes.data) {
+          const consultoriosActivos = consultoriosRes.data.filter((cons: any) => cons.active);
+          setConsultorios(consultoriosActivos.map((cons: any) => ({
+            value: cons.id,
+            label: cons.name
+          })));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    })();
+  }, [clinicId, currentUser?.role]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -88,6 +155,18 @@ export default function ProfilePage() {
           ciudad: user.ciudad || '',
           provincia: user.provincia || '',
           codigoPostal: user.codigoPostal || '',
+          isDoctor: user.isDoctor || false,
+          especialidades: user.especialidades || [],
+          consultorio: user.consultorio || '',
+          matricula: user.matricula || '',
+          horariosAtencion: user.horariosAtencion || [
+            { dia: 1, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 2, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 3, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 4, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 5, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 6, activo: false, horaInicio: '08:00', horaFin: '18:00' }
+          ]
         });
         setAvatarPreview(user.avatar || null);
       } catch (_error) {
@@ -101,6 +180,33 @@ export default function ProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEspecialidadToggle = (especialidadId: string) => {
+    setFormData(prev => {
+      const currentEspecialidades = prev.especialidades || [];
+      const isSelected = currentEspecialidades.includes(especialidadId);
+      
+      return {
+        ...prev,
+        especialidades: isSelected
+          ? currentEspecialidades.filter(id => id !== especialidadId)
+          : [...currentEspecialidades, especialidadId]
+      };
+    });
+  };
+
+  const handleHorarioChange = (diaIndex: number, field: 'activo' | 'horaInicio' | 'horaFin', value: boolean | string) => {
+    setFormData(prev => {
+      const newHorarios = [...(prev.horariosAtencion || [])];
+      if (newHorarios[diaIndex]) {
+        newHorarios[diaIndex] = {
+          ...newHorarios[diaIndex],
+          [field]: value
+        };
+      }
+      return { ...prev, horariosAtencion: newHorarios };
+    });
   };
 
   const handleAvatarClick = () => {
@@ -160,6 +266,18 @@ export default function ProfilePage() {
           ciudad: user.ciudad || '',
           provincia: user.provincia || '',
           codigoPostal: user.codigoPostal || '',
+          isDoctor: user.isDoctor || false,
+          especialidades: user.especialidades || [],
+          consultorio: user.consultorio || '',
+          matricula: user.matricula || '',
+          horariosAtencion: user.horariosAtencion || [
+            { dia: 1, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 2, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 3, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 4, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 5, activo: false, horaInicio: '08:00', horaFin: '18:00' },
+            { dia: 6, activo: false, horaInicio: '08:00', horaFin: '18:00' }
+          ]
         });
         setAvatarPreview(user.avatar || null);
       }
@@ -446,6 +564,158 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
+
+              {/* Configuración como Doctor (solo para admin) */}
+              {currentUser.role === 'admin' && (
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Stethoscope className="w-6 h-6 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-900">Configuración como Doctor</h3>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.isDoctor || false}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isDoctor: e.target.checked }))}
+                        className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="font-medium text-gray-900">También soy doctor y atiendo pacientes</span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Activa esta opción si además de tus funciones administrativas, también atiendes pacientes. 
+                          Podrás configurar tus especialidades, consultorio y horarios de atención.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {formData.isDoctor && (
+                    <div className="space-y-6 pl-6 border-l-2 border-blue-200">
+                      {/* Especialidades */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Especialidades *
+                        </label>
+                        {isLoadingSettings ? (
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Cargando especialidades...</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {especialidades.map((esp) => (
+                              <label
+                                key={esp.value}
+                                className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                  formData.especialidades?.includes(esp.value)
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={formData.especialidades?.includes(esp.value) || false}
+                                  onChange={() => handleEspecialidadToggle(esp.value)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">{esp.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Consultorio y Matrícula */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Consultorio
+                          </label>
+                          {isLoadingSettings ? (
+                            <div className="flex items-center gap-2 text-gray-500 py-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="text-sm">Cargando...</span>
+                            </div>
+                          ) : (
+                            <select
+                              name="consultorio"
+                              value={formData.consultorio || ''}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="">Seleccionar consultorio...</option>
+                              {consultorios.map((cons) => (
+                                <option key={cons.value} value={cons.value}>
+                                  {cons.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Matrícula Profesional
+                          </label>
+                          <input
+                            type="text"
+                            name="matricula"
+                            value={formData.matricula || ''}
+                            onChange={handleInputChange}
+                            placeholder="Ej: MP 12345"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Horarios de Atención */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Horarios de Atención
+                        </label>
+                        <div className="space-y-3">
+                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map((dia, index) => {
+                            const horario = formData.horariosAtencion?.[index];
+                            return (
+                              <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                <label className="flex items-center gap-2 min-w-[100px]">
+                                  <input
+                                    type="checkbox"
+                                    checked={horario?.activo || false}
+                                    onChange={(e) => handleHorarioChange(index, 'activo', e.target.checked)}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700">{dia}</span>
+                                </label>
+                                
+                                {horario?.activo && (
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <input
+                                      type="time"
+                                      value={horario.horaInicio}
+                                      onChange={(e) => handleHorarioChange(index, 'horaInicio', e.target.value)}
+                                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                    <span className="text-gray-500">a</span>
+                                    <input
+                                      type="time"
+                                      value={horario.horaFin}
+                                      onChange={(e) => handleHorarioChange(index, 'horaFin', e.target.value)}
+                                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Botones */}
               <div className="mt-8 flex items-center justify-end gap-4">

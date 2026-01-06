@@ -97,6 +97,9 @@ export interface UserFormData {
   confirmPassword?: string; // Solo para validación en frontend
   estado: string;
   
+  // Admin puede ser doctor también
+  isDoctor?: boolean; // Para usuarios admin que también atienden pacientes
+  
   // Campos para doctor
   especialidades?: string[];
   consultorio?: string;
