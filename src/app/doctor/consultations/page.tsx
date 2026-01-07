@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, type Appointment } from '@/services/api/appointments.service';
 import { patientsService, type Patient } from '@/services/api/patients.service';
+import { backendToFrontend } from '@/utils/appointment-state-mapper';
 import { 
   Stethoscope,
   Plus,
@@ -16,7 +17,8 @@ import {
   Activity,
   Eye,
   Edit,
-  Filter
+  Filter,
+  RefreshCw
 } from 'lucide-react';
 
 // Simular datos de consultas (en el futuro vendrán del backend)
@@ -69,11 +71,21 @@ export default function ConsultationsPage() {
         (patientsRes.data ?? []).forEach((p) => patientsById.set(p.id, p));
 
         const mapStatus = (estado: Appointment['estado']): Consultation['status'] => {
-          switch (estado) {
+          // Usar mapper centralizado para convertir backend a frontend
+          const frontendState = backendToFrontend(estado);
+          
+          // Mapear estados del frontend a estados de consulta
+          switch (frontendState) {
             case 'completada':
               return 'completed';
-            case 'en_curso':
+            case 'en-curso':
               return 'in-progress';
+            case 'programada':
+            case 'confirmada':
+            case 'esperando':
+            case 'cancelada':
+            case 'no-show':
+              return 'pending';
             default:
               return 'pending';
           }
@@ -128,6 +140,96 @@ export default function ConsultationsPage() {
 
     void fetchConsultations();
   }, [currentUser?.id]);
+
+  // Auto-refresh cada 30 segundos para reflejar cambios de recepción
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fetchConsultations = async () => {
+        try {
+          const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+          const doctorId = currentUser?.id as string | undefined;
+
+          if (!doctorId) return;
+
+          const [appointmentsRes, patientsRes] = await Promise.all([
+            appointmentsService.getAppointments(clinicId, { doctorId, limit: 500 }),
+            patientsService.getPatients(clinicId, { limit: 2000 }),
+          ]);
+
+          const patientsById = new Map<string, Patient>();
+          (patientsRes.data ?? []).forEach((p) => patientsById.set(p.id, p));
+
+          const mapStatus = (estado: Appointment['estado']): Consultation['status'] => {
+            // Usar mapper centralizado para convertir backend a frontend
+            const frontendState = backendToFrontend(estado);
+            
+            // Mapear estados del frontend a estados de consulta
+            switch (frontendState) {
+              case 'completada':
+                return 'completed';
+              case 'en-curso':
+                return 'in-progress';
+              case 'programada':
+              case 'confirmada':
+              case 'esperando':
+              case 'cancelada':
+              case 'no-show':
+                return 'pending';
+              default:
+                return 'pending';
+            }
+          };
+
+          const mapType = (tipo: Appointment['tipo']): Consultation['type'] => {
+            switch (tipo) {
+              case 'control':
+                return 'follow-up';
+              case 'urgencia':
+                return 'emergency';
+              default:
+                return 'consultation';
+            }
+          };
+
+          const mapped: Consultation[] = (appointmentsRes.data ?? [])
+            .filter((apt) => apt.doctorId === doctorId)
+            .map((apt) => {
+              const patient = patientsById.get(apt.patientId);
+              const patientName = patient ? `${patient.nombres} ${patient.apellidos}`.trim() : 'Paciente desconocido';
+              const hasMotivo = Boolean(apt.motivo && apt.motivo.trim());
+              return {
+                id: apt.id,
+                patientName,
+                patientId: apt.patientId,
+                date: apt.fecha,
+                time: apt.horaInicio,
+                reason: hasMotivo ? apt.motivo : 'N/A',
+                diagnosis: 'N/A',
+                status: mapStatus(apt.estado),
+                type: mapType(apt.tipo),
+              };
+            })
+            .sort((a, b) => {
+              const aKey = `${a.date} ${a.time}`;
+              const bKey = `${b.date} ${b.time}`;
+              return bKey.localeCompare(aKey);
+            });
+
+          setConsultations(mapped);
+        } catch (e) {
+          console.error('Error en auto-refresh:', e);
+        }
+      };
+
+      void fetchConsultations();
+    }, 30000); // Refresh cada 30 segundos
+
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
+
+  const handleManualRefresh = () => {
+    window.location.reload();
+  };
 
   useEffect(() => {
     let filtered = consultations;
@@ -238,6 +340,14 @@ export default function ConsultationsPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={handleManualRefresh}
+                className="px-4 py-2 text-blue-600 hover:text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors inline-flex items-center gap-2"
+                title="Actualizar consultas"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Actualizar
+              </button>
               <Link
                 href="/doctor/dashboard"
                 className="px-4 py-2 text-gray-600 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

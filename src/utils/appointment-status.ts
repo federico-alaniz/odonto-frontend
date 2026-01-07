@@ -23,7 +23,7 @@ export const getAppointmentStatusConfig = (status: string): StatusConfig => {
     case 'programada':
       return {
         color: 'bg-blue-100 text-blue-800 border-blue-200',
-        text: 'Programado',
+        text: 'Programada',
         icon: Calendar,
         bgCard: 'bg-blue-50'
       };
