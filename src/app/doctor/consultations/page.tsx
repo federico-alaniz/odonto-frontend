@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, type Appointment } from '@/services/api/appointments.service';
 import { patientsService, type Patient } from '@/services/api/patients.service';
-import { backendToFrontend } from '@/utils/appointment-state-mapper';
 import { 
   Stethoscope,
   Plus,
@@ -71,20 +70,16 @@ export default function ConsultationsPage() {
         (patientsRes.data ?? []).forEach((p) => patientsById.set(p.id, p));
 
         const mapStatus = (estado: Appointment['estado']): Consultation['status'] => {
-          // Usar mapper centralizado para convertir backend a frontend
-          const frontendState = backendToFrontend(estado);
-          
-          // Mapear estados del frontend a estados de consulta
-          switch (frontendState) {
+          switch (estado) {
             case 'completada':
               return 'completed';
-            case 'en-curso':
+            case 'en_curso':
               return 'in-progress';
             case 'programada':
             case 'confirmada':
-            case 'esperando':
+              return 'pending';
             case 'cancelada':
-            case 'no-show':
+            case 'no_asistio':
               return 'pending';
             default:
               return 'pending';
@@ -160,20 +155,16 @@ export default function ConsultationsPage() {
           (patientsRes.data ?? []).forEach((p) => patientsById.set(p.id, p));
 
           const mapStatus = (estado: Appointment['estado']): Consultation['status'] => {
-            // Usar mapper centralizado para convertir backend a frontend
-            const frontendState = backendToFrontend(estado);
-            
-            // Mapear estados del frontend a estados de consulta
-            switch (frontendState) {
+            switch (estado) {
               case 'completada':
                 return 'completed';
-              case 'en-curso':
+              case 'en_curso':
                 return 'in-progress';
               case 'programada':
               case 'confirmada':
-              case 'esperando':
+                return 'pending';
               case 'cancelada':
-              case 'no-show':
+              case 'no_asistio':
                 return 'pending';
               default:
                 return 'pending';

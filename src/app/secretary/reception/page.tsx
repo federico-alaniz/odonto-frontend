@@ -29,10 +29,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, Appointment } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { patientsService, Patient } from '@/services/api/patients.service';
-import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
-import { backendToFrontend, frontendToBackend, type FrontendAppointmentState } from '@/utils/appointment-state-mapper';
 
 interface ReceptionAppointment {
   id: string;
@@ -46,13 +44,13 @@ interface ReceptionAppointment {
   endTime: string;
   consultorio: string;
   motivo: string;
-  status: FrontendAppointmentState;
+  status: 'programada' | 'confirmada' | 'esperando' | 'en-curso' | 'completada' | 'no-show' | 'cancelada';
   arrivalTime?: string;
   consultationStartTime?: string;
   priority: 'normal' | 'urgent';
   isNewPatient: boolean;
   estimatedDuration: number; // en minutos
-  isDelayed?: boolean; // Indica si la cita está retrasada (hora pasó y no se confirmó)
+  updatedAt?: string; // Para calcular tiempo de espera
 }
 
 interface WaitingStats {
@@ -118,25 +116,14 @@ export default function ReceptionPage() {
       setLoading(true);
 
       // Cargar datos en paralelo
-      const [appointmentsRes, doctorsRes, adminsRes, patientsRes, settingsRes] = await Promise.all([
+      const [appointmentsRes, doctorsRes, adminsRes, patientsRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId),
         usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' }),
         usersService.getUsers(clinicId, { role: 'admin' }),
-        patientsService.getPatients(clinicId),
-        clinicSettingsService.getSettings(clinicId)
+        patientsService.getPatients(clinicId)
       ]);
 
-      if (appointmentsRes.success && doctorsRes.success && adminsRes.success && patientsRes.success && settingsRes.success) {
-        // Crear mapas de IDs a nombres para especialidades y consultorios
-        const specialtiesMap = new Map(
-          settingsRes.data.specialties.map(s => [s.id, s.name])
-        );
-        const consultingRoomsMap = new Map(
-          settingsRes.data.consultingRooms.map(r => [r.id, r.name || r.number])
-        );
-        
-        console.log('📋 Specialties map:', Array.from(specialtiesMap.entries()));
-        console.log('🏥 Consulting rooms map:', Array.from(consultingRoomsMap.entries()));
+      if (appointmentsRes.success && doctorsRes.success && adminsRes.success && patientsRes.success) {
         setAppointments(appointmentsRes.data);
         const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
         const allDoctors = [...doctorsRes.data, ...adminDoctors];
@@ -163,49 +150,20 @@ export default function ReceptionPage() {
               ? `Dr. ${doctor.nombres} ${doctor.apellidos}`
               : 'Doctor no asignado';
 
-            // Debug: ver estructura de datos del doctor
-            if (doctor && (doctor.role === 'admin' || doctor.isDoctor)) {
-              console.log('🔍 Doctor data:', {
-                id: doctor.id,
-                role: doctor.role,
-                isDoctor: doctor.isDoctor,
-                especialidades: doctor.especialidades,
-                consultorio: doctor.consultorio
-              });
-            }
+            const specialty = doctor?.especialidades?.[0] || 'General';
+            const consultorio = doctor?.consultorio || 'N/A';
 
-            // Resolver especialidad desde el ID
-            let specialty = 'General';
-            if (doctor?.especialidades) {
-              if (Array.isArray(doctor.especialidades) && doctor.especialidades.length > 0) {
-                const firstEspId = doctor.especialidades[0];
-                specialty = specialtiesMap.get(firstEspId) || firstEspId || 'General';
-              } else if (typeof doctor.especialidades === 'string') {
-                specialty = specialtiesMap.get(doctor.especialidades) || doctor.especialidades || 'General';
-              }
-            }
-
-            // Resolver consultorio desde el ID
-            let consultorio = 'N/A';
-            if (doctor?.consultorio) {
-              consultorio = consultingRoomsMap.get(doctor.consultorio) || doctor.consultorio || 'N/A';
-            }
-
-            // Calcular tiempo estimado de finalización
             const startTime = apt.horaInicio;
             const duration = 30; // 30 minutos por defecto
             const [hours, minutes] = startTime.split(':').map(Number);
             const endTime = `${String(hours + Math.floor((minutes + duration) / 60)).padStart(2, '0')}:${String((minutes + duration) % 60).padStart(2, '0')}`;
 
-            // Detectar si la cita está retrasada (hora ya pasó y no está confirmada/en espera/en curso)
-            const currentTime = new Date();
-            const [aptHours, aptMinutes] = apt.horaInicio.split(':').map(Number);
-            const appointmentTime = new Date();
-            appointmentTime.setHours(aptHours, aptMinutes, 0, 0);
+            // Convertir estado backend a frontend para la UI
+            let frontendStatus: string = apt.estado;
+            if (apt.estado === 'en_curso') frontendStatus = 'en-curso';
+            if (apt.estado === 'no_asistio') frontendStatus = 'no-show';
+            // 'confirmada' se mantiene igual en ambos lados
             
-            const isDelayed = currentTime > appointmentTime && 
-                            (apt.estado === 'programada' || apt.estado === 'confirmada');
-
             return {
               id: apt.id,
               patientId: apt.patientId,
@@ -218,13 +176,13 @@ export default function ReceptionPage() {
               endTime,
               consultorio,
               motivo: apt.motivo || 'Consulta general',
-              status: backendToFrontend(apt.estado) as FrontendAppointmentState,
+              status: frontendStatus as any,
               arrivalTime: undefined,
               consultationStartTime: undefined,
               priority: 'normal' as any,
               isNewPatient: false,
               estimatedDuration: duration,
-              isDelayed
+              updatedAt: apt.updatedAt
             } as ReceptionAppointment;
           })
           .sort((a, b) => a.time.localeCompare(b.time));
@@ -340,141 +298,116 @@ export default function ReceptionPage() {
         };
       case 'cancelada':
         return {
-    
-    const patientName = patient 
-      ? `${patient.nombres} ${patient.apellidos}` 
-      : 'Paciente desconocido';
-    
-    const doctorName = doctor
-      ? `Dr. ${doctor.nombres} ${doctor.apellidos}`
-      : 'Doctor no asignado';
+          color: 'bg-red-100 text-red-800 border-red-200',
+          icon: XCircle,
+          text: 'Cancelada',
+          bgCard: 'bg-red-50'
+        };
+      default:
+        return {
+          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          icon: Calendar,
+          text: status,
+          bgCard: 'bg-blue-50'
+        };
+    }
+  };
 
-    // Debug: ver estructura de datos del doctor
-    if (doctor && (doctor.role === 'admin' || doctor.isDoctor)) {
-      console.log('🔍 Doctor data:', {
-        id: doctor.id,
-        role: doctor.role,
-        isDoctor: doctor.isDoctor,
-        especialidades: doctor.especialidades,
-        consultorio: doctor.consultorio
-      });
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    if (!clinicId || !currentUser?.id) {
+      console.error('❌ No hay clinicId o userId');
+      return;
     }
 
-    // Resolver especialidad desde el ID
-    let specialty = 'General';
-    if (doctor?.especialidades) {
-      if (Array.isArray(doctor.especialidades) && doctor.especialidades.length > 0) {
-        const firstEspId = doctor.especialidades[0];
-        specialty = specialtiesMap.get(firstEspId) || firstEspId || 'General';
-      } else if (typeof doctor.especialidades === 'string') {
-        specialty = specialtiesMap.get(doctor.especialidades) || doctor.especialidades || 'General';
-      }
-    }
-
-    // Resolver consultorio desde el ID
-    let consultorio = 'N/A';
-    if (doctor?.consultorio) {
-      consultorio = consultingRoomsMap.get(doctor.consultorio) || doctor.consultorio || 'N/A';
-    }
-
-    // Calcular tiempo estimado de finalización
-    const startTime = apt.horaInicio;
-    const duration = 30; // 30 minutos por defecto
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const endTime = `${String(hours + Math.floor((minutes + duration) / 60)).padStart(2, '0')}:${String((minutes + duration) % 60).padStart(2, '0')}`;
-
-    // Detectar si la cita está retrasada (hora ya pasó y no está confirmada/en espera/en curso)
-    const currentTime = new Date();
-    const [aptHours, aptMinutes] = apt.horaInicio.split(':').map(Number);
-    const appointmentTime = new Date();
-    appointmentTime.setHours(aptHours, aptMinutes, 0, 0);
-    
-    const isDelayed = currentTime > appointmentTime && 
-                    (apt.estado === 'programada' || apt.estado === 'confirmada');
-
-    return {
-      id: apt.id,
-      patientId: apt.patientId,
-      patientName,
-      patientPhone: patient?.telefono || 'N/A',
-      doctorId: apt.doctorId,
-      doctorName,
-      specialty,
-      time: apt.horaInicio,
-      endTime,
-      consultorio,
-      motivo: apt.motivo || 'Consulta general',
-      status: backendToFrontend(apt.estado) as FrontendAppointmentState,
-      arrivalTime: undefined,
-      consultationStartTime: undefined,
-      priority: 'normal' as any,
-      isNewPatient: false,
-      estimatedDuration: duration,
-      isDelayed
-    } as ReceptionAppointment;
-  })
-  .sort((a, b) => a.time.localeCompare(b.time));
-
-// Calcular estadísticas
-// Calcular tiempo promedio de espera real (desde confirmación hasta inicio de consulta)
-const citasConEsperaCompleta = todayCitas.filter(apt => 
-  apt.arrivalTime && apt.consultationStartTime && 
-  (apt.status === 'en-curso' || apt.status === 'completada')
-);
-let promedioEspera = 0;
-  
-if (citasConEsperaCompleta.length > 0) {
-  const tiemposEspera = citasConEsperaCompleta.map(apt => {
-    if (!apt.arrivalTime || !apt.consultationStartTime) return 0;
     try {
-      const [arrHours, arrMinutes] = apt.arrivalTime.split(':').map(Number);
-      const [startHours, startMinutes] = apt.consultationStartTime.split(':').map(Number);
-      const arrivalMinutes = arrHours * 60 + arrMinutes;
-      const consultationStartMinutes = startHours * 60 + startMinutes;
-      return Math.max(0, consultationStartMinutes - arrivalMinutes);
-    } catch {
-      return 0;
-      if (arrTimeParts.length !== 2) return '';
-      
-      const arrHours = parseInt(arrTimeParts[0], 10);
-      const arrMinutes = parseInt(arrTimeParts[1], 10);
-      
-      // Validar que sean números válidos
-      if (isNaN(arrHours) || isNaN(arrMinutes)) return '';
-      
-      const arrivalTotalMinutes = arrHours * 60 + arrMinutes;
-      let endTotalMinutes: number;
-      
-      // Si la cita ya está en curso o completada, usar el tiempo de inicio de consulta
-      if (appointment.consultationStartTime) {
-        const startTimeParts = appointment.consultationStartTime.split(':');
-        if (startTimeParts.length !== 2) return '';
-        
-        const startHours = parseInt(startTimeParts[0], 10);
-        const startMinutes = parseInt(startTimeParts[1], 10);
-        
-        if (isNaN(startHours) || isNaN(startMinutes)) return '';
-        endTotalMinutes = startHours * 60 + startMinutes;
-      } else if (appointment.status === 'esperando') {
-        // Si está esperando, usar la hora actual
-        const nowHours = currentTime.getHours();
-        const nowMinutes = currentTime.getMinutes();
-        endTotalMinutes = nowHours * 60 + nowMinutes;
+      console.log('🔄 Cambiando estado de cita:', { appointmentId, newStatus });
+
+      // Convertir estado frontend a backend (esperando -> confirmada, en-curso -> en_curso, no-show -> no_asistio)
+      let backendStatus: string = newStatus;
+      if (newStatus === 'esperando') backendStatus = 'confirmada';
+      if (newStatus === 'en-curso') backendStatus = 'en_curso';
+      if (newStatus === 'no-show') backendStatus = 'no_asistio';
+
+      // Actualizar en el backend
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        currentUser.id,
+        appointmentId,
+        { estado: backendStatus as any }
+      );
+
+      console.log('📥 Respuesta del backend:', response);
+
+      if (response.success) {
+        // Actualizar estado local solo si el backend confirma
+        setTodayAppointments(prev => 
+          prev.map(apt => {
+            if (apt.id === appointmentId) {
+              const updatedApt = { ...apt, status: newStatus as any };
+              
+              const currentTime = new Date().toLocaleTimeString('es-AR', { 
+                timeZone: 'America/Argentina/Buenos_Aires',
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+              });
+              
+              // Si se confirma llegada, agregar hora de llegada
+              if (newStatus === 'esperando' && !apt.arrivalTime) {
+                updatedApt.arrivalTime = currentTime;
+              }
+              
+              // Si pasa a consulta, agregar hora de inicio de consulta
+              if (newStatus === 'en-curso' && !apt.consultationStartTime) {
+                updatedApt.consultationStartTime = currentTime;
+              }
+              
+              console.log('✅ Estado actualizado localmente:', updatedApt.status);
+              return updatedApt;
+            }
+            return apt;
+          })
+        );
       } else {
-        return '';
+        console.error('❌ Backend no confirmó la actualización');
+        alert('No se pudo actualizar el estado de la cita.');
       }
+    } catch (error) {
+      console.error('❌ Error al actualizar estado:', error);
+      alert('Error al actualizar el estado de la cita.');
+    }
+  };
+
+  const handleNotifyDoctor = (appointment: ReceptionAppointment) => {
+    // Aquí se enviaría notificación al doctor
+  };
+
+  const getWaitingTime = (appointment: ReceptionAppointment) => {
+    // Solo mostrar tiempo de espera para citas confirmadas o en espera
+    if (appointment.status !== 'confirmada' && appointment.status !== 'esperando') {
+      return '';
+    }
+
+    // Usar updatedAt para calcular el tiempo desde que se confirmó la cita
+    if (!appointment.updatedAt) {
+      return '0 min';
+    }
+
+    try {
+      const updatedAt = new Date(appointment.updatedAt);
+      const now = currentTime;
+      const diffMs = now.getTime() - updatedAt.getTime();
+      const diffMinutes = Math.floor(diffMs / 60000);
+
+      if (diffMinutes < 0) return '0 min';
+      if (diffMinutes < 60) return `${diffMinutes} min`;
       
-      const waitingMinutes = endTotalMinutes - arrivalTotalMinutes;
-      
-      if (waitingMinutes < 0) return '';
-      if (waitingMinutes < 60) return `${waitingMinutes}m`;
-      
-      const hours = Math.floor(waitingMinutes / 60);
-      const minutes = waitingMinutes % 60;
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
       return `${hours}h ${minutes}m`;
     } catch (error) {
       console.error('Error calculando tiempo de espera:', error);
-      return '';
+      return '0 min';
     }
   };
 
@@ -667,23 +600,22 @@ if (citasConEsperaCompleta.length > 0) {
                     const waitingTime = getWaitingTime(appointment);
 
                     return (
-                      <tr key={appointment.id} className={`hover:bg-gray-50 ${appointment.isDelayed ? 'bg-red-50' : ''}`}>
+                      <tr key={appointment.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10">
-                              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${appointment.isDelayed ? 'bg-red-100' : 'bg-blue-100'}`}>
-                                <User className={`h-5 w-5 ${appointment.isDelayed ? 'text-red-600' : 'text-blue-600'}`} />
+                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <User className="h-5 w-5 text-blue-600" />
                               </div>
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
-                              {appointment.isDelayed && <div className="text-xs text-red-600 font-medium flex items-center gap-1"><AlertTriangle className="w-3 h-3" />Retrasada</div>}
-                              {waitingTime && !appointment.isDelayed && <div className="text-xs text-yellow-600">Espera: {waitingTime}</div>}
+                              {waitingTime && <div className="text-xs text-yellow-600">Espera: {waitingTime}</div>}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className={`text-sm font-medium ${appointment.isDelayed ? 'text-red-600' : 'text-gray-900'}`}>{appointment.time}</div>
+                          <div className="text-sm text-gray-900">{appointment.time}</div>
                           <div className="text-xs text-gray-500">{appointment.endTime}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -701,34 +633,24 @@ if (citasConEsperaCompleta.length > 0) {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             {appointment.status === 'programada' && (
-                              <>
-                                <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="Confirmar Llegada">
-                                  <Timer className="w-5 h-5" />
-                                </button>
-                                <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="p-1 text-red-600 hover:text-red-700 transition-colors" title="Marcar como No Asistió">
-                                  <XCircle className="w-5 h-5" />
-                                </button>
-                              </>
+                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="Confirmar Llegada">
+                                <Timer className="w-5 h-5" />
+                              </button>
                             )}
                             {appointment.status === 'confirmada' && (
-                              <>
-                                <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="Confirmar Llegada">
-                                  <Timer className="w-5 h-5" />
-                                </button>
-                                <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="p-1 text-red-600 hover:text-red-700 transition-colors" title="Marcar como No Asistió">
-                                  <XCircle className="w-5 h-5" />
-                                </button>
-                              </>
+                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="En Espera">
+                                <Timer className="w-5 h-5" />
+                              </button>
                             )}
                             {appointment.status === 'esperando' && (
-                              <>
-                                <span className="text-xs text-yellow-700 font-medium bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
-                                  En sala de espera
-                                </span>
-                                <button onClick={() => handleStatusChange(appointment.id, 'en-curso')} className="p-1 text-green-600 hover:text-green-700 transition-colors" title="Pasar a Consulta">
-                                  <ArrowRight className="w-5 h-5" />
-                                </button>
-                              </>
+                              <button onClick={() => handleStatusChange(appointment.id, 'en-curso')} className="p-1 text-green-600 hover:text-green-700 transition-colors" title="Pasar a Consulta">
+                                <ArrowRight className="w-5 h-5" />
+                              </button>
+                            )}
+                            {appointment.status === 'programada' && (
+                              <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="p-1 text-red-600 hover:text-red-700 transition-colors" title="No Asistio">
+                                <XCircle className="w-5 h-5" />
+                              </button>
                             )}
                           </div>
                         </td>
