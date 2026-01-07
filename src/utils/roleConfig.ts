@@ -76,12 +76,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'system', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -97,12 +97,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'medical-records', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -113,12 +113,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'patients', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -129,12 +129,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'consultations', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -150,12 +150,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'appointments', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -166,12 +166,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'reception', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -182,12 +182,28 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'billing', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
+            }
+          },
+          {
+            label: 'Plantilla Médica',
+            href: '/secretary/medical-staff',
+            icon: 'Stethoscope',
+            description: 'Estado y novedades del personal médico',
+            roles: ['admin'],
+            requiredPermission: { resource: 'users', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -203,28 +219,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'users', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
-            }
-          },
-          {
-            label: 'Plantilla Médica',
-            href: '/secretary/medical-staff',
-            icon: 'Stethoscope',
-            description: 'Estado y novedades del personal médico',
-            roles: ['admin'],
-            requiredPermission: { resource: 'users', action: 'read' },
-            color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
-              active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -235,12 +235,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'reports', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -251,12 +251,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['admin'],
             requiredPermission: { resource: 'settings', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -298,12 +298,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['doctor'],
             requiredPermission: { resource: 'medical-records', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -319,12 +319,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['doctor'],
             requiredPermission: { resource: 'patients', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -335,12 +335,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['doctor'],
             requiredPermission: { resource: 'consultations', action: 'read' },
             color: {
-              bg: 'hover:bg-gray-100',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-gray-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -382,12 +382,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'appointments', action: 'read' },
             color: {
-              bg: 'hover:bg-pink-50',
-              text: 'hover:text-pink-700',
-              hover: 'hover:text-pink-700',
-              active: 'bg-pink-600 text-white border-l-pink-400',
-              iconBg: 'bg-pink-100',
-              iconText: 'hover:text-pink-600'
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]
@@ -403,12 +403,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'appointments', action: 'read' },
             color: {
-              bg: 'hover:bg-blue-50',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-blue-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -419,12 +419,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'reception', action: 'read' },
             color: {
-              bg: 'hover:bg-green-50',
-              text: 'hover:text-green-700',
-              hover: 'hover:text-green-700',
-              active: 'bg-green-600 text-white border-l-green-400',
-              iconBg: 'bg-green-100',
-              iconText: 'hover:text-green-600'
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -435,12 +435,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'patients', action: 'read' },
             color: {
-              bg: 'hover:bg-purple-50',
-              text: 'hover:text-purple-700',
-              hover: 'hover:text-purple-700',
-              active: 'bg-purple-600 text-white border-l-purple-400',
-              iconBg: 'bg-purple-100',
-              iconText: 'hover:text-purple-600'
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -451,12 +451,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'billing', action: 'read' },
             color: {
-              bg: 'hover:bg-yellow-50',
-              text: 'hover:text-yellow-700',
-              hover: 'hover:text-yellow-700',
-              active: 'bg-yellow-600 text-white border-l-yellow-400',
-              iconBg: 'bg-yellow-100',
-              iconText: 'hover:text-yellow-600'
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           },
           {
@@ -467,12 +467,12 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             roles: ['secretary'],
             requiredPermission: { resource: 'users', action: 'read' },
             color: {
-              bg: 'hover:bg-blue-50',
-              text: 'hover:text-blue-700',
-              hover: 'hover:text-blue-700',
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
               active: 'bg-blue-600 text-white border-l-blue-400',
-              iconBg: 'bg-blue-100',
-              iconText: 'hover:text-blue-600'
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
             }
           }
         ]

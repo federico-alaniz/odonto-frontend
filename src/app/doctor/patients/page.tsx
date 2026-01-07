@@ -12,7 +12,7 @@ export default function DoctorPatientsPage() {
     search: '',
     numeroDocumento: '',
     genero: '',
-    tipoSangre: '',
+    obraSocial: '',
     edadMin: '',
     edadMax: '',
     urgencia: '',

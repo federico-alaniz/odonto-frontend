@@ -1,40 +1,15 @@
 /**
- * Helper para manejar fechas con opción de override para testing
- * 
- * Para simular una fecha diferente:
- * 1. Abre la consola del navegador
- * 2. Ejecuta: localStorage.setItem('DEBUG_DATE', '2024-11-18')
- * 3. Recarga la página
- * 
- * Para volver a la fecha real:
- * localStorage.removeItem('DEBUG_DATE')
+ * Helper para manejar fechas
  */
-
-// Helper para verificar si estamos en el cliente
-const isClient = typeof window !== 'undefined';
 
 // Zona horaria de Buenos Aires
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 export const dateHelper = {
   /**
-   * Obtiene la fecha actual (o la fecha de debug si está configurada)
+   * Obtiene la fecha actual
    */
   now(): Date {
-    if (!isClient) {
-      return new Date();
-    }
-    
-    const debugDate = localStorage.getItem('DEBUG_DATE');
-    
-    if (debugDate) {
-      // Crear fecha en hora local para evitar problemas de zona horaria
-      // Formato esperado: YYYY-MM-DD
-      const [year, month, day] = debugDate.split('-').map(Number);
-      const date = new Date(year, month - 1, day, 12, 0, 0); // Usar mediodía para evitar cambios de día
-      return date;
-    }
-    
     return new Date();
   },
 
@@ -102,58 +77,5 @@ export const dateHelper = {
       minute: '2-digit',
       hour12: false
     });
-  },
-
-  /**
-   * Configura una fecha de debug
-   */
-  setDebugDate(dateString: string) {
-    if (!isClient) return;
-    
-    localStorage.setItem('DEBUG_DATE', dateString);
-  },
-
-  /**
-   * Limpia la fecha de debug
-   */
-  clearDebugDate() {
-    if (!isClient) return;
-    
-    localStorage.removeItem('DEBUG_DATE');
-  },
-
-  /**
-   * Verifica si está en modo debug
-   */
-  isDebugMode(): boolean {
-    if (!isClient) return false;
-    
-    return !!localStorage.getItem('DEBUG_DATE');
-  },
-
-  /**
-   * Obtiene info del modo debug
-   */
-  getDebugInfo(): { isDebug: boolean; debugDate?: string; realDate: string } {
-    if (!isClient) {
-      return {
-        isDebug: false,
-        debugDate: undefined,
-        realDate: this.formatDate(new Date())
-      };
-    }
-    
-    const debugDate = localStorage.getItem('DEBUG_DATE');
-    return {
-      isDebug: !!debugDate,
-      debugDate: debugDate || undefined,
-      realDate: this.formatDate(new Date())
-    };
   }
 };
-
-// Exponer globalmente para facilitar el debug desde la consola
-if (typeof window !== 'undefined') {
-  (window as any).dateHelper = dateHelper;
-  
-}

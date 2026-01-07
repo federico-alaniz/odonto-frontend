@@ -9,6 +9,7 @@ import { patientsService, Patient } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
+import { getAppointmentStatusConfig } from '@/utils/appointment-status';
 import { ConfirmArrivalModal } from '@/components/ConfirmArrivalModal';
 import { 
   Users, 
@@ -207,51 +208,6 @@ export default function SecretaryDashboard() {
     }
   };
 
-  const getStatusClasses = (status: string) => {
-    switch (status) {
-      case 'programada':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'confirmada':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'en-curso':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'completada':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'cancelada':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'programada':
-        return <Calendar className="w-4 h-4" />;
-      case 'confirmada':
-        return <Clock className="w-4 h-4" />;
-      case 'en-curso':
-        return <Activity className="w-4 h-4" />;
-      case 'completada':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'cancelada':
-        return <CalendarX className="w-4 h-4" />;
-      default:
-        return <Calendar className="w-4 h-4" />;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'programada': return 'Programada';
-      case 'confirmada': return 'Paciente esperando';
-      case 'en-curso': return 'En consulta';
-      case 'completada': return 'Completada';
-      case 'cancelada': return 'Cancelada';
-      default: return status;
-    }
-  };
-
   const handleConfirmArrival = (appointmentId: string) => {
     const appointment = todayAppointments.find(apt => apt.id === appointmentId);
     if (appointment) {
@@ -335,7 +291,7 @@ export default function SecretaryDashboard() {
   return (
     <div className="flex-1 bg-gray-50 min-h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -481,9 +437,12 @@ export default function SecretaryDashboard() {
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getStatusClasses(appointment.status)}`}>
-                            {getStatusIcon(appointment.status)}
-                            {getStatusText(appointment.status)}
+                          <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getAppointmentStatusConfig(appointment.status).color}`}>
+                            {getAppointmentStatusConfig(appointment.status).icon && (() => {
+                              const Icon = getAppointmentStatusConfig(appointment.status).icon;
+                              return <Icon className="w-4 h-4" />;
+                            })()}
+                            {getAppointmentStatusConfig(appointment.status).text}
                           </div>
                           
                           <div className="flex items-center gap-1">
