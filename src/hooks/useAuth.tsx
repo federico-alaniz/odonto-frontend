@@ -126,7 +126,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const hasPermission = (resource: string, action: string, scope?: string): boolean => {
     if (!currentUser) return false;
 
+    const permissionKey = `${resource}:${action}`;
+    
+    // Verificar si el permiso está específicamente revocado
+    if (currentUser.customPermissions?.revoked?.includes(permissionKey)) {
+      return false;
+    }
+    
+    // Verificar si el permiso está específicamente otorgado
+    if (currentUser.customPermissions?.granted?.includes(permissionKey)) {
+      return true;
+    }
+    
+    // Verificar permisos del rol base
     return currentUser.permissions.some(permission => {
+      // Admin con wildcard tiene todos los permisos (a menos que estén revocados)
+      if (permission.resource === '*') return true;
+      
       const hasResource = permission.resource === resource;
       const hasAction = permission.actions.includes(action as 'create' | 'read' | 'update' | 'delete');
       const hasScope = !scope || permission.scope === scope || permission.scope === 'all';

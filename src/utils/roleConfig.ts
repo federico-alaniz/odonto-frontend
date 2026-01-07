@@ -8,11 +8,13 @@ const PERMISSIONS: Record<string, Permission[]> = {
     { resource: 'users', actions: ['create', 'read', 'update', 'delete'], scope: 'all' },
     { resource: 'patients', actions: ['create', 'read', 'update', 'delete'], scope: 'all' },
     { resource: 'appointments', actions: ['create', 'read', 'update', 'delete'], scope: 'all' },
-    { resource: 'medical-records', actions: ['read', 'update'], scope: 'all' },
+    { resource: 'medical-records', actions: ['create', 'read', 'update'], scope: 'all' },
     { resource: 'billing', actions: ['create', 'read', 'update', 'delete'], scope: 'all' },
     { resource: 'reports', actions: ['read'], scope: 'all' },
     { resource: 'settings', actions: ['read', 'update'], scope: 'all' },
-    { resource: 'system', actions: ['read', 'update'], scope: 'all' }
+    { resource: 'system', actions: ['read', 'update'], scope: 'all' },
+    { resource: 'consultations', actions: ['create', 'read', 'update'], scope: 'all' },
+    { resource: 'reception', actions: ['create', 'read', 'update'], scope: 'all' }
   ],
   
   // Permisos de Doctor - Enfoque clínico
@@ -34,7 +36,8 @@ const PERMISSIONS: Record<string, Permission[]> = {
     { resource: 'reception', actions: ['create', 'read', 'update'], scope: 'all' },
     { resource: 'communications', actions: ['create', 'read'], scope: 'all' },
     { resource: 'waiting-room', actions: ['read', 'update'], scope: 'all' },
-    { resource: 'insurance', actions: ['read', 'update'], scope: 'all' }
+    { resource: 'insurance', actions: ['read', 'update'], scope: 'all' },
+    { resource: 'users', actions: ['read'], scope: 'all' }
   ]
 };
 
@@ -71,6 +74,113 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'BarChart3',
             description: 'Vista general administrativa',
             roles: ['admin'],
+            requiredPermission: { resource: 'system', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          }
+        ]
+      },
+      {
+        title: 'Atención Médica',
+        items: [
+          {
+            label: 'Dashboard Médico',
+            href: '/doctor/dashboard',
+            icon: 'Stethoscope',
+            description: 'Panel de control médico',
+            roles: ['admin'],
+            requiredPermission: { resource: 'medical-records', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Mis Pacientes',
+            href: '/doctor/patients',
+            icon: 'Users',
+            description: 'Pacientes asignados',
+            roles: ['admin'],
+            requiredPermission: { resource: 'patients', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Consultas',
+            href: '/doctor/consultations',
+            icon: 'ClipboardList',
+            description: 'Consultas médicas',
+            roles: ['admin'],
+            requiredPermission: { resource: 'consultations', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          }
+        ]
+      },
+      {
+        title: 'Gestión Operativa',
+        items: [
+          {
+            label: 'Citas',
+            href: '/secretary/appointments',
+            icon: 'CalendarPlus',
+            description: 'Programación de citas',
+            roles: ['admin'],
+            requiredPermission: { resource: 'appointments', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Recepción',
+            href: '/secretary/reception',
+            icon: 'DoorOpen',
+            description: 'Control de recepción',
+            roles: ['admin'],
+            requiredPermission: { resource: 'reception', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Facturación',
+            href: '/secretary/billing',
+            icon: 'Receipt',
+            description: 'Gestión de facturación',
+            roles: ['admin'],
+            requiredPermission: { resource: 'billing', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -91,6 +201,23 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'UserCog',
             description: 'Gestión de usuarios del sistema',
             roles: ['admin'],
+            requiredPermission: { resource: 'users', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Plantilla Médica',
+            href: '/secretary/medical-staff',
+            icon: 'Stethoscope',
+            description: 'Estado y novedades del personal médico',
+            roles: ['admin'],
+            requiredPermission: { resource: 'users', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -106,6 +233,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'TrendingUp',
             description: 'Informes y analíticas',
             roles: ['admin'],
+            requiredPermission: { resource: 'reports', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -121,6 +249,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Settings',
             description: 'Configuración del sistema',
             roles: ['admin'],
+            requiredPermission: { resource: 'settings', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -167,6 +296,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Stethoscope',
             description: 'Panel de control médico',
             roles: ['doctor'],
+            requiredPermission: { resource: 'medical-records', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -187,6 +317,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Users',
             description: 'Pacientes asignados',
             roles: ['doctor'],
+            requiredPermission: { resource: 'patients', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -202,6 +333,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'ClipboardList',
             description: 'Consultas médicas',
             roles: ['doctor'],
+            requiredPermission: { resource: 'consultations', action: 'read' },
             color: {
               bg: 'hover:bg-gray-100',
               text: 'hover:text-blue-700',
@@ -248,6 +380,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Calendar',
             description: 'Panel de control operativo',
             roles: ['secretary'],
+            requiredPermission: { resource: 'appointments', action: 'read' },
             color: {
               bg: 'hover:bg-pink-50',
               text: 'hover:text-pink-700',
@@ -268,6 +401,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'CalendarPlus',
             description: 'Programación de citas',
             roles: ['secretary'],
+            requiredPermission: { resource: 'appointments', action: 'read' },
             color: {
               bg: 'hover:bg-blue-50',
               text: 'hover:text-blue-700',
@@ -283,6 +417,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'DoorOpen',
             description: 'Control de recepción',
             roles: ['secretary'],
+            requiredPermission: { resource: 'reception', action: 'read' },
             color: {
               bg: 'hover:bg-green-50',
               text: 'hover:text-green-700',
@@ -298,6 +433,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Users',
             description: 'Registro de pacientes',
             roles: ['secretary'],
+            requiredPermission: { resource: 'patients', action: 'read' },
             color: {
               bg: 'hover:bg-purple-50',
               text: 'hover:text-purple-700',
@@ -313,6 +449,7 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             icon: 'Receipt',
             description: 'Gestión de facturación',
             roles: ['secretary'],
+            requiredPermission: { resource: 'billing', action: 'read' },
             color: {
               bg: 'hover:bg-yellow-50',
               text: 'hover:text-yellow-700',
@@ -320,6 +457,22 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
               active: 'bg-yellow-600 text-white border-l-yellow-400',
               iconBg: 'bg-yellow-100',
               iconText: 'hover:text-yellow-600'
+            }
+          },
+          {
+            label: 'Plantilla Médica',
+            href: '/secretary/medical-staff',
+            icon: 'Stethoscope',
+            description: 'Estado y novedades del personal médico',
+            roles: ['secretary'],
+            requiredPermission: { resource: 'users', action: 'read' },
+            color: {
+              bg: 'hover:bg-blue-50',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-blue-100',
+              iconText: 'hover:text-blue-600'
             }
           }
         ]

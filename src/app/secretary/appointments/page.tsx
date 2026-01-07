@@ -60,9 +60,10 @@ export default function SecretaryAppointmentsPage() {
       setLoading(true);
 
       // Cargar citas, doctores y pacientes en paralelo
-      const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
+      const [appointmentsRes, doctorsRes, adminsRes, patientsRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId, { limit: 1000 }),
         usersService.getUsers(clinicId, { role: 'doctor', limit: 100 }),
+        usersService.getUsers(clinicId, { role: 'admin', limit: 100 }),
         patientsService.getPatients(clinicId, { limit: 1000 })
       ]);
 
@@ -70,8 +71,12 @@ export default function SecretaryAppointmentsPage() {
       console.log(' Doctors loaded:', doctorsRes.data.length);
       console.log(' Patients loaded:', patientsRes.data.length);
 
+      // Filtrar admins que tienen isDoctor = true y combinar con doctores
+      const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+      const allDoctors = [...doctorsRes.data, ...adminDoctors];
+
       setAppointments(appointmentsRes.data);
-      setDoctors(doctorsRes.data);
+      setDoctors(allDoctors);
       setPatients(patientsRes.data);
 
     } catch (error) {

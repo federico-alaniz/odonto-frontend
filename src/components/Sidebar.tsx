@@ -204,7 +204,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps) {
   const currentRole = useCurrentRole();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, hasPermission } = useAuth();
   const pathname = usePathname();
   const { buildPath } = useTenant();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
@@ -214,7 +214,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   const clinicMetaStorageKey = clinicId ? `${clinicId}_clinic_meta` : 'clinic_meta';
   const [clinicMeta, setClinicMeta] = useState<{ clinicName?: string; logo?: string } | null>(null);
 
-  // Obtener secciones del sidebar basadas en el rol actual
+  // Obtener secciones del sidebar basadas en el rol actual y permisos
   const getSidebarSections = (): SidebarSection[] => {
     if (!currentRole) {
       // Fallback a secciones básicas si no hay rol definido
@@ -241,16 +241,31 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       ];
     }
     
-    return currentRole.sidebarSections.map(section => ({
-      title: section.title,
-      items: section.items.map(item => ({
-        label: item.label,
-        href: item.href,
-        icon: iconMap[item.icon] || User,
-        description: item.description,
-        color: item.color
+    // Filtrar items basándose en permisos del usuario
+    const filteredSections = currentRole.sidebarSections
+      .map(section => ({
+        title: section.title,
+        items: section.items
+          .filter(item => {
+            // Si el item tiene un permiso requerido, verificar que el usuario lo tenga
+            if (item.requiredPermission) {
+              const { resource, action } = item.requiredPermission;
+              return hasPermission(resource, action);
+            }
+            // Si no tiene permiso requerido, mostrar el item
+            return true;
+          })
+          .map(item => ({
+            label: item.label,
+            href: item.href,
+            icon: iconMap[item.icon] || User,
+            description: item.description,
+            color: item.color
+          }))
       }))
-    }));
+      .filter(section => section.items.length > 0); // Eliminar secciones vacías
+    
+    return filteredSections;
   };
 
   const dynamicSidebarSections = getSidebarSections();

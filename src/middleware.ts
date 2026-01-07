@@ -60,13 +60,14 @@ export async function middleware(req: NextRequest) {
     url.pathname = defaultHome;
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith('/doctor') && role !== 'doctor') {
+  // Admin puede acceder a rutas de doctor y secretary
+  if (pathname.startsWith('/doctor') && role !== 'doctor' && role !== 'admin') {
     const url = req.nextUrl.clone();
     const defaultHome = role ? getRoleConfig(role).defaultHomePage : '/login';
     url.pathname = defaultHome;
     return NextResponse.redirect(url);
   }
-  if (pathname.startsWith('/secretary') && role !== 'secretary') {
+  if (pathname.startsWith('/secretary') && role !== 'secretary' && role !== 'admin') {
     const url = req.nextUrl.clone();
     const defaultHome = role ? getRoleConfig(role).defaultHomePage : '/login';
     url.pathname = defaultHome;

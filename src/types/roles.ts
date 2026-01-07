@@ -37,7 +37,12 @@ export interface User {
   role: UserRole;
   estado: 'activo' | 'inactivo' | 'suspendido';
   isActive: boolean;
+  isDoctor?: boolean; // Para usuarios admin que también atienden pacientes
   permissions: Permission[];
+  customPermissions?: {
+    granted: string[]; // Permisos adicionales otorgados (formato: "resource:action")
+    revoked: string[]; // Permisos específicos revocados (formato: "resource:action")
+  };
   lastLogin?: Date;
   
   // Auditoría
@@ -155,6 +160,10 @@ export interface SidebarItem {
   icon: string; // Nombre del icono de Lucide
   description?: string;
   roles: UserRole[]; // Roles que pueden ver este item
+  requiredPermission?: {
+    resource: string;
+    action: 'create' | 'read' | 'update' | 'delete';
+  }; // Permiso requerido para ver este item
   color: {
     bg: string;
     text: string;

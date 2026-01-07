@@ -55,9 +55,10 @@ export default function EditAppointmentPage() {
       setLoading(true);
 
       // Cargar cita, doctores y paciente en paralelo
-      const [appointmentRes, doctorsRes] = await Promise.all([
+      const [appointmentRes, doctorsRes, adminsRes] = await Promise.all([
         appointmentsService.getAppointmentById(clinicId, appointmentId),
-        usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' })
+        usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' }),
+        usersService.getUsers(clinicId, { role: 'admin', estado: 'activo' })
       ]);
 
       if (appointmentRes.success && appointmentRes.data) {
@@ -77,8 +78,12 @@ export default function EditAppointmentPage() {
         }
       }
 
-      if (doctorsRes.success) {
-        setDoctors(doctorsRes.data);
+      if (doctorsRes.success && adminsRes.success) {
+        // Filtrar admins que tienen isDoctor = true
+        const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+        // Combinar doctores y admin-doctores
+        const allDoctors = [...doctorsRes.data, ...adminDoctors];
+        setDoctors(allDoctors);
       }
     } catch (error) {
       console.error('Error cargando datos:', error);

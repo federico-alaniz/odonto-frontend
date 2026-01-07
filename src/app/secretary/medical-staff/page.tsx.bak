@@ -1,0 +1,515 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { 
+  Stethoscope,
+  Users,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  Activity,
+  UserCheck,
+  UserX,
+  Bell,
+  Search,
+  Filter,
+  ChevronDown,
+  LogIn,
+  LogOut,
+  CircleDot,
+  FileText,
+  Briefcase,
+  Plane,
+  Home,
+  AlertTriangle
+} from 'lucide-react';
+import { usersService } from '@/services/api/users.service';
+import { User } from '@/types/roles';
+
+type TabType = 'profesionales' | 'avisos' | 'ausencias';
+
+interface DoctorWithStatus extends User {
+  isOnline?: boolean;
+  loginTime?: string;
+  logoutTime?: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  isAttending?: boolean;
+  currentPatient?: string;
+  currentPatientId?: string;
+}
+
+interface Aviso {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  mensaje: string;
+  tipo: 'informativo' | 'urgente' | 'recordatorio';
+  fecha: string;
+  hora: string;
+  leido: boolean;
+}
+
+interface Ausencia {
+  id: string;
+  doctorId: string;
+  doctorName: string;
+  tipo: 'sin_aviso' | 'licencia' | 'vacaciones' | 'razones_particulares' | 'fuerza_mayor';
+  fechaInicio: string;
+  fechaFin?: string;
+  descripcion: string;
+  aprobado: boolean;
+}
+
+export default function MedicalStaffPage() {
+  const { currentUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('profesionales');
+  const [doctors, setDoctors] = useState<DoctorWithStatus[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [ausencias, setAusencias] = useState<Ausencia[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+
+  useEffect(() => {
+    loadMedicalStaff();
+    loadAvisos();
+    loadAusencias();
+  }, []);
+
+  const loadMedicalStaff = async () => {
+    if (!clinicId) return;
+    
+    try {
+      setLoading(true);
+      
+      const [doctorsRes, adminsRes] = await Promise.all([
+        usersService.getUsers(clinicId, { role: 'doctor', limit: 100 }),
+        usersService.getUsers(clinicId, { role: 'admin', limit: 100 })
+      ]);
+
+      const adminDoctors = adminsRes.data.filter((user: User) => user.isDoctor === true);
+      
+      // Simulación de datos - en producción vendría del backend
+      const allDoctors: DoctorWithStatus[] = [...doctorsRes.data, ...adminDoctors].map(doctor => {
+        const isOnline = Math.random() > 0.3;
+        const isAttending = isOnline && Math.random() > 0.5;
+        return {
+          ...doctor,
+          isOnline,
+          loginTime: isOnline ? new Date(Date.now() - Math.random() * 14400000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined,
+          logoutTime: !isOnline && Math.random() > 0.5 ? new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined,
+          scheduledStart: '08:00',
+          scheduledEnd: '16:00',
+          isAttending,
+          currentPatient: isAttending ? ['Juan Pérez', 'María González', 'Carlos López', 'Ana Martínez'][Math.floor(Math.random() * 4)] : undefined,
+          currentPatientId: isAttending ? 'PAT-' + Math.floor(Math.random() * 1000) : undefined
+        };
+      });
+
+      setDoctors(allDoctors);
+    } catch (error) {
+      console.error('Error cargando personal médico:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAvisos = () => {
+    // Simulación - en producción vendría del backend
+    const mockAvisos: Aviso[] = [
+      {
+        id: '1',
+        doctorId: 'doc1',
+        doctorName: 'Dr. Juan Pérez',
+        mensaje: 'Llegaré 30 minutos tarde por tráfico',
+        tipo: 'informativo',
+        fecha: new Date().toISOString().split('T')[0],
+        hora: '08:15',
+        leido: false
+      },
+      {
+        id: '2',
+        doctorId: 'doc2',
+        doctorName: 'Dra. María González',
+        mensaje: 'Paciente con síntomas graves en consultorio 3, requiere atención urgente',
+        tipo: 'urgente',
+        fecha: new Date().toISOString().split('T')[0],
+        hora: '10:30',
+        leido: false
+      },
+      {
+        id: '3',
+        doctorId: 'doc3',
+        doctorName: 'Dr. Carlos López',
+        mensaje: 'Recordar reprogramar citas de la tarde para mañana',
+        tipo: 'recordatorio',
+        fecha: new Date().toISOString().split('T')[0],
+        hora: '14:00',
+        leido: true
+      }
+    ];
+    setAvisos(mockAvisos);
+  };
+
+  const loadAusencias = () => {
+    // Simulación - en producción vendría del backend
+    const mockAusencias: Ausencia[] = [
+      {
+        id: '1',
+        doctorId: 'doc4',
+        doctorName: 'Dr. Roberto Fernández',
+        tipo: 'licencia',
+        fechaInicio: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+        fechaFin: new Date(Date.now() + 172800000).toISOString().split('T')[0],
+        descripcion: 'Licencia médica por gripe',
+        aprobado: true
+      },
+      {
+        id: '2',
+        doctorId: 'doc5',
+        doctorName: 'Dra. Laura Sánchez',
+        tipo: 'vacaciones',
+        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaFin: new Date(Date.now() + 604800000).toISOString().split('T')[0],
+        descripcion: 'Vacaciones programadas',
+        aprobado: true
+      },
+      {
+        id: '3',
+        doctorId: 'doc6',
+        doctorName: 'Dr. Miguel Torres',
+        tipo: 'sin_aviso',
+        fechaInicio: new Date().toISOString().split('T')[0],
+        descripcion: 'No se presentó sin aviso previo',
+        aprobado: false
+      },
+      {
+        id: '4',
+        doctorId: 'doc7',
+        doctorName: 'Dra. Patricia Ruiz',
+        tipo: 'fuerza_mayor',
+        fechaInicio: new Date().toISOString().split('T')[0],
+        descripcion: 'Emergencia familiar - hospitalización de familiar directo',
+        aprobado: true
+      }
+    ];
+    setAusencias(mockAusencias);
+  };
+
+  const filteredDoctors = doctors.filter(doctor => 
+    `${doctor.nombres} ${doctor.apellidos}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doctor.especialidades?.some(esp => esp.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredAvisos = avisos.filter(aviso =>
+    aviso.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    aviso.mensaje.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredAusencias = ausencias.filter(ausencia =>
+    ausencia.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const onlineDoctors = doctors.filter(d => d.isOnline).length;
+  const attendingDoctors = doctors.filter(d => d.isAttending).length;
+  const avisosNoLeidos = avisos.filter(a => !a.leido).length;
+
+  const getAusenciaTipo = (tipo: string) => {
+    switch (tipo) {
+      case 'sin_aviso': return { label: 'Sin Aviso', color: 'bg-red-100 text-red-700', icon: <AlertTriangle className="w-4 h-4" /> };
+      case 'licencia': return { label: 'Licencia', color: 'bg-blue-100 text-blue-700', icon: <FileText className="w-4 h-4" /> };
+      case 'vacaciones': return { label: 'Vacaciones', color: 'bg-green-100 text-green-700', icon: <Plane className="w-4 h-4" /> };
+      case 'razones_particulares': return { label: 'Razones Particulares', color: 'bg-yellow-100 text-yellow-700', icon: <Home className="w-4 h-4" /> };
+      case 'fuerza_mayor': return { label: 'Fuerza Mayor', color: 'bg-orange-100 text-orange-700', icon: <AlertCircle className="w-4 h-4" /> };
+      default: return { label: tipo, color: 'bg-gray-100 text-gray-700', icon: <Bell className="w-4 h-4" /> };
+    }
+  };
+
+  const getAvisoTipo = (tipo: string) => {
+    switch (tipo) {
+      case 'urgente': return { color: 'bg-red-50 border-red-200', icon: <AlertCircle className="w-5 h-5 text-red-600" />, badge: 'bg-red-100 text-red-700' };
+      case 'recordatorio': return { color: 'bg-blue-50 border-blue-200', icon: <Bell className="w-5 h-5 text-blue-600" />, badge: 'bg-blue-100 text-blue-700' };
+      default: return { color: 'bg-gray-50 border-gray-200', icon: <FileText className="w-5 h-5 text-gray-600" />, badge: 'bg-gray-100 text-gray-700' };
+    }
+  };
+
+  const getSpecialtyName = (specialty: string): string => {
+    const names: Record<string, string> = {
+      'clinica-medica': 'Clínica Médica',
+      'medicina-interna': 'Medicina Interna',
+      'cardiologia': 'Cardiología',
+      'pediatria': 'Pediatría',
+      'dermatologia': 'Dermatología',
+      'ginecologia': 'Ginecología',
+      'obstetricia': 'Obstetricia',
+      'odontologia': 'Odontología',
+      'traumatologia': 'Traumatología',
+      'ortopedia': 'Ortopedia',
+      'psiquiatria': 'Psiquiatría'
+    };
+    return names[specialty] || specialty;
+  };
+
+  return (
+    <div className="flex-1 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
+                <Stethoscope className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Plantilla Médica</h1>
+                <p className="text-gray-600 mt-1">Estado y novedades del personal médico</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-8">
+        {/* Estadísticas Rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Total Médicos</span>
+              <Users className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="text-3xl font-bold text-gray-900">{doctors.length}</div>
+            <div className="text-xs text-gray-500 mt-1">Personal activo</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Presentes</span>
+              <UserCheck className="w-5 h-5 text-green-600" />
+            </div>
+            <div className="text-3xl font-bold text-green-700">{onlineDoctors}</div>
+            <div className="text-xs text-green-600 mt-1">Conectados ahora</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Ausentes</span>
+              <UserX className="w-5 h-5 text-gray-600" />
+            </div>
+            <div className="text-3xl font-bold text-gray-700">{offlineDoctors}</div>
+            <div className="text-xs text-gray-500 mt-1">No conectados</div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Novedades</span>
+              <Bell className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div className="text-3xl font-bold text-yellow-700">{novedades.length}</div>
+            <div className="text-xs text-yellow-600 mt-1">Hoy</div>
+          </div>
+        </div>
+
+        {/* Novedades */}
+        {novedades.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Bell className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-900">Novedades del Día</h2>
+            </div>
+            <div className="space-y-3">
+              {novedades.map(novedad => (
+                <div 
+                  key={novedad.id}
+                  className={`border rounded-lg p-4 ${getNovedadColor(novedad.type)}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {getNovedadIcon(novedad.type)}
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="font-semibold text-gray-900">{novedad.doctorName}</h3>
+                        <span className="text-xs font-medium text-gray-600">
+                          {getNovedadLabel(novedad.type)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">{novedad.motivo}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(novedad.fecha).toLocaleDateString('es-AR')}
+                        </span>
+                        {novedad.horaInicio && novedad.horaFin && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {novedad.horaInicio} - {novedad.horaFin}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Búsqueda y Filtros */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o especialidad..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Filter className="w-4 h-4" />
+                <span>
+                  {filterStatus === 'all' && 'Todos'}
+                  {filterStatus === 'online' && 'Presentes'}
+                  {filterStatus === 'offline' && 'Ausentes'}
+                </span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {showFilterDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowFilterDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
+                    <button
+                      onClick={() => { setFilterStatus('all'); setShowFilterDropdown(false); }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      Todos
+                    </button>
+                    <button
+                      onClick={() => { setFilterStatus('online'); setShowFilterDropdown(false); }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      Presentes
+                    </button>
+                    <button
+                      onClick={() => { setFilterStatus('offline'); setShowFilterDropdown(false); }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    >
+                      Ausentes
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Listado de Médicos */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Users className="w-5 h-5 text-blue-600" />
+            <h2 className="text-xl font-bold text-gray-900">Personal Médico</h2>
+            <span className="text-sm text-gray-500">({filteredDoctors.length})</span>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Activity className="w-8 h-8 text-blue-600 animate-spin" />
+            </div>
+          ) : filteredDoctors.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">No se encontraron médicos</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredDoctors.map(doctor => (
+                <div 
+                  key={doctor.id}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold relative">
+                        {doctor.nombres.charAt(0)}{doctor.apellidos.charAt(0)}
+                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                          doctor.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                        }`} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          {doctor.nombres} {doctor.apellidos}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          {doctor.especialidades && doctor.especialidades.length > 0
+                            ? getSpecialtyName(doctor.especialidades[0])
+                            : 'Sin especialidad'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    {doctor.consultorio && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span>Consultorio {doctor.consultorio}</span>
+                      </div>
+                    )}
+                    {doctor.telefono && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="w-4 h-4" />
+                        <span>{doctor.telefono}</span>
+                      </div>
+                    )}
+                    {doctor.email && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Mail className="w-4 h-4" />
+                        <span className="truncate">{doctor.email}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        doctor.isOnline 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {doctor.isOnline ? 'Presente' : 'Ausente'}
+                      </span>
+                      {doctor.lastActivity && (
+                        <span className="text-xs text-gray-500">
+                          {new Date(doctor.lastActivity).toLocaleTimeString('es-AR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
