@@ -32,6 +32,7 @@ import { usersService } from '@/services/api/users.service';
 import { User } from '@/types/roles';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
+import UserPermissionsModal from '@/components/UserPermissionsModal';
 
 interface UserFilters {
   search: string;
@@ -41,7 +42,7 @@ interface UserFilters {
 }
 
 export default function AdminUsersPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export default function AdminUsersPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUserForView, setSelectedUserForView] = useState<User | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<User | null>(null);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
   const currentUserId = (currentUser as any)?.id;
@@ -121,6 +123,43 @@ export default function AdminUsersPage() {
       showError('Error al eliminar', 'No se pudo eliminar el usuario. Intenta nuevamente.');
       console.error('Error deleting user:', err);
     }
+  };
+
+  const handleToggleUserStatus = async (user: User) => {
+    setActiveDropdown(null);
+    
+    const newEstado = user.estado === 'activo' ? 'inactivo' : 'activo';
+    
+    try {
+      await usersService.updateUser(
+        user.id,
+        { estado: newEstado } as any,
+        clinicId,
+        currentUserId
+      );
+      await loadUsers();
+      showSuccess(
+        'Estado actualizado',
+        `Usuario ${newEstado === 'activo' ? 'activado' : 'desactivado'} exitosamente`
+      );
+    } catch (err) {
+      showError('Error al actualizar', 'No se pudo cambiar el estado del usuario.');
+      console.error('Error updating user status:', err);
+    }
+  };
+
+  const handleSendEmail = (email: string) => {
+    setActiveDropdown(null);
+    if (email) {
+      window.location.href = `mailto:${email}`;
+    } else {
+      showError('Email no disponible', 'Este usuario no tiene un email configurado.');
+    }
+  };
+
+  const handleManagePermissions = (user: User) => {
+    setActiveDropdown(null);
+    setSelectedUserForPermissions(user);
   };
 
   // Filtrar usuarios
@@ -671,35 +710,28 @@ export default function AdminUsersPage() {
                                 />
                                 <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[101]">
                                   <button 
-                                    onClick={() => {
-                                      // TODO: Implementar cambio de estado
-                                      setActiveDropdown(null);
-                                    }}
+                                    onClick={() => handleToggleUserStatus(user)}
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                   >
                                     {user.estado === 'activo' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                                     {user.estado === 'activo' ? 'Desactivar' : 'Activar'}
                                   </button>
                                   <button 
-                                    onClick={() => {
-                                      // TODO: Implementar envío de email
-                                      setActiveDropdown(null);
-                                    }}
+                                    onClick={() => handleSendEmail(user.email)}
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                   >
                                     <Mail className="w-4 h-4" />
                                     Enviar email
                                   </button>
-                                  <button 
-                                    onClick={() => {
-                                      // TODO: Implementar gestión de permisos
-                                      setActiveDropdown(null);
-                                    }}
-                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <Shield className="w-4 h-4" />
-                                    Permisos
-                                  </button>
+                                  {hasPermission('permissions', 'update') && (
+                                    <button 
+                                      onClick={() => handleManagePermissions(user)}
+                                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                    >
+                                      <Shield className="w-4 h-4" />
+                                      Permisos
+                                    </button>
+                                  )}
                                 </div>
                               </>
                             )}
@@ -1031,6 +1063,20 @@ export default function AdminUsersPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Modal de Permisos Personalizados */}
+        {selectedUserForPermissions && (
+          <UserPermissionsModal
+            user={selectedUserForPermissions}
+            clinicId={clinicId}
+            currentUserId={currentUserId}
+            onClose={() => setSelectedUserForPermissions(null)}
+            onUpdate={() => {
+              loadUsers();
+              setSelectedUserForPermissions(null);
+            }}
+          />
         )}
       </div>
     </div>

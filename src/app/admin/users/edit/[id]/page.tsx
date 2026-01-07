@@ -17,7 +17,12 @@ import {
   X,
   Check,
   Loader2,
-  Bell
+  Bell,
+  MoreVertical,
+  UserX,
+  UserCheck,
+  Shield,
+  Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { UserFormData, HorarioAtencion, User as UserType } from '@/types/roles';
@@ -54,6 +59,7 @@ export default function EditUserPage() {
   const [especialidadSearch, setEspecialidadSearch] = useState('');
   const [consultorios, setConsultorios] = useState<Array<{ id: string; name: string; number: string }>>([]);
   const [areas, setAreas] = useState<Array<{ id: string; name: string; description: string }>>([]);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
   const currentUserId = (currentUser as any)?.id;
@@ -307,18 +313,115 @@ export default function EditUserPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-6 py-6">
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/admin/users"
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6 text-gray-600" />
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900">Editar Usuario</h1>
-              <p className="text-gray-600 mt-1">
-                Modificar información de {originalData?.nombres} {originalData?.apellidos}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Link
+                href="/admin/users"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6 text-gray-600" />
+              </Link>
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900">Editar Usuario</h1>
+                <p className="text-gray-600 mt-1">
+                  Modificar información de {originalData?.nombres} {originalData?.apellidos}
+                </p>
+              </div>
+            </div>
+            
+            {/* Menú de Acciones */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Más acciones"
+              >
+                <MoreVertical className="w-6 h-6 text-gray-600" />
+              </button>
+              
+              {showActionsMenu && (
+                <>
+                  {/* Backdrop para cerrar el menú */}
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowActionsMenu(false)}
+                  />
+                  
+                  {/* Menú desplegable */}
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                    {/* Ver perfil */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        // Navegar a vista de perfil (si existe)
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-sm">Ver perfil</span>
+                    </button>
+                    
+                    {/* Desactivar/Activar usuario */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        const newEstado = formData.estado === 'activo' ? 'inactivo' : 'activo';
+                        setFormData({ ...formData, estado: newEstado });
+                        showSuccess(
+                          'Estado actualizado',
+                          `Usuario ${newEstado === 'activo' ? 'activado' : 'desactivado'}. Recuerda guardar los cambios.`
+                        );
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    >
+                      {formData.estado === 'activo' ? (
+                        <>
+                          <UserX className="w-4 h-4" />
+                          <span className="text-sm">Desactivar</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4" />
+                          <span className="text-sm">Activar</span>
+                        </>
+                      )}
+                    </button>
+                    
+                    {/* Enviar email */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        if (formData.email) {
+                          window.location.href = `mailto:${formData.email}`;
+                        } else {
+                          showError('Email no disponible', 'Este usuario no tiene un email configurado.');
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span className="text-sm">Enviar email</span>
+                    </button>
+                    
+                    {/* Gestionar permisos */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        router.push(buildPath('/admin/settings?tab=permisos'));
+                      }}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center gap-3 text-gray-700"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span className="text-sm">Permisos</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -392,6 +495,76 @@ export default function EditUserPage() {
                   {errors.telefono && (
                     <p className="mt-1 text-sm text-red-600">{errors.telefono}</p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Documento
+                  </label>
+                  <select
+                    value={formData.tipoDocumento || ''}
+                    onChange={(e) => setFormData({ ...formData, tipoDocumento: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccionar tipo</option>
+                    <option value="DNI">DNI</option>
+                    <option value="Pasaporte">Pasaporte</option>
+                    <option value="CI">CI</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Número de Documento
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.numeroDocumento || ''}
+                    onChange={(e) => setFormData({ ...formData, numeroDocumento: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha de Nacimiento
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.fechaNacimiento || ''}
+                    onChange={(e) => setFormData({ ...formData, fechaNacimiento: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Género
+                  </label>
+                  <select
+                    value={formData.genero || ''}
+                    onChange={(e) => setFormData({ ...formData, genero: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccionar género</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Dirección
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.direccion || ''}
+                    onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Calle, número, piso, depto"
+                  />
                 </div>
 
                 <div>

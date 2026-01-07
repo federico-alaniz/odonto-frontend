@@ -36,7 +36,8 @@ const PERMISSIONS: Record<string, Permission[]> = {
     { resource: 'reception', actions: ['create', 'read', 'update'], scope: 'all' },
     { resource: 'communications', actions: ['create', 'read'], scope: 'all' },
     { resource: 'waiting-room', actions: ['read', 'update'], scope: 'all' },
-    { resource: 'insurance', actions: ['read', 'update'], scope: 'all' }
+    { resource: 'insurance', actions: ['read', 'update'], scope: 'all' },
+    { resource: 'users', actions: ['read'], scope: 'all' }
   ]
 };
 
@@ -199,6 +200,22 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             href: '/admin/users',
             icon: 'UserCog',
             description: 'Gestión de usuarios del sistema',
+            roles: ['admin'],
+            requiredPermission: { resource: 'users', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-100',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-100',
+              iconText: 'hover:text-blue-600'
+            }
+          },
+          {
+            label: 'Plantilla Médica',
+            href: '/secretary/medical-staff',
+            icon: 'Stethoscope',
+            description: 'Estado y novedades del personal médico',
             roles: ['admin'],
             requiredPermission: { resource: 'users', action: 'read' },
             color: {
@@ -440,6 +457,22 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
               active: 'bg-yellow-600 text-white border-l-yellow-400',
               iconBg: 'bg-yellow-100',
               iconText: 'hover:text-yellow-600'
+            }
+          },
+          {
+            label: 'Plantilla Médica',
+            href: '/secretary/medical-staff',
+            icon: 'Stethoscope',
+            description: 'Estado y novedades del personal médico',
+            roles: ['secretary'],
+            requiredPermission: { resource: 'users', action: 'read' },
+            color: {
+              bg: 'hover:bg-blue-50',
+              text: 'hover:text-blue-700',
+              hover: 'hover:text-blue-700',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-blue-100',
+              iconText: 'hover:text-blue-600'
             }
           }
         ]
