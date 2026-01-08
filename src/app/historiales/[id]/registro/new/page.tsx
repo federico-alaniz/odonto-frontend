@@ -149,17 +149,10 @@ export default function NewMedicalRecordPage() {
         if (appointmentData) {
           setAppointment(appointmentData);
           
-          // Configurar automáticamente el tipo de consulta basado en la especialidad del doctor actual
-          const doctorSpecialties = (currentUser as any)?.especialidades || [];
-          const doctorSpecialty = doctorSpecialties[0] || '';
-          
-          if (doctorSpecialty.toLowerCase().includes('odonto')) {
-            setConsultationType('odontologia');
-            setShowDatosOdonto(true);
-            setShowOdontogramas(true);
-          } else {
-            setConsultationType('general');
-          }
+          // Mantener tipo de consulta como odontología (sistema exclusivo de odontología)
+          setConsultationType('odontologia');
+          setShowDatosOdonto(true);
+          setShowOdontogramas(true);
         }
 
         // Intentar cargar registro borrador existente para esta cita
@@ -196,9 +189,10 @@ export default function NewMedicalRecordPage() {
               materiales: draftRecord.datosOdontologicos?.materiales || ''
             });
 
-            if (draftRecord.odontogramas) {
-              setHistoricalOdontogram(draftRecord.odontogramas.historico || []);
-              setCurrentOdontogram(draftRecord.odontogramas.actual || []);
+            // Solo cargar el odontograma actual del borrador
+            // El odontograma histórico se cargará desde el otro useEffect con todos los registros guardados
+            if (draftRecord.odontogramas?.actual) {
+              setCurrentOdontogram(draftRecord.odontogramas.actual);
             }
 
             showSuccess('Borrador cargado', 'Se ha cargado el registro médico borrador de esta consulta');
@@ -234,61 +228,72 @@ export default function NewMedicalRecordPage() {
   // Cargar registros médicos previos para construir el odontograma histórico
   useEffect(() => {
     const loadHistoricalOdontogram = async () => {
+      if (!currentUser) {
+        return;
+      }
+
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      
+      if (!clinicId || !patientId) {
+        return;
+      }
+
       try {
-        const response = await medicalRecordsService.getByPatient(patientId);
+        const response = await medicalRecordsApiService.getPatientRecords(patientId, clinicId, 1, 1000);
         if (response.success && response.data) {
-          // Acumular todas las intervenciones de registros previos
-          const allConditions: ToothCondition[] = [];
+          // Acumular todas las intervenciones de registros previos guardados (no borradores)
           const toothMap = new Map<number, ToothCondition>();
 
-          response.data.forEach((record: any) => {
-            if (record.odontogramas?.actual) {
-              record.odontogramas.actual.forEach((condition: any) => {
-                const existing = toothMap.get(condition.number);
-                
-                if (!existing) {
-                  // Si el diente no existe en el mapa, agregarlo
-                  toothMap.set(condition.number, { ...condition });
-                } else {
-                  // Si ya existe, combinar las condiciones
-                  // Prioridad: extraction > otros estados > healthy
-                  if (condition.status === 'extraction') {
-                    existing.status = 'extraction';
-                  } else if (condition.status !== 'healthy' && existing.status === 'healthy') {
-                    existing.status = condition.status;
-                  }
+          response.data
+            .filter((record: any) => !record.estadoRegistro || record.estadoRegistro === 'guardado')
+            .forEach((record: any) => {
+              if (record.odontogramas?.actual) {
+                record.odontogramas.actual.forEach((condition: any) => {
+                  const existing = toothMap.get(condition.number);
                   
-                  // Combinar sectores afectados
-                  if (condition.sectors && condition.sectors.length > 0) {
-                    if (!existing.sectors) {
-                      existing.sectors = [];
+                  if (!existing) {
+                    // Si el diente no existe en el mapa, agregarlo
+                    toothMap.set(condition.number, { ...condition });
+                  } else {
+                    // Si ya existe, combinar las condiciones
+                    // Prioridad: extraction > missing > otros estados > healthy
+                    if (condition.status === 'extraction' || condition.status === 'missing') {
+                      existing.status = condition.status;
+                    } else if (condition.status !== 'healthy' && existing.status === 'healthy') {
+                      existing.status = condition.status;
                     }
-                    condition.sectors.forEach((sector: any) => {
-                      if (!existing.sectors!.some((s: any) => s.sector === sector.sector)) {
-                        existing.sectors!.push(sector);
+                    
+                    // Combinar sectores afectados
+                    if (condition.sectors && condition.sectors.length > 0) {
+                      if (!existing.sectors) {
+                        existing.sectors = [];
                       }
-                    });
+                      condition.sectors.forEach((sector: any) => {
+                        if (!existing.sectors!.some((s: any) => s.sector === sector.sector)) {
+                          existing.sectors!.push(sector);
+                        }
+                      });
+                    }
+                    
+                    // Mantener coronas y prótesis
+                    if (condition.hasCrown) {
+                      existing.hasCrown = true;
+                    }
+                    if (condition.hasProsthesis) {
+                      existing.hasProsthesis = true;
+                    }
                   }
-                  
-                  // Mantener coronas y prótesis
-                  if (condition.hasCrown) {
-                    existing.hasCrown = true;
-                  }
-                  if (condition.hasProsthesis) {
-                    existing.hasProsthesis = true;
-                  }
-                }
-              });
-            }
-          });
+                });
+              }
+            });
 
           // Convertir el mapa a array
           const historicalConditions = Array.from(toothMap.values());
           setHistoricalOdontogram(historicalConditions);
           
-          // Identificar dientes extraídos para marcarlos como ausentes en el odontograma actual
+          // Identificar dientes extraídos o ausentes para marcarlos en el odontograma actual
           const extracted = historicalConditions
-            .filter(condition => condition.status === 'extraction')
+            .filter(condition => condition.status === 'extraction' || condition.status === 'missing')
             .map(condition => condition.number);
           setExtractedTeeth(extracted);
         }
@@ -297,9 +302,7 @@ export default function NewMedicalRecordPage() {
       }
     };
 
-    if (patientId) {
-      loadHistoricalOdontogram();
-    }
+    loadHistoricalOdontogram();
   }, [patientId]);
 
   const handleInputChange = (field: string, value: string) => {
