@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { appointmentsService, type Appointment } from '@/services/api/appointments.service';
-import { patientsService, type Patient } from '@/services/api/patients.service';
+import { useTenant } from '@/hooks/useTenant';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { Appointment, Patient } from '@/types';
 import { usersService } from '@/services/api/users.service';
 import { 
   ArrowLeft,
@@ -27,6 +30,7 @@ export default function ConsultationDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { buildPath } = useTenant();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [doctorName, setDoctorName] = useState<string>('');
@@ -167,12 +171,7 @@ export default function ConsultationDetailPage() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando detalles de la consulta...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando consulta..." />
       </div>
     );
   }
@@ -393,7 +392,7 @@ export default function ConsultationDetailPage() {
                   </div>
 
                   <Link
-                    href={`/doctor/patients/${patient.id}`}
+                    href={buildPath(`/historiales/${patient.id}`)}
                     className="mt-4 block w-full text-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                   >
                     Ver Historial Completo

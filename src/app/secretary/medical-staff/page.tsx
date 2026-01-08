@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { getSpecialtyName } from '@/utils';
 import { 
   Stethoscope,
   Users,
@@ -251,45 +253,17 @@ export default function MedicalStaffPage() {
     }
   };
 
-  const getSpecialtyName = (specialty: string): string => {
+  const getSpecialtyNameLocal = (specialty: string): string => {
     if (!specialty) return 'Sin especialidad';
     
     // Primero intentar buscar por ID en las especialidades cargadas del backend
-    const specialtyById = specialties.find(s => s.id === specialty);
-    if (specialtyById) {
-      return specialtyById.name;
+    const specialtyObj = specialties.find(s => s.id === specialty);
+    if (specialtyObj) {
+      return specialtyObj.name || specialty;
     }
     
-    // Fallback: mapeo estático de códigos a nombres
-    const names: Record<string, string> = {
-      'clinica-medica': 'Clínica Médica',
-      'medicina-interna': 'Medicina Interna',
-      'cardiologia': 'Cardiología',
-      'pediatria': 'Pediatría',
-      'dermatologia': 'Dermatología',
-      'ginecologia': 'Ginecología',
-      'obstetricia': 'Obstetricia',
-      'odontologia': 'Odontología',
-      'traumatologia': 'Traumatología',
-      'ortopedia': 'Ortopedia',
-      'psiquiatria': 'Psiquiatría'
-    };
-    
-    // Si es un código conocido, retornar el nombre
-    if (names[specialty]) {
-      return names[specialty];
-    }
-    
-    // Si el valor es un ID largo (número) y no se encontró en el backend
-    if (/^\d{10,}$/.test(specialty)) {
-      console.warn(`Especialidad con ID no encontrado: ${specialty}`, {
-        specialtiesCount: specialties.length,
-        specialties: specialties.map(s => ({ id: s.id, name: s.name }))
-      });
-      return 'Sin especialidad';
-    }
-    
-    return specialty;
+    // Si no se encuentra, usar la utilidad centralizada
+    return getSpecialtyName(specialty);
   };
 
   const getConsultingRoomName = (consultorioId: string | undefined): string => {
@@ -450,7 +424,7 @@ export default function MedicalStaffPage() {
           <div className="p-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Activity className="w-8 h-8 text-blue-600 animate-spin" />
+                <Spinner size="md" />
               </div>
             ) : (
               <>
@@ -499,7 +473,7 @@ export default function MedicalStaffPage() {
                             </td>
                             <td className="py-4 px-4 text-gray-700 text-sm">
                               {doctor.especialidades && doctor.especialidades.length > 0
-                                ? getSpecialtyName(doctor.especialidades[0])
+                                ? getSpecialtyNameLocal(doctor.especialidades[0])
                                 : 'Sin especialidad'}
                             </td>
                             <td className="py-4 px-4 text-center">

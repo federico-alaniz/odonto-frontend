@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -20,9 +21,10 @@ import {
   Mail,
   AlertTriangle
 } from 'lucide-react';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
 import { appointmentsService } from '@/services/api/appointments.service';
+import type { Patient } from '@/types';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User, HorarioAtencion } from '@/types/roles';
 import { useAuth } from '@/hooks/useAuth';
@@ -109,8 +111,8 @@ export default function NewAppointmentFlow() {
       // Cargar especialidades primero
       const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
       const specMap = new Map<string, string>();
-      specialtiesRes.data.forEach((spec: any) => {
-        specMap.set(spec.id, spec.name || spec.nombre);
+      specialtiesRes.data.forEach((spec: { id: string; name?: string; nombre?: string }) => {
+        specMap.set(spec.id, spec.name || spec.nombre || 'Sin nombre');
       });
       setSpecialtiesMap(specMap);
 
@@ -451,9 +453,8 @@ export default function NewAppointmentFlow() {
               {/* Lista de Pacientes */}
               <div className="p-6">
                 {loadingPatients ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando pacientes...</p>
+                  <div className="py-12">
+                    <LoadingSpinner message="Cargando pacientes..." />
                   </div>
                 ) : filteredPatients.length === 0 ? (
                   <div className="text-center py-12">

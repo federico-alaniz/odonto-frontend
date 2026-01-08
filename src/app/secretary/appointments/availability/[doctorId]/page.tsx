@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +13,8 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { usersService } from '@/services/api/users.service';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import type { Appointment } from '@/types';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { dateHelper } from '@/utils/date-helper';
 import { User } from '@/types/roles';
@@ -235,11 +237,8 @@ export default function DoctorAvailabilityPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando disponibilidad...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando disponibilidad..." />
       </div>
     );
   }

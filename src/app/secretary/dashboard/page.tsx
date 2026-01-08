@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
 import { User as UserType } from '@/types/roles';
+import { Appointment, Patient } from '@/types';
 import { dateHelper } from '@/utils/date-helper';
 import { getAppointmentStatusConfig } from '@/utils/appointment-status';
 import { ConfirmArrivalModal } from '@/components/ConfirmArrivalModal';
@@ -278,12 +280,7 @@ export default function SecretaryDashboard() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando panel de secretaría...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando panel de secretaría..." />
       </div>
     );
   }

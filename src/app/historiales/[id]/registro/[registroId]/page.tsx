@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useParams, useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, Pill, ClipboardList, FileText, Printer } from 'lucide-react';
@@ -682,8 +683,8 @@ export default function RegistroDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando registro..." />
       </div>
     );
   }

@@ -11,19 +11,20 @@ import {
   Stethoscope, 
   AlertTriangle, 
   Shield,
-  Loader2,
   UserPlus,
   MapPin,
   Heart,
   Clock,
   Calendar
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 // import { 
 //   getProvincias, 
 //   getDepartamentosPorProvincia, 
 //   getCiudadesPorProvincia
 // } from '../../../../utils';
-import { patientsService, CreatePatientData } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { CreatePatientData } from '@/types';
 
 interface SecretaryPatientFormData {
   // Información Personal
@@ -1026,7 +1027,7 @@ export default function SecretaryNewPatientForm() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Spinner size="sm" color="white" />
                     <span>Registrando...</span>
                   </>
                 ) : (

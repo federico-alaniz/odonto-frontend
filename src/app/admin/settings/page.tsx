@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/ToastProvider';
 import { 
   Settings,
@@ -571,11 +572,8 @@ export default function AdminSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Cargando configuración...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando configuración..." />
       </div>
     );
   }
@@ -1199,8 +1197,7 @@ export default function AdminSettingsPage() {
                   <div className="p-6">
                     {isLoadingRoles ? (
                       <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                        <span className="ml-3 text-gray-600">Cargando roles y permisos...</span>
+                        <LoadingSpinner message="Cargando roles y permisos..." />
                       </div>
                     ) : (
                       <div className="space-y-6">
@@ -1456,7 +1453,7 @@ export default function AdminSettingsPage() {
               >
                 {isSaving ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <Spinner size="sm" color="white" />
                     <span>Guardando...</span>
                   </>
                 ) : (

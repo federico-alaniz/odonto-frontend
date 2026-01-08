@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useConsultation } from '@/contexts/ConsultationContext';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
 import { dateHelper } from '@/utils/date-helper';
 import { useToast } from '@/components/ui/ToastProvider';
 
@@ -238,7 +239,7 @@ export default function DoctorDashboard() {
     }
 
     try {
-      // Cambiar el estado de la cita a 'en_curso'
+      // 1. Cambiar el estado de la cita a 'en_curso'
       const response = await appointmentsService.updateAppointment(
         clinicId,
         userId,
@@ -247,13 +248,29 @@ export default function DoctorDashboard() {
       );
 
       if (response.success) {
-        // Activar el temporizador de consulta
+        // 2. Crear registro médico borrador asociado a esta cita
+        const today = new Date().toISOString().split('T')[0];
+        const medicalRecordData = {
+          pacienteId: patientId,
+          doctorId: userId,
+          appointmentId: appointmentId,
+          fecha: today,
+          tipoConsulta: 'general' as 'general' | 'odontologia',
+          estadoRegistro: 'borrador' as 'borrador' | 'guardado',
+          motivoConsulta: '',
+          diagnostico: '',
+          tratamiento: ''
+        };
+
+        await medicalRecordsService.createRecord(clinicId, userId, medicalRecordData);
+        
+        // 3. Activar el temporizador de consulta
         startConsultation(appointmentId, patientId, patientName);
         
-        // Navegar a la historia clínica del paciente
+        // 4. Navegar a la historia clínica del paciente
         router.push(`/doctor/patients/${patientId}/medical-record?appointmentId=${appointmentId}`);
         
-        showSuccess('Consulta iniciada', 'El temporizador de consulta está activo');
+        showSuccess('Consulta iniciada', 'Se ha creado un registro médico borrador. El temporizador de consulta está activo');
       } else {
         throw new Error(response.message || 'Error al iniciar la consulta');
       }

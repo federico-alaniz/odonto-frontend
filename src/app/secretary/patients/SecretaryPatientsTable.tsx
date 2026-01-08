@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
+import { calculateAge } from '@/utils';
 import { useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { 
@@ -27,7 +29,8 @@ import {
   UserPlus
 } from 'lucide-react';
 import { SecretaryPatientFilters } from './SecretaryPatientsFilters';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { Patient } from '@/types';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { formatGender, formatCity } from '@/utils/format-helpers';
@@ -215,16 +218,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
     }
   };
 
-  const calculateAge = (birthDate: string) => {
-    const birth = new Date(birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -254,12 +247,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-        <div className="flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando pacientes...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando pacientes..." size="md" />
       </div>
     );
   }
@@ -307,7 +295,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                   checked={selectedPatients.length === currentPatients.length && currentPatients.length > 0}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedPatients(currentPatients.map(p => p.id));
+                      setSelectedPatients(currentPatients.map((p: SecretaryPatient) => p.id));
                     } else {
                       setSelectedPatients([]);
                     }
@@ -361,7 +349,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentPatients.length > 0 ? (
-              currentPatients.map((patient) => {
+              currentPatients.map((patient: SecretaryPatient) => {
                 const estadoConfig = getEstadoConfig(patient.estado);
                 const age = calculateAge(patient.fechaNacimiento);
                 

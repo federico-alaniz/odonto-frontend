@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -14,8 +15,9 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { Appointment, Patient, AppointmentStatus } from '@/types';
 import { usersService } from '@/services/api/users.service';
 import { User } from '@/types/roles';
 import Link from 'next/link';
@@ -40,7 +42,7 @@ export default function EditAppointmentPage() {
   const [horaInicio, setHoraInicio] = useState('');
   const [horaFin, setHoraFin] = useState('');
   const [motivo, setMotivo] = useState('');
-  const [estado, setEstado] = useState<'programada' | 'confirmada' | 'en_curso' | 'completada' | 'cancelada' | 'no_asistio'>('programada');
+  const [estado, setEstado] = useState<AppointmentStatus>('programada');
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
@@ -80,7 +82,7 @@ export default function EditAppointmentPage() {
 
       if (doctorsRes.success && adminsRes.success) {
         // Filtrar admins que tienen isDoctor = true
-        const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+        const adminDoctors = adminsRes.data.filter((user: User) => user.isDoctor === true);
         // Combinar doctores y admin-doctores
         const allDoctors = [...doctorsRes.data, ...adminDoctors];
         setDoctors(allDoctors);
@@ -127,9 +129,10 @@ export default function EditAppointmentPage() {
       } else {
         showError('Error', 'No se pudo actualizar el turno');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error actualizando turno:', error);
-      showError('Error', error.message || 'No se pudo actualizar el turno');
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo actualizar el turno';
+      showError('Error', errorMessage);
     } finally {
       setSaving(false);
     }
@@ -137,11 +140,8 @@ export default function EditAppointmentPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando turno...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando turno..." />
       </div>
     );
   }
@@ -338,7 +338,7 @@ export default function EditAppointmentPage() {
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <Spinner size="sm" color="white" />
                   Guardando...
                 </>
               ) : (

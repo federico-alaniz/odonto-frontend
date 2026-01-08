@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
@@ -18,9 +19,10 @@ import {
   Plus,
   Clock
 } from 'lucide-react';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { Appointment, Patient } from '@/types';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
@@ -85,7 +87,7 @@ export default function SecretaryAppointmentsPage() {
         patientsService.getPatients(clinicId, { limit: 1000 })
       ]);
 
-      const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+      const adminDoctors = adminsRes.data.filter((user: UserType) => user.isDoctor === true);
       const allDoctors = [...doctorsRes.data, ...adminDoctors].map(doc => {
         console.log('Doctor data:', {
           name: `${doc.nombres} ${doc.apellidos}`,
@@ -124,8 +126,8 @@ export default function SecretaryAppointmentsPage() {
       const backendDay = dayOfWeek === 0 ? 7 : dayOfWeek;
       
       doctors.forEach(doctor => {
-        const horario = (doctor as any).horariosAtencion?.find(
-          (h: any) => h.activo && h.dia === backendDay
+        const horario = doctor.horariosAtencion?.find(
+          (h) => h.activo && h.dia === backendDay
         );
         
         console.log(`Doctor ${doctor.nombres} ${doctor.apellidos}:`, {
@@ -273,13 +275,13 @@ export default function SecretaryAppointmentsPage() {
       // Procesar especialidades
       if (specialtiesRes.success && specialtiesRes.data) {
         const activeSpecialties = specialtiesRes.data
-          .filter((esp: any) => esp.active)
-          .map((esp: any) => esp.name)
+          .filter((esp: { active: boolean; name: string }) => esp.active)
+          .map((esp: { name: string }) => esp.name)
           .sort();
         setSpecialties(activeSpecialties);
         
         const specMap = new Map<string, string>();
-        specialtiesRes.data.forEach((esp: any) => {
+        specialtiesRes.data.forEach((esp: { id: string; name: string; active: boolean }) => {
           if (esp.active && esp.id && esp.name) {
             specMap.set(esp.id, esp.name);
           }
@@ -290,9 +292,10 @@ export default function SecretaryAppointmentsPage() {
       // Procesar consultorios
       if (consultoriosRes.success && consultoriosRes.data) {
         const consMap = new Map<string, string>();
-        consultoriosRes.data.forEach((cons: any) => {
-          if (cons.id && (cons.nombre || cons.name)) {
-            consMap.set(cons.id, cons.nombre || cons.name);
+        consultoriosRes.data.forEach((cons: { id: string; nombre?: string; name?: string }) => {
+          const nombre = cons.nombre || cons.name;
+          if (cons.id && nombre) {
+            consMap.set(cons.id, nombre);
           }
         });
         setConsultoriosMap(consMap);
@@ -426,11 +429,8 @@ export default function SecretaryAppointmentsPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando..." />
       </div>
     );
   }
@@ -647,7 +647,7 @@ export default function SecretaryAppointmentsPage() {
                             // Si es un array, convertir IDs a nombres
                             if (Array.isArray(especialidades) && especialidades.length > 0) {
                                 const nombres = especialidades
-                                  .map((esp: any) => {
+                                  .map((esp: string | { name?: string; nombre?: string }) => {
                                     // Si es un objeto con name/nombre
                                     if (typeof esp === 'object' && esp !== null) {
                                       return esp.name || esp.nombre;

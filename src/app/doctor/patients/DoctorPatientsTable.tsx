@@ -29,6 +29,7 @@ import { patientsService } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { formatGender, formatCity } from '@/utils/format-helpers';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 
 // Interface para pacientes del doctor con información adicional
 interface DoctorPatient {
@@ -331,13 +332,8 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <div className="flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando pacientes...</p>
-          </div>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <LoadingSpinner message="Cargando pacientes..." size="md" />
       </div>
     );
   }

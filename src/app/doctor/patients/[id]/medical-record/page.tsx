@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { 
@@ -26,7 +27,9 @@ import {
 } from 'lucide-react';
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function MedicalRecordPage() {
   const params = useParams();
@@ -43,6 +46,7 @@ export default function MedicalRecordPage() {
   const [loading, setLoading] = useState(true);
   const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
   const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
+  const { showError } = useToast();
   
   // Especialidad del médico actual (TODO: obtener del contexto de autenticación)
   const doctorSpecialty = 'Odontología';
@@ -82,34 +86,55 @@ export default function MedicalRecordPage() {
         }
       }
 
-      // TODO: Cargar historial médico real del paciente cuando el endpoint esté disponible
-      // Por ahora, mostrar array vacío hasta que se implemente el endpoint en el backend
-      // El endpoint /api/patients/:id/historia-clinica aún no existe
-      
-      /* 
+      // Cargar registros médicos del paciente
       try {
-        const historiaClinicaResponse = await patientsService.getHistoriaClinica(patientId, clinicId);
+        const recordsResponse = await medicalRecordsService.getPatientRecords(patientId, clinicId, 1, 1000);
         
-        if (historiaClinicaResponse.success && historiaClinicaResponse.data) {
-          const historiaClinica = historiaClinicaResponse.data;
+        if (recordsResponse.success && recordsResponse.data) {
+          // Obtener IDs únicos de doctores para cargar sus nombres
+          const doctorIds = [...new Set(
+            recordsResponse.data
+              .filter((record: any) => record.doctorId)
+              .map((record: any) => record.doctorId)
+          )];
+
+          // Cargar información de los doctores (usuarios)
+          const doctorsMap = new Map();
+          try {
+            // Intentar obtener el nombre del doctor desde localStorage o hacer una llamada al API
+            const usersData = localStorage.getItem(`${clinicId}_users`);
+            if (usersData) {
+              const users = JSON.parse(usersData);
+              users.forEach((user: any) => {
+                if (doctorIds.includes(user.id)) {
+                  doctorsMap.set(user.id, user.nombre || user.email || user.id);
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error cargando información de doctores:', error);
+          }
+
+          // Filtrar registros guardados (no borradores)
+          // Incluir registros sin estadoRegistro (registros antiguos) o con estadoRegistro === 'guardado'
+          const filteredRecords = recordsResponse.data
+            .filter((record: any) => 
+              !record.estadoRegistro || record.estadoRegistro === 'guardado'
+            )
+            .map((record: any) => ({
+              id: record.id,
+              fecha: record.fecha,
+              doctor: doctorsMap.get(record.doctorId) || record.doctorId || 'Doctor no especificado',
+              especialidad: record.tipoConsulta === 'odontologia' ? 'Odontología' : 'General',
+              motivo: record.motivoConsulta || 'No especificado',
+              diagnostico: record.diagnostico || '',
+              tratamiento: record.tratamiento || '',
+              presionArterial: record.signosVitales?.presionArterial || 'N/A',
+              peso: record.signosVitales?.peso || 'N/A'
+            }))
+            .sort((a: any, b: any) => b.fecha.localeCompare(a.fecha)); // Ordenar por fecha descendente
           
-          const consultasFormateadas = (historiaClinica.consultas || []).map((consulta: any) => ({
-            id: consulta.id,
-            fecha: consulta.fecha,
-            doctor: consulta.doctorNombre || 'Doctor no especificado',
-            especialidad: consulta.especialidad || 'General',
-            motivo: consulta.motivo || 'No especificado',
-            diagnostico: consulta.diagnostico || '',
-            tratamiento: consulta.tratamiento || '',
-            presionArterial: consulta.presionArterial || 'N/A',
-            peso: consulta.peso || 'N/A'
-          }));
-          
-          const filteredHistory = consultasFormateadas.filter(
-            (record: any) => record.especialidad === doctorSpecialty
-          );
-          
-          setMedicalHistory(filteredHistory);
+          setMedicalHistory(filteredRecords);
         } else {
           setMedicalHistory([]);
         }
@@ -117,12 +142,9 @@ export default function MedicalRecordPage() {
         console.error('Error cargando historial médico:', error);
         setMedicalHistory([]);
       }
-      */
-      
-      // Mientras tanto, mostrar array vacío
-      setMedicalHistory([]);
     } catch (error) {
       console.error('Error cargando datos:', error);
+      showError('Error', 'No se pudieron cargar los datos del paciente');
     } finally {
       setLoading(false);
     }
@@ -130,11 +152,8 @@ export default function MedicalRecordPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Cargando historia clínica...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando historia clínica..." />
       </div>
     );
   }

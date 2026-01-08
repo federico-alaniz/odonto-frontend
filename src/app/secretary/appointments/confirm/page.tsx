@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,8 +18,9 @@ import {
   FileText
 } from 'lucide-react';
 import { usersService } from '@/services/api/users.service';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
+import type { Patient } from '@/types';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User } from '@/types/roles';
 
@@ -163,11 +165,8 @@ function ConfirmAppointmentContent() {
 
   if (loading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando datos...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando datos..." />
       </div>
     );
   }
@@ -377,7 +376,7 @@ function ConfirmAppointmentContent() {
           >
             {creating ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <Spinner size="sm" color="white" />
                 <span>Confirmando...</span>
               </>
             ) : (
@@ -396,11 +395,8 @@ function ConfirmAppointmentContent() {
 export default function ConfirmAppointmentPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <LoadingSpinner message="Cargando..." />
       </div>
     }>
       <ConfirmAppointmentContent />

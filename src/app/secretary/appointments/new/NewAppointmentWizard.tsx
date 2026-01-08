@@ -18,9 +18,10 @@ import {
   X,
   ArrowLeft
 } from 'lucide-react';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import type { Patient, Appointment } from '@/types';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { User, HorarioAtencion } from '@/types/roles';
 import { useAuth } from '@/hooks/useAuth';

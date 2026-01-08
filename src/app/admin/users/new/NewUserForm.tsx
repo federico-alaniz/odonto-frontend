@@ -30,6 +30,7 @@ import { UserFormData, HorarioAtencion } from '@/types/roles';
 import { usersService } from '@/services/api/users.service';
 import { useAuth } from '@/hooks/useAuth';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
+import { Spinner } from '@/components/ui/Spinner';
 
 const INITIAL_FORM_DATA: UserFormData = {
   nombres: '',
@@ -1091,8 +1092,8 @@ export default function NewUserForm() {
               >
                 {isSubmitting ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Creando...
+                    <Spinner size="sm" color="white" />
+                    <span>Guardando...</span>
                   </>
                 ) : (
                   <>

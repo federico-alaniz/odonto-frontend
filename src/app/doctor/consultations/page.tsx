@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { appointmentsService, type Appointment } from '@/services/api/appointments.service';
-import { patientsService, type Patient } from '@/services/api/patients.service';
+import { appointmentsService } from '@/services/api/appointments.service';
+import { patientsService } from '@/services/api/patients.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
+import type { Appointment, Patient } from '@/types';
+import { useRouter } from 'next/navigation';
+import { useTenant } from '@/hooks/useTenant';
 import { 
   Stethoscope,
   Plus,
@@ -17,8 +22,11 @@ import {
   Eye,
   Edit,
   Filter,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react';
+import { useToast } from '@/components/ui/ToastProvider';
+import { Spinner } from '@/components/ui/Spinner';
 
 // Simular datos de consultas (en el futuro vendrán del backend)
 interface Consultation {
@@ -35,12 +43,17 @@ interface Consultation {
 
 export default function ConsultationsPage() {
   const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
+  const router = useRouter();
+  const { buildPath } = useTenant();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [filteredConsultations, setFilteredConsultations] = useState<Consultation[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [finishingConsultation, setFinishingConsultation] = useState<string | null>(null);
+  const [consultationsWithRecords, setConsultationsWithRecords] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchConsultations = async () => {
@@ -222,6 +235,87 @@ export default function ConsultationsPage() {
     window.location.reload();
   };
 
+  const handleConsultationAction = async (consultation: Consultation) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    if (!clinicId || !userId) {
+      showError('Error', 'No se pudo obtener la información del usuario');
+      return;
+    }
+
+    try {
+      setFinishingConsultation(consultation.id);
+      
+      // Verificar si existe un registro médico guardado (no borrador) para esta consulta específica
+      const medicalRecordsResponse = await medicalRecordsService.getPatientRecords(
+        consultation.patientId,
+        clinicId,
+        1,
+        1000
+      );
+      
+      // Verificar si hay un registro médico guardado asociado a esta cita específica
+      const hasRecordForConsultation = medicalRecordsResponse.success && 
+                                       medicalRecordsResponse.data && 
+                                       medicalRecordsResponse.data.some(record => 
+                                         record.appointmentId === consultation.id && 
+                                         record.estadoRegistro === 'guardado'
+                                       );
+
+      if (!hasRecordForConsultation) {
+        // No hay registro médico, redirigir a crear uno
+        showError(
+          'Registro médico requerido', 
+          'Debe crear un registro médico antes de finalizar la consulta'
+        );
+        router.push(buildPath(`/doctor/patients/${consultation.patientId}/medical-record?appointmentId=${consultation.id}`));
+        return;
+      }
+
+      // Si hay registro médico, proceder a finalizar la consulta
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        consultation.id,
+        { estado: 'completada' }
+      );
+
+      if (response.success) {
+        showSuccess('Consulta finalizada', 'La consulta se ha completado exitosamente');
+        
+        // Actualizar la lista de consultas
+        setConsultations(prev => 
+          prev.map(c => 
+            c.id === consultation.id 
+              ? { ...c, status: 'completed' as const }
+              : c
+          )
+        );
+        
+        // Marcar que esta consulta tiene registro médico
+        setConsultationsWithRecords(prev => new Set(prev).add(consultation.id));
+      } else {
+        throw new Error(response.message || 'Error al finalizar la consulta');
+      }
+    } catch (error: any) {
+      console.error('Error en acción de consulta:', error);
+      
+      // Si el error es porque no existe historia clínica, redirigir a crear registro
+      if (error.message?.includes('no encontrada') || error.message?.includes('not found')) {
+        showError(
+          'Registro médico requerido', 
+          'Debe crear un registro médico antes de finalizar la consulta'
+        );
+        router.push(buildPath(`/doctor/patients/${consultation.patientId}/medical-record?appointmentId=${consultation.id}`));
+      } else {
+        showError('Error', error.message || 'No se pudo completar la acción');
+      }
+    } finally {
+      setFinishingConsultation(null);
+    }
+  };
+
   useEffect(() => {
     let filtered = consultations;
 
@@ -289,12 +383,7 @@ export default function ConsultationsPage() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando consultas...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando consultas..." />
       </div>
     );
   }
@@ -466,7 +555,28 @@ export default function ConsultationsPage() {
                               <Eye className="w-4 h-4" />
                             </Link>
 
-                            {consultation.status !== 'completed' && (
+                            {consultation.status === 'in-progress' && (
+                              <button
+                                onClick={() => handleConsultationAction(consultation)}
+                                disabled={finishingConsultation === consultation.id}
+                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                title="Finalizar consulta o crear registro médico"
+                              >
+                                {finishingConsultation === consultation.id ? (
+                                  <>
+                                    <Spinner size="sm" color="white" />
+                                    <span>Procesando...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span>Finalizar Consulta</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            {consultation.status !== 'completed' && consultation.status !== 'in-progress' && (
                               <Link
                                 href={`/doctor/consultations/${consultation.id}/edit`}
                                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"

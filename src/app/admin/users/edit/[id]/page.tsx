@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { 
@@ -299,11 +300,8 @@ export default function EditUserPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Cargando datos del usuario...</p>
-        </div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando usuario..." />
       </div>
     );
   }

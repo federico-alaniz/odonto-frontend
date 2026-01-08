@@ -1,11 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Heart, AlertCircle, Users as UsersIcon, Shield } from 'lucide-react';
-import { patientsService, CreatePatientData } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
+
+interface CreatePatientData {
+  nombres: string;
+  apellidos: string;
+  tipoDocumento: 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero';
+  numeroDocumento: string;
+  fechaNacimiento: string;
+  genero: 'masculino' | 'femenino' | 'otro';
+  telefono: string;
+  email: string;
+  direccion: {
+    calle: string;
+    numero: string;
+    ciudad: string;
+    provincia: string;
+    codigoPostal: string;
+  };
+  tipoSangre: string;
+  alergias: string[];
+  medicamentosActuales: string[];
+  antecedentesPersonales: string[];
+  antecedentesFamiliares: string[];
+  contactoEmergencia: {
+    nombre: string;
+    telefono: string;
+    relacion: string;
+  };
+  seguroMedico: {
+    empresa: string;
+    numeroPoliza: string;
+    vigencia: string;
+  };
+}
 
 export default function NewPatientPage() {
   const router = useRouter();
@@ -137,7 +171,7 @@ export default function NewPatientPage() {
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <Spinner size="sm" color="white" />
                   Guardando...
                 </>
               ) : (

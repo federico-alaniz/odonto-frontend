@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import Odontogram, { ToothCondition } from '../../../components/Odontogram';
 import medicalRecordsService from '@/services/medicalRecords';
+import { medicalRecordsService as medicalRecordsApiService } from '@/services/api/medical-records.service';
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -89,8 +90,11 @@ export default function NewMedicalRecordPage() {
   const [appointment, setAppointment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
+  const [isDraft, setIsDraft] = useState(false);
 
-  // Cargar datos del paciente
+  // Cargar datos del paciente y registro borrador si existe
   useEffect(() => {
     const loadPatient = async () => {
       const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
@@ -127,9 +131,9 @@ export default function NewMedicalRecordPage() {
     }
   }, [patientId, currentUser]);
 
-  // Cargar datos de la cita si existe appointmentId
+  // Cargar datos de la cita y registro borrador si existe appointmentId
   useEffect(() => {
-    const loadAppointment = async () => {
+    const loadAppointmentAndDraft = async () => {
       const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
       const doctorId = (currentUser as any)?.id;
       
@@ -138,6 +142,7 @@ export default function NewMedicalRecordPage() {
       }
 
       try {
+        // Cargar datos de la cita
         const appointmentsResponse = await appointmentsService.getAppointments(clinicId);
         const appointmentData = appointmentsResponse.data.find((a: any) => a.id === appointmentId);
         
@@ -145,7 +150,6 @@ export default function NewMedicalRecordPage() {
           setAppointment(appointmentData);
           
           // Configurar automáticamente el tipo de consulta basado en la especialidad del doctor actual
-          // Obtener la especialidad del doctor desde currentUser
           const doctorSpecialties = (currentUser as any)?.especialidades || [];
           const doctorSpecialty = doctorSpecialties[0] || '';
           
@@ -156,9 +160,50 @@ export default function NewMedicalRecordPage() {
           } else {
             setConsultationType('general');
           }
-          
-          // Pre-llenar el motivo de consulta con el motivo de la cita
-          if (appointmentData.motivo) {
+        }
+
+        // Intentar cargar registro borrador existente para esta cita
+        const recordsResponse = await medicalRecordsApiService.getPatientRecords(patientId, clinicId, 1, 1000);
+        
+        if (recordsResponse.success && recordsResponse.data) {
+          // Buscar registro borrador asociado a esta cita
+          const draftRecord = recordsResponse.data.find(record => 
+            record.appointmentId === appointmentId && 
+            record.estadoRegistro === 'borrador'
+          );
+
+          if (draftRecord) {
+            // Cargar datos del borrador en el formulario
+            setExistingRecordId(draftRecord.id);
+            setIsDraft(true);
+            setFormData({
+              fecha: draftRecord.fecha,
+              motivoConsulta: draftRecord.motivoConsulta || '',
+              anamnesis: draftRecord.anamnesis || '',
+              examenFisico: draftRecord.examenFisico || '',
+              diagnostico: draftRecord.diagnostico || '',
+              tratamiento: draftRecord.tratamiento || '',
+              observaciones: draftRecord.observaciones || '',
+              proximoControl: draftRecord.proximaCita || '',
+              presionArterial: draftRecord.signosVitales?.presionArterial || '',
+              frecuenciaCardiaca: draftRecord.signosVitales?.frecuenciaCardiaca?.toString() || '',
+              temperatura: draftRecord.signosVitales?.temperatura?.toString() || '',
+              peso: draftRecord.signosVitales?.peso?.toString() || '',
+              talla: draftRecord.signosVitales?.altura?.toString() || '',
+              saturacionOxigeno: draftRecord.signosVitales?.saturacionOxigeno?.toString() || '',
+              piezasDentales: draftRecord.datosOdontologicos?.piezasDentales || '',
+              procedimiento: draftRecord.datosOdontologicos?.procedimiento || '',
+              materiales: draftRecord.datosOdontologicos?.materiales || ''
+            });
+
+            if (draftRecord.odontogramas) {
+              setHistoricalOdontogram(draftRecord.odontogramas.historico || []);
+              setCurrentOdontogram(draftRecord.odontogramas.actual || []);
+            }
+
+            showSuccess('Borrador cargado', 'Se ha cargado el registro médico borrador de esta consulta');
+          } else if (appointmentData?.motivo) {
+            // Si no hay borrador, pre-llenar el motivo de consulta con el motivo de la cita
             setFormData(prev => ({
               ...prev,
               motivoConsulta: appointmentData.motivo
@@ -166,14 +211,14 @@ export default function NewMedicalRecordPage() {
           }
         }
       } catch (error) {
-        console.error('Error cargando cita:', error);
+        console.error('Error cargando cita y borrador:', error);
       }
     };
 
     if (currentUser && appointmentId) {
-      loadAppointment();
+      loadAppointmentAndDraft();
     }
-  }, [appointmentId, currentUser]);
+  }, [appointmentId, currentUser, patientId]);
 
   // Inicializar odontograma actual con dientes extraídos como ausentes
   useEffect(() => {
@@ -283,20 +328,28 @@ export default function NewMedicalRecordPage() {
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
+  // Función para guardar como borrador
+  const handleSaveDraft = async () => {
     try {
-      setSaving(true);
+      setSavingDraft(true);
+
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = (currentUser as any)?.id;
+
+      if (!clinicId || !userId) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
 
       // Preparar datos para enviar
       const recordData = {
         pacienteId: patientId,
-        doctorId: (currentUser as any)?.id || undefined,
+        doctorId: userId,
+        appointmentId: appointmentId || undefined,
         fecha: formData.fecha,
-        tipoConsulta: consultationType,
+        tipoConsulta: consultationType as 'general' | 'odontologia',
+        estadoRegistro: 'borrador' as 'borrador' | 'guardado',
         motivoConsulta: formData.motivoConsulta,
         anamnesis: formData.anamnesis,
-        
-        // Signos vitales
         signosVitales: {
           presionArterial: formData.presionArterial,
           frecuenciaCardiaca: formData.frecuenciaCardiaca ? parseInt(formData.frecuenciaCardiaca) : undefined,
@@ -305,10 +358,7 @@ export default function NewMedicalRecordPage() {
           altura: formData.talla ? parseFloat(formData.talla) : undefined,
           saturacionOxigeno: formData.saturacionOxigeno ? parseInt(formData.saturacionOxigeno) : undefined,
         },
-        
         examenFisico: formData.examenFisico,
-        
-        // Datos odontológicos (solo si es consulta odontológica)
         ...(consultationType === 'odontologia' && {
           datosOdontologicos: {
             motivoConsultaOdontologica: formData.motivoConsulta,
@@ -321,23 +371,105 @@ export default function NewMedicalRecordPage() {
             actual: currentOdontogram,
           },
         }),
-        
         diagnostico: formData.diagnostico,
         tratamiento: formData.tratamiento,
         observaciones: formData.observaciones,
         proximaCita: formData.proximoControl || undefined,
-        
-        // TODO: Implementar subida de imágenes
         imagenes: [],
         documentos: [],
       };
 
+      let response;
+      if (existingRecordId) {
+        // Actualizar borrador existente
+        response = await medicalRecordsApiService.createRecord(clinicId, userId, {
+          ...recordData,
+          id: existingRecordId
+        });
+      } else {
+        // Crear nuevo borrador
+        response = await medicalRecordsApiService.createRecord(clinicId, userId, recordData);
+        if (response.success && response.data) {
+          setExistingRecordId(response.data.id);
+          setIsDraft(true);
+        }
+      }
+      
+      if (response.success) {
+        showSuccess('Borrador guardado', 'El registro médico se guardó como borrador. Puedes continuar editándolo más tarde');
+      } else {
+        throw new Error(response.errors?.[0] || 'Error al guardar borrador');
+      }
+    } catch (error: any) {
+      console.error('Error guardando borrador:', error);
+      showError('Error al guardar borrador', error.message || 'Error al guardar el registro médico como borrador');
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  // Función para guardar definitivamente
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+
       const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      if (!clinicId) {
-        throw new Error('No se pudo obtener el clinicId');
+      const userId = (currentUser as any)?.id;
+
+      if (!clinicId || !userId) {
+        throw new Error('No se pudo obtener la información del usuario');
       }
 
-      const response = await medicalRecordsService.create(recordData, clinicId);
+      // Preparar datos para enviar
+      const recordData = {
+        pacienteId: patientId,
+        doctorId: userId,
+        appointmentId: appointmentId || undefined,
+        fecha: formData.fecha,
+        tipoConsulta: consultationType as 'general' | 'odontologia',
+        estadoRegistro: 'guardado' as 'borrador' | 'guardado',
+        motivoConsulta: formData.motivoConsulta,
+        anamnesis: formData.anamnesis,
+        signosVitales: {
+          presionArterial: formData.presionArterial,
+          frecuenciaCardiaca: formData.frecuenciaCardiaca ? parseInt(formData.frecuenciaCardiaca) : undefined,
+          temperatura: formData.temperatura ? parseFloat(formData.temperatura) : undefined,
+          peso: formData.peso ? parseFloat(formData.peso) : undefined,
+          altura: formData.talla ? parseFloat(formData.talla) : undefined,
+          saturacionOxigeno: formData.saturacionOxigeno ? parseInt(formData.saturacionOxigeno) : undefined,
+        },
+        examenFisico: formData.examenFisico,
+        ...(consultationType === 'odontologia' && {
+          datosOdontologicos: {
+            motivoConsultaOdontologica: formData.motivoConsulta,
+            piezasDentales: formData.piezasDentales,
+            procedimiento: formData.procedimiento,
+            materiales: formData.materiales,
+          },
+          odontogramas: {
+            historico: historicalOdontogram,
+            actual: currentOdontogram,
+          },
+        }),
+        diagnostico: formData.diagnostico,
+        tratamiento: formData.tratamiento,
+        observaciones: formData.observaciones,
+        proximaCita: formData.proximoControl || undefined,
+        imagenes: [],
+        documentos: [],
+      };
+
+      let response;
+      if (existingRecordId) {
+        // Actualizar registro existente y cambiar estado a guardado
+        response = await medicalRecordsApiService.createRecord(clinicId, userId, {
+          ...recordData,
+          id: existingRecordId
+        });
+      } else {
+        // Crear nuevo registro guardado
+        response = await medicalRecordsApiService.createRecord(clinicId, userId, recordData);
+      }
       
       if (response.success) {
         showSuccess('Registro guardado', 'El registro médico se guardó exitosamente');
@@ -414,27 +546,50 @@ export default function NewMedicalRecordPage() {
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Nuevo Registro Médico</h1>
-                <p className="text-sm text-gray-600 mt-1">Complete la información de la consulta</p>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {isDraft ? 'Editar Registro Médico (Borrador)' : 'Nuevo Registro Médico'}
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  {isDraft ? 'Continúa editando el borrador guardado' : 'Complete la información de la consulta'}
+                </p>
               </div>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Guardar Registro
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSaveDraft}
+                disabled={savingDraft || saving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingDraft ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Guardar Borrador
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || savingDraft}
+                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Guardar Registro
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

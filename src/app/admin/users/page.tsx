@@ -33,6 +33,7 @@ import { User } from '@/types/roles';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import UserPermissionsModal from '@/components/UserPermissionsModal';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 
 interface UserFilters {
   search: string;
@@ -368,40 +369,40 @@ export default function AdminUsersPage() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex-1 bg-gray-50 min-h-screen">
+            <LoadingSpinner message="Cargando usuarios..." />
           </div>
         )}
 
         {!isLoading && !error && (
           <>
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Total Usuarios</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Total Usuarios</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+                  </div>
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Activos</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.active}</p>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Activos</p>
+                    <p className="text-2xl font-bold text-blue-600 mt-1">{stats.active}</p>
+                  </div>
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <UserCheck className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <UserCheck className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">Doctores</p>

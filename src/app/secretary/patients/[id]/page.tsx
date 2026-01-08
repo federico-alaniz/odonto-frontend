@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { 
-  User, 
+  User as UserIcon, 
   ArrowLeft,
   Phone,
   Mail,
@@ -31,7 +32,9 @@ import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { useAuth } from '@/hooks/useAuth';
+import { calculateAge } from '@/utils';
 import { getAppointmentStatusConfig } from '@/utils/appointment-status';
+import { User } from '@/types/roles';
 
 // Datos temporales vacíos hasta integrar con backend
 interface PatientDetails {
@@ -75,7 +78,7 @@ interface PatientAppointment {
 interface PatientBill {
   id: string;
   fecha: string;
-  conceptos: any[];
+  conceptos: { descripcion: string; cantidad: number; precio: number }[];
   total: number;
   estado: string;
   metodoPago?: string;
@@ -148,15 +151,18 @@ export default function SecretaryPatientDetailPage() {
         setPatient(patientDetails);
 
         // Combinar doctores y admin-doctores
-        const adminDoctors = adminsData.data.filter((user: any) => user.isDoctor === true);
+        const adminDoctors = adminsData.data.filter((user: User) => user.isDoctor === true);
         const allDoctors = [...doctorsData.data, ...adminDoctors];
 
         // Cargar especialidades para mapear IDs a nombres
         const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
         const specialtiesMap = new Map<string, string>();
         if (specialtiesRes.success && specialtiesRes.data) {
-          specialtiesRes.data.forEach((spec: any) => {
-            specialtiesMap.set(spec.id, spec.name || spec.nombre);
+          specialtiesRes.data.forEach((spec: { id: string; name?: string; nombre?: string }) => {
+            const name = spec.name || spec.nombre;
+            if (name) {
+              specialtiesMap.set(spec.id, name);
+            }
           });
         }
 
@@ -164,8 +170,11 @@ export default function SecretaryPatientDetailPage() {
         const consultoriosRes = await clinicSettingsService.getConsultingRooms(clinicId);
         const consultoriosMap = new Map<string, string>();
         if (consultoriosRes.success && consultoriosRes.data) {
-          consultoriosRes.data.forEach((cons: any) => {
-            consultoriosMap.set(cons.id, cons.nombre || cons.name);
+          consultoriosRes.data.forEach((cons: { id: string; nombre?: string; name?: string }) => {
+            const nombre = cons.nombre || cons.name;
+            if (nombre) {
+              consultoriosMap.set(cons.id, nombre);
+            }
           });
         }
 
@@ -228,17 +237,6 @@ export default function SecretaryPatientDetailPage() {
     loadPatientData();
   }, [patientId, currentUser, router]);
 
-  const calculateAge = (birthDate: string) => {
-    const birth = new Date(birthDate);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-AR', {
@@ -271,7 +269,7 @@ export default function SecretaryPatientDetailPage() {
   };
 
   // Función para validar si un turno puede ser reprogramado
-  const canRescheduleAppointment = (appointment: any) => {
+  const canRescheduleAppointment = (appointment: PatientAppointment) => {
     // Solo se pueden reprogramar turnos en estado 'programada'
     if (appointment.estado !== 'programada') {
       return false;
@@ -295,12 +293,7 @@ export default function SecretaryPatientDetailPage() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando información del paciente...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando información del paciente..." />
       </div>
     );
   }
@@ -310,7 +303,7 @@ export default function SecretaryPatientDetailPage() {
       <div className="flex-1 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <UserIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Paciente no encontrado</h3>
             <p className="text-gray-600 mb-6">El paciente solicitado no existe en el sistema</p>
             <Link 
@@ -340,7 +333,7 @@ export default function SecretaryPatientDetailPage() {
                 <ArrowLeft className="w-6 h-6" />
               </Link>
               <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-md">
-                <User className="w-7 h-7 text-white" />
+                <UserIcon className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
@@ -427,7 +420,7 @@ export default function SecretaryPatientDetailPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-purple-100 rounded-lg">
-                    <User className="w-5 h-5 text-purple-600" />
+                    <UserIcon className="w-5 h-5 text-purple-600" />
                   </div>
                   <h2 className="text-xl font-semibold text-gray-900">Información Personal</h2>
                 </div>

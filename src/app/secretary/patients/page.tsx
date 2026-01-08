@@ -61,9 +61,8 @@ export default function SecretaryPatientsPage() {
         const patientsResponse = await patientsService.getPatients(clinicId, {
           limit: 1000
         });
-        const followUpCount = patientsResponse.data.filter((p: any) => 
-          p.requiereSeguimiento || p.estado === 'seguimiento'
-        ).length;
+        // TODO: Implementar lógica de seguimiento cuando se agregue al modelo Patient
+        const followUpCount = 0;
         setRequireFollowUp(followUpCount);
       } catch (error) {
         console.error('Error loading stats:', error);

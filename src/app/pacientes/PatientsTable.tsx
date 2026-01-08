@@ -28,6 +28,7 @@ import EditPatientModal from './modals/EditPatientModal';
 import { PatientFilters } from './PatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 import { useAuth } from '@/hooks/useAuth';
+import { calculateAge } from '@/utils';
 
 // Interface adaptada para el componente (compatible con modales existentes)
 interface Patient {
@@ -157,20 +158,6 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     setShowEditModal(false);
     setShowAppointmentModal(false);
     setShowDeleteModal(false);
-  };
-
-  // Calcular edad
-  const calculateAge = (birthDate: string): number => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
-    return age;
   };
 
   // Filtrar y ordenar pacientes

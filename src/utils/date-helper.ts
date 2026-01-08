@@ -79,3 +79,58 @@ export const dateHelper = {
     });
   }
 };
+
+/**
+ * Calculate age from birth date
+ * @param birthDate - Birth date as string (YYYY-MM-DD) or Date object
+ * @returns Age in years
+ */
+export const calculateAge = (birthDate: string | Date): number => {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+/**
+ * Format date in short format (DD MMM YYYY)
+ * @param date - Date as string or Date object
+ * @returns Formatted date string
+ */
+export const formatDateShort = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+/**
+ * Format date in full format (Weekday, DD de Month de YYYY)
+ * @param date - Date as string or Date object
+ * @returns Formatted date string
+ */
+export const formatDateFull = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
+/**
+ * Format date with weekday short (Lun 15)
+ * @param date - Date as string or Date object
+ * @returns Formatted date string
+ */
+export const formatDateWithWeekday = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString('es-AR', {
+    weekday: 'short',
+    day: 'numeric'
+  });
+};

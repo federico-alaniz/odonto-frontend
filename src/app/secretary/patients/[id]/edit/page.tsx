@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -25,7 +26,8 @@ import {
   getDepartamentosPorProvincia, 
   getCiudadesPorProvincia
 } from '@/utils';
-import { patientsService, UpdatePatientData } from '@/services/api/patients.service';
+import type { Patient, UpdatePatientData } from '@/types';
+import { patientsService } from '@/services/api/patients.service';
 
 interface EditPatientFormData {
   // Información Personal
@@ -78,7 +80,7 @@ export default function EditPatientPage() {
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [patientData, setPatientData] = useState<any>(null);
+  const [patientData, setPatientData] = useState<Patient | null>(null);
   const [formData, setFormData] = useState<EditPatientFormData>({
     nombres: '',
     apellidos: '',
@@ -291,12 +293,7 @@ export default function EditPatientPage() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando información del paciente...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando información del paciente..." />
       </div>
     );
   }
@@ -890,7 +887,7 @@ export default function EditPatientPage() {
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Spinner size="sm" color="white" />
                   Guardando...
                 </>
               ) : (

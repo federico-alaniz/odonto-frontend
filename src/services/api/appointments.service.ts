@@ -1,5 +1,15 @@
 // services/api/appointments.service.ts
 
+import type {
+  Appointment,
+  CreateAppointmentData,
+  UpdateAppointmentData,
+  AppointmentFilters,
+  AppointmentResponse,
+  AppointmentsListResponse,
+  AppointmentStatsResponse
+} from '@/types';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 // Headers comunes
@@ -15,89 +25,6 @@ const getHeaders = (clinicId: string, userId?: string) => {
   
   return headers;
 };
-
-// Tipos
-export interface Appointment {
-  id: string;
-  clinicId: string;
-  patientId: string;
-  doctorId: string;
-  fecha: string; // YYYY-MM-DD
-  horaInicio: string; // HH:mm
-  horaFin: string; // HH:mm
-  motivo: string;
-  estado: 'programada' | 'confirmada' | 'en_curso' | 'completada' | 'cancelada' | 'no_asistio';
-  tipo: 'consulta' | 'control' | 'urgencia' | 'cirugia';
-  notas?: string;
-  motivoCancelacion?: string;
-  createdAt: string;
-  createdBy: string;
-  updatedAt: string;
-  updatedBy: string;
-  canceladaAt?: string;
-  canceladaBy?: string;
-}
-
-export interface CreateAppointmentData {
-  patientId: string;
-  doctorId: string;
-  fecha: string;
-  horaInicio: string;
-  horaFin: string;
-  motivo?: string;
-  tipo?: 'consulta' | 'control' | 'urgencia' | 'cirugia';
-  notas?: string;
-}
-
-export interface UpdateAppointmentData {
-  fecha?: string;
-  horaInicio?: string;
-  horaFin?: string;
-  motivo?: string;
-  estado?: 'programada' | 'confirmada' | 'en_curso' | 'completada' | 'cancelada' | 'no_asistio';
-  tipo?: 'consulta' | 'control' | 'urgencia' | 'cirugia';
-  notas?: string;
-}
-
-export interface AppointmentFilters {
-  doctorId?: string;
-  patientId?: string;
-  fecha?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
-  estado?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface AppointmentResponse {
-  success: boolean;
-  data: Appointment;
-  message?: string;
-}
-
-export interface AppointmentsListResponse {
-  success: boolean;
-  data: Appointment[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface AppointmentStatsResponse {
-  success: boolean;
-  data: {
-    total: number;
-    programadas: number;
-    confirmadas: number;
-    completadas: number;
-    canceladas: number;
-    hoy: number;
-  };
-}
 
 class AppointmentsService {
   /**

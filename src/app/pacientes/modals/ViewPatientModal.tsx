@@ -15,6 +15,7 @@ import {
   CreditCard,
   Cake
 } from 'lucide-react';
+import { calculateAge } from '@/utils';
 import MedicalModal from '@/components/ui/MedicalModal';
 
 interface Patient {
@@ -62,19 +63,6 @@ export default function ViewPatientModal({
 
   const handleViewHistory = () => {
     onViewHistory?.(patient);
-  };
-
-  const calculateAge = (birthDate: string): number => {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
-    return age;
   };
 
   const formatDate = (dateString: string) => {

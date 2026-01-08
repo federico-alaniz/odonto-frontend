@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { getAppointmentStatusConfig } from '@/utils/appointment-status';
 
 interface Appointment {
   id: string;
@@ -148,15 +149,14 @@ export default function Calendar() {
     }
   };
 
-  // Obtener color del estado de la cita
-  const getStatusColor = (status: Appointment['status']) => {
-    switch (status) {
-      case 'confirmada': return 'bg-green-500';
-      case 'programada': return 'bg-yellow-500';
-      case 'completada': return 'bg-blue-500';
-      case 'cancelada': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+  // Mapear colores de estado para indicadores visuales
+  const getStatusDotColor = (status: string) => {
+    const config = getAppointmentStatusConfig(status);
+    if (config.color.includes('green')) return 'bg-green-500';
+    if (config.color.includes('yellow')) return 'bg-yellow-500';
+    if (config.color.includes('blue')) return 'bg-blue-500';
+    if (config.color.includes('red')) return 'bg-red-500';
+    return 'bg-gray-500';
   };
 
   // Verificar si una fecha es hoy
@@ -290,7 +290,7 @@ export default function Calendar() {
                         <span className="font-medium truncate">
                           {appointment.time}
                         </span>
-                        <div className={`w-2 h-2 rounded-full ${getStatusColor(appointment.status)}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
                       </div>
                       <div className="truncate">
                         {appointment.patientName}
@@ -353,7 +353,7 @@ export default function Calendar() {
                           `}>
                             {appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1)}
                           </span>
-                          <div className={`w-3 h-3 rounded-full ${getStatusColor(appointment.status)}`}></div>
+                          <div className={`w-3 h-3 rounded-full ${getStatusDotColor(appointment.status)}`}></div>
                         </div>
                         <h4 className="text-lg font-medium text-slate-900 mt-2">
                           {appointment.patientName}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { 
   Users, 
   Clock, 
@@ -26,9 +27,10 @@ import {
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
-import { appointmentsService, Appointment } from '@/services/api/appointments.service';
+import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
-import { patientsService, Patient } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
+import type { Appointment, Patient } from '@/types';
 import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
@@ -151,7 +153,7 @@ export default function ReceptionPage() {
           .filter(apt => apt.fecha === today)
           .map(apt => {
             const patient = patientsRes.data.find(p => p.id === apt.patientId);
-            const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+            const adminDoctors = adminsRes.data.filter((user: UserType) => user.isDoctor === true);
             const allDoctors = [...doctorsRes.data, ...adminDoctors];
             const doctor = allDoctors.find(d => d.id === apt.doctorId);
             
@@ -464,12 +466,7 @@ export default function ReceptionPage() {
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando recepción...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Cargando recepción..." />
       </div>
     );
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { UserCircle, ArrowLeft, Filter, Plus, Calendar, FileText } from 'lucide-react';
@@ -138,8 +139,8 @@ export default function HistoryDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex-1 bg-gray-50 min-h-screen">
+        <LoadingSpinner message="Cargando historia clínica..." />
       </div>
     );
   }

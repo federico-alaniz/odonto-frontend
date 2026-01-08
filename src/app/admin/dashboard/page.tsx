@@ -29,6 +29,8 @@ import {
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
+import { getAppointmentStatusConfig } from '@/utils/appointment-status';
+import { getSpecialtyName } from '@/utils';
 
 interface StatCard {
   title: string;
@@ -335,23 +337,6 @@ export default function AdminDashboard() {
     setDoctorStats(statsData);
   };
 
-  const getSpecialtyName = (specialty: string): string => {
-    const names: Record<string, string> = {
-      'clinica-medica': 'Clínica Médica',
-      'medicina-interna': 'Medicina Interna',
-      'cardiologia': 'Cardiología',
-      'pediatria': 'Pediatría',
-      'dermatologia': 'Dermatología',
-      'ginecologia': 'Ginecología',
-      'obstetricia': 'Obstetricia',
-      'odontologia': 'Odontología',
-      'cirugia-oral': 'Cirugía Oral',
-      'traumatologia': 'Traumatología',
-      'ortopedia': 'Ortopedia',
-      'psiquiatria': 'Psiquiatría'
-    };
-    return names[specialty] || specialty;
-  };
 
   const getPatientName = (patientId: string): string => {
     const patient = patients.find(p => p.id === patientId);
@@ -701,8 +686,8 @@ export default function AdminDashboard() {
                     </td>
                     <td className="py-4 px-4 text-gray-700">{apt.horaInicio}</td>
                     <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(apt.estado)}`}>
-                        {apt.estado.charAt(0).toUpperCase() + apt.estado.slice(1)}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getAppointmentStatusConfig(apt.estado).color}`}>
+                        {getAppointmentStatusConfig(apt.estado).text}
                       </span>
                     </td>
                   </tr>
