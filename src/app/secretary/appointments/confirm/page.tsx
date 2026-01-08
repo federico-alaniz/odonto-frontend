@@ -138,7 +138,7 @@ function ConfirmAppointmentContent() {
         horaInicio: time,
         horaFin: horaFin,
         motivo: motivo || 'Consulta general',
-        estado: 'programado' as const
+        estado: 'programada' as const
       };
 
       const response = await appointmentsService.createAppointment(clinicId!, currentUser!.id, appointmentData);
