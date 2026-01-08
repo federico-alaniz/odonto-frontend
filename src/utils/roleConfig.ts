@@ -175,6 +175,22 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             }
           },
           {
+            label: 'Pacientes',
+            href: '/secretary/patients',
+            icon: 'Users',
+            description: 'Registro de pacientes',
+            roles: ['admin'],
+            requiredPermission: { resource: 'patients', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
+            }
+          },
+          {
             label: 'Facturación',
             href: '/secretary/billing',
             icon: 'Receipt',
