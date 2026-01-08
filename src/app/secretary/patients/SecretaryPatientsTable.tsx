@@ -30,6 +30,7 @@ import { SecretaryPatientFilters } from './SecretaryPatientsFilters';
 import { patientsService, Patient } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { formatGender, formatCity } from '@/utils/format-helpers';
 
 // Interface adaptada para secretaria
 interface SecretaryPatient {
@@ -100,10 +101,10 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
           tipoDocumento: patient.tipoDocumento,
           numeroDocumento: patient.numeroDocumento,
           fechaNacimiento: patient.fechaNacimiento,
-          genero: patient.genero,
+          genero: formatGender(patient.genero),
           telefono: patient.telefono,
           email: patient.email || '',
-          ciudad: patient.direccion?.ciudad || 'No especificada',
+          ciudad: formatCity(patient.direccion?.ciudad) || 'No especificada',
           tipoSangre: patient.tipoSangre || '',
           ultimaConsulta: undefined,
           proximaCita: undefined,

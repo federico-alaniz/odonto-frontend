@@ -86,12 +86,12 @@ const sidebarSections: SidebarSection[] = [
         icon: BarChart3,
         description: 'Vista general del sistema',
         color: {
-          bg: 'hover:bg-gray-100',
-          text: 'hover:text-blue-700',
-          hover: 'hover:text-blue-700',
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-gray-100',
-          iconText: 'hover:text-blue-600'
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       },
       {
@@ -100,12 +100,12 @@ const sidebarSections: SidebarSection[] = [
         icon: Calendar,
         description: 'Gestión de citas y horarios',
         color: {
-          bg: 'hover:bg-gray-100',
-          text: 'hover:text-blue-700',
-          hover: 'hover:text-blue-700',
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-gray-100',
-          iconText: 'hover:text-blue-600'
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       }
     ]
@@ -119,12 +119,12 @@ const sidebarSections: SidebarSection[] = [
         icon: Users,
         description: 'Gestionar información de pacientes',
         color: {
-          bg: 'hover:bg-gray-100',
-          text: 'hover:text-blue-700',
-          hover: 'hover:text-blue-700',
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-gray-100',
-          iconText: 'hover:text-blue-600'
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       },
       {
@@ -133,12 +133,12 @@ const sidebarSections: SidebarSection[] = [
         icon: ClipboardList,
         description: 'Historias clínicas completas',
         color: {
-          bg: 'hover:bg-gray-100',
-          text: 'hover:text-blue-700',
-          hover: 'hover:text-blue-700',
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
           active: 'bg-blue-600 text-white border-l-blue-400',
-          iconBg: 'bg-gray-100',
-          iconText: 'hover:text-blue-600'
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       }
     ]
@@ -152,12 +152,12 @@ const sidebarSections: SidebarSection[] = [
         icon: BarChart3,
         description: 'Panel médico especializado',
         color: {
-          bg: 'hover:bg-indigo-50',
-          text: 'hover:text-indigo-700',
-          hover: 'hover:text-indigo-700',
-          active: 'bg-indigo-600 text-white border-l-indigo-400',
-          iconBg: 'bg-indigo-100',
-          iconText: 'hover:text-indigo-600'
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       }
     ]
@@ -171,12 +171,12 @@ const sidebarSections: SidebarSection[] = [
         icon: FileText,
         description: 'Consultas y registros médicos',
         color: {
-          bg: 'hover:bg-cyan-50',
-          text: 'hover:text-cyan-700',
-          hover: 'hover:text-cyan-700',
-          active: 'bg-cyan-600 text-white border-l-cyan-400',
-          iconBg: 'bg-cyan-100',
-          iconText: 'hover:text-cyan-600'
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       },
       {
@@ -185,12 +185,12 @@ const sidebarSections: SidebarSection[] = [
         icon: Settings,
         description: 'Configuración del sistema',
         color: {
-          bg: 'hover:bg-indigo-50',
-          text: 'hover:text-indigo-700',
-          hover: 'hover:text-indigo-700',
-          active: 'bg-indigo-600 text-white border-l-indigo-400',
-          iconBg: 'bg-indigo-100',
-          iconText: 'hover:text-indigo-600'
+          bg: 'hover:bg-gray-700',
+          text: 'text-gray-100 hover:text-white',
+          hover: 'hover:text-white',
+          active: 'bg-blue-600 text-white border-l-blue-400',
+          iconBg: 'bg-gray-700',
+          iconText: 'text-gray-100 group-hover:text-white'
         }
       }
     ]
@@ -228,12 +228,12 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               icon: BarChart3,
               description: 'Vista general del sistema',
               color: {
-                bg: 'hover:bg-gray-100',
-                text: 'hover:text-blue-700',
-                hover: 'hover:text-blue-700',
+                bg: 'hover:bg-gray-700',
+                text: 'text-gray-100 hover:text-white',
+                hover: 'hover:text-white',
                 active: 'bg-blue-600 text-white border-l-blue-400',
-                iconBg: 'bg-gray-100',
-                iconText: 'hover:text-blue-600'
+                iconBg: 'bg-gray-700',
+                iconText: 'text-gray-100 group-hover:text-white'
               }
             }
           ]
@@ -272,7 +272,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
 
   // Helper function para obtener las clases CSS correctas basadas en el color
   const getItemClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
-    const baseClasses = 'flex items-center rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-offset-2';
+    const baseClasses = 'flex items-center rounded-lg transition-all duration-200 group focus:outline-none';
     const paddingClasses = isCollapsed ? 'p-2 justify-center' : 'px-3 py-2';
     
     if (isActive) {
@@ -282,7 +282,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       return `${baseClasses} ${paddingClasses} ${item.color.active} shadow-md border-l-4`;
     }
     
-    return `${baseClasses} ${paddingClasses} text-gray-700 ${item.color.bg} ${item.color.text} hover:shadow-sm`;
+    return `${baseClasses} ${paddingClasses} ${item.color.text} ${item.color.bg} hover:shadow-sm`;
   };
 
   const getIconClasses = (item: SidebarItem, isActive: boolean, isCollapsed: boolean) => {
@@ -293,7 +293,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
       return `${baseClasses} ${marginClass} text-white`;
     }
     
-    return `${baseClasses} ${marginClass} text-gray-500 ${item.color.iconText}`;
+    return `${baseClasses} ${marginClass} ${item.color.iconText}`;
   };
 
   // Cerrar dropdown al hacer clic fuera
@@ -348,15 +348,15 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
   return (
     <aside
       className={`
-        bg-white shadow-lg
-        border-r border-gray-200
+        bg-gray-800 shadow-lg
+        border-r border-gray-700
         transition-all duration-300 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-64'}
         h-screen overflow-y-auto
         flex flex-col
       `}
     >
-      <div className={`border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-b border-gray-700 bg-gradient-to-r from-gray-700 to-gray-800 ${isCollapsed ? 'p-2' : 'p-4'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center space-y-3">
             {clinicLogo ? (
@@ -375,7 +375,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
               )}
             </div>
 
-            <h1 className="text-base font-semibold text-gray-900 text-center truncate">
+            <h1 className="text-base font-semibold text-white text-center truncate">
               {clinicDisplayName}
             </h1>
           </div>
@@ -386,7 +386,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         {dynamicSidebarSections.map((section, sectionIndex) => (
           <div key={sectionIndex}>
             {!isCollapsed && (
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
+              <h2 className="text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-2 px-3">
                 {section.title}
               </h2>
             )}
@@ -405,8 +405,8 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                       <IconComponent className={getIconClasses(item, isActive, isCollapsed)} />
                       {!isCollapsed && (
                         <span
-                          className={`block font-medium transition-colors ${
-                            isActive ? 'text-white' : item.color.text
+                          className={`block text-sm transition-colors ${
+                            isActive ? 'text-white font-medium' : item.color.text
                           }`}
                         >
                           {item.label}
@@ -424,12 +424,12 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-200 bg-gray-50 relative" ref={dropdownRef}>
+      <div className="p-4 border-t border-gray-700 bg-gray-800 relative" ref={dropdownRef}>
         {!isCollapsed ? (
           <div className="relative">
             <button
               onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-              className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-sm overflow-hidden">
                 {currentUser?.avatar ? (
@@ -445,10 +445,10 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 )}
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-xs font-medium text-white truncate">
                   {currentUser?.name || 'Usuario'}
                 </p>
-                <p className="text-xs text-blue-600 font-medium truncate">
+                <p className="text-[10px] text-blue-400 font-medium truncate">
                   {currentUser?.role === 'admin'
                     ? 'Administrador'
                     : currentUser?.role === 'doctor'

@@ -65,11 +65,11 @@ export default function NewMedicalRecordPage() {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   
-  // Estados de visibilidad de secciones
+  // Estados de visibilidad de secciones - Odontología por defecto
   const [showInfoGeneral, setShowInfoGeneral] = useState(true);
   const [showMotivoAntecedentes, setShowMotivoAntecedentes] = useState(true);
-  const [showDatosOdonto, setShowDatosOdonto] = useState(false);
-  const [showOdontogramas, setShowOdontogramas] = useState(false);
+  const [showDatosOdonto, setShowDatosOdonto] = useState(true);
+  const [showOdontogramas, setShowOdontogramas] = useState(true);
   const [showSignosVitales, setShowSignosVitales] = useState(false);
   const [showDiagnostico, setShowDiagnostico] = useState(false);
   const [showTratamiento, setShowTratamiento] = useState(false);
@@ -81,8 +81,8 @@ export default function NewMedicalRecordPage() {
   const [currentOdontogram, setCurrentOdontogram] = useState<ToothCondition[]>([]);
   const [extractedTeeth, setExtractedTeeth] = useState<number[]>([]);
   
-  // Tipo de consulta
-  const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('general');
+  // Tipo de consulta - Por defecto odontología ya que es la única especialidad del sistema
+  const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('odontologia');
   
   // Estado para paciente y cita
   const [patient, setPatient] = useState<any>(null);

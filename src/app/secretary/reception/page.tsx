@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, Appointment } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { patientsService, Patient } from '@/services/api/patients.service';
+import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
 
@@ -50,6 +51,7 @@ interface ReceptionAppointment {
   priority: 'normal' | 'urgent';
   isNewPatient: boolean;
   estimatedDuration: number; // en minutos
+  updatedAt?: string; // Para calcular tiempo de espera
 }
 
 interface WaitingStats {
@@ -68,6 +70,8 @@ export default function ReceptionPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<UserType[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
+  const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
   const [stats, setStats] = useState<WaitingStats>({
     esperando: 0,
     enConsulta: 0,
@@ -115,16 +119,29 @@ export default function ReceptionPage() {
       setLoading(true);
 
       // Cargar datos en paralelo
-      const [appointmentsRes, doctorsRes, patientsRes] = await Promise.all([
+      const [appointmentsRes, doctorsRes, adminsRes, patientsRes, roomsRes, specialtiesRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId),
         usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' }),
-        patientsService.getPatients(clinicId)
+        usersService.getUsers(clinicId, { role: 'admin' }),
+        patientsService.getPatients(clinicId),
+        clinicSettingsService.getConsultingRooms(clinicId),
+        clinicSettingsService.getSpecialties(clinicId)
       ]);
 
-      if (appointmentsRes.success && doctorsRes.success && patientsRes.success) {
+      if (appointmentsRes.success && doctorsRes.success && adminsRes.success && patientsRes.success) {
         setAppointments(appointmentsRes.data);
-        setDoctors(doctorsRes.data);
+        const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+        const allDoctors = [...doctorsRes.data, ...adminDoctors];
+        setDoctors(allDoctors);
         setPatients(patientsRes.data);
+        
+        // Cargar consultorios y especialidades
+        if (roomsRes.success && roomsRes.data) {
+          setConsultingRooms(roomsRes.data);
+        }
+        if (specialtiesRes.success && specialtiesRes.data) {
+          setSpecialties(specialtiesRes.data);
+        }
 
         // Obtener fecha de hoy (respeta modo debug)
         const today = dateHelper.today();
@@ -134,7 +151,9 @@ export default function ReceptionPage() {
           .filter(apt => apt.fecha === today)
           .map(apt => {
             const patient = patientsRes.data.find(p => p.id === apt.patientId);
-            const doctor = doctorsRes.data.find(d => d.id === apt.doctorId);
+            const adminDoctors = adminsRes.data.filter((user: any) => user.isDoctor === true);
+            const allDoctors = [...doctorsRes.data, ...adminDoctors];
+            const doctor = allDoctors.find(d => d.id === apt.doctorId);
             
             const patientName = patient 
               ? `${patient.nombres} ${patient.apellidos}` 
@@ -147,12 +166,17 @@ export default function ReceptionPage() {
             const specialty = doctor?.especialidades?.[0] || 'General';
             const consultorio = doctor?.consultorio || 'N/A';
 
-            // Calcular tiempo estimado de finalización
             const startTime = apt.horaInicio;
             const duration = 30; // 30 minutos por defecto
             const [hours, minutes] = startTime.split(':').map(Number);
             const endTime = `${String(hours + Math.floor((minutes + duration) / 60)).padStart(2, '0')}:${String((minutes + duration) % 60).padStart(2, '0')}`;
 
+            // Convertir estado backend a frontend para la UI
+            let frontendStatus: string = apt.estado;
+            if (apt.estado === 'en_curso') frontendStatus = 'en-curso';
+            if (apt.estado === 'no_asistio') frontendStatus = 'no-show';
+            // 'confirmada' se mantiene igual en ambos lados
+            
             return {
               id: apt.id,
               patientId: apt.patientId,
@@ -165,12 +189,13 @@ export default function ReceptionPage() {
               endTime,
               consultorio,
               motivo: apt.motivo || 'Consulta general',
-              status: apt.estado as any,
+              status: frontendStatus as any,
               arrivalTime: undefined,
               consultationStartTime: undefined,
               priority: 'normal' as any,
               isNewPatient: false,
-              estimatedDuration: duration
+              estimatedDuration: duration,
+              updatedAt: apt.updatedAt
             } as ReceptionAppointment;
           })
           .sort((a, b) => a.time.localeCompare(b.time));
@@ -240,6 +265,43 @@ export default function ReceptionPage() {
     setFilteredAppointments(filtered);
   }, [todayAppointments, selectedFilter, searchTerm]);
 
+  const getSpecialtyName = (specialtyId: string): string => {
+    if (!specialtyId) return 'General';
+    
+    // Buscar por ID en las especialidades cargadas
+    const specialty = specialties.find(s => s.id === specialtyId);
+    if (specialty) {
+      return specialty.name;
+    }
+    
+    // Fallback: mapeo estático
+    const names: Record<string, string> = {
+      'odontologia': 'Odontología',
+      'clinica-medica': 'Clínica Médica',
+      'pediatria': 'Pediatría'
+    };
+    
+    return names[specialtyId] || specialtyId;
+  };
+
+  const getConsultingRoomName = (consultorioId: string): string => {
+    if (!consultorioId || consultorioId === 'N/A') return 'Sin consultorio';
+    
+    // Buscar por ID
+    const room = consultingRooms.find(r => r.id === consultorioId);
+    if (room) {
+      return room.name;
+    }
+    
+    // Buscar por número
+    const roomByNumber = consultingRooms.find(r => r.number === consultorioId);
+    if (roomByNumber) {
+      return roomByNumber.name;
+    }
+    
+    return `Consultorio ${consultorioId}`;
+  };
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'programada':
@@ -301,36 +363,69 @@ export default function ReceptionPage() {
     }
   };
 
-  const handleStatusChange = (appointmentId: string, newStatus: string) => {
-    setTodayAppointments(prev => 
-      prev.map(apt => {
-        if (apt.id === appointmentId) {
-          const updatedApt = { ...apt, status: newStatus as any };
-          
-          const currentTime = new Date().toLocaleTimeString('es-AR', { 
-            timeZone: 'America/Argentina/Buenos_Aires',
-            hour: '2-digit', 
-            minute: '2-digit',
-            hour12: false
-          });
-          
-          // Si se confirma llegada, agregar hora de llegada
-          if (newStatus === 'esperando' && !apt.arrivalTime) {
-            updatedApt.arrivalTime = currentTime;
-          }
-          
-          // Si pasa a consulta, agregar hora de inicio de consulta
-          if (newStatus === 'en-curso' && !apt.consultationStartTime) {
-            updatedApt.consultationStartTime = currentTime;
-          }
-          
-          return updatedApt;
-        }
-        return apt;
-      })
-    );
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    if (!clinicId || !currentUser?.id) {
+      console.error('❌ No hay clinicId o userId');
+      return;
+    }
 
-    // Notificar cambio (aquí se integraría con el backend)
+    try {
+      console.log('🔄 Cambiando estado de cita:', { appointmentId, newStatus });
+
+      // Convertir estado frontend a backend (esperando -> confirmada, en-curso -> en_curso, no-show -> no_asistio)
+      let backendStatus: string = newStatus;
+      if (newStatus === 'esperando') backendStatus = 'confirmada';
+      if (newStatus === 'en-curso') backendStatus = 'en_curso';
+      if (newStatus === 'no-show') backendStatus = 'no_asistio';
+
+      // Actualizar en el backend
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        currentUser.id,
+        appointmentId,
+        { estado: backendStatus as any }
+      );
+
+      console.log('📥 Respuesta del backend:', response);
+
+      if (response.success) {
+        // Actualizar estado local solo si el backend confirma
+        setTodayAppointments(prev => 
+          prev.map(apt => {
+            if (apt.id === appointmentId) {
+              const updatedApt = { ...apt, status: newStatus as any };
+              
+              const currentTime = new Date().toLocaleTimeString('es-AR', { 
+                timeZone: 'America/Argentina/Buenos_Aires',
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false
+              });
+              
+              // Si se confirma llegada, agregar hora de llegada
+              if (newStatus === 'esperando' && !apt.arrivalTime) {
+                updatedApt.arrivalTime = currentTime;
+              }
+              
+              // Si pasa a consulta, agregar hora de inicio de consulta
+              if (newStatus === 'en-curso' && !apt.consultationStartTime) {
+                updatedApt.consultationStartTime = currentTime;
+              }
+              
+              console.log('✅ Estado actualizado localmente:', updatedApt.status);
+              return updatedApt;
+            }
+            return apt;
+          })
+        );
+      } else {
+        console.error('❌ Backend no confirmó la actualización');
+        alert('No se pudo actualizar el estado de la cita.');
+      }
+    } catch (error) {
+      console.error('❌ Error al actualizar estado:', error);
+      alert('Error al actualizar el estado de la cita.');
+    }
   };
 
   const handleNotifyDoctor = (appointment: ReceptionAppointment) => {
@@ -338,51 +433,31 @@ export default function ReceptionPage() {
   };
 
   const getWaitingTime = (appointment: ReceptionAppointment) => {
-    if (!appointment.arrivalTime) return '';
-    
+    // Solo mostrar tiempo de espera para citas confirmadas o en espera
+    if (appointment.status !== 'confirmada' && appointment.status !== 'esperando') {
+      return '';
+    }
+
+    // Usar updatedAt para calcular el tiempo desde que se confirmó la cita
+    if (!appointment.updatedAt) {
+      return '0 min';
+    }
+
     try {
-      const arrTimeParts = appointment.arrivalTime.split(':');
-      if (arrTimeParts.length !== 2) return '';
+      const updatedAt = new Date(appointment.updatedAt);
+      const now = currentTime;
+      const diffMs = now.getTime() - updatedAt.getTime();
+      const diffMinutes = Math.floor(diffMs / 60000);
+
+      if (diffMinutes < 0) return '0 min';
+      if (diffMinutes < 60) return `${diffMinutes} min`;
       
-      const arrHours = parseInt(arrTimeParts[0], 10);
-      const arrMinutes = parseInt(arrTimeParts[1], 10);
-      
-      // Validar que sean números válidos
-      if (isNaN(arrHours) || isNaN(arrMinutes)) return '';
-      
-      const arrivalTotalMinutes = arrHours * 60 + arrMinutes;
-      let endTotalMinutes: number;
-      
-      // Si la cita ya está en curso o completada, usar el tiempo de inicio de consulta
-      if (appointment.consultationStartTime) {
-        const startTimeParts = appointment.consultationStartTime.split(':');
-        if (startTimeParts.length !== 2) return '';
-        
-        const startHours = parseInt(startTimeParts[0], 10);
-        const startMinutes = parseInt(startTimeParts[1], 10);
-        
-        if (isNaN(startHours) || isNaN(startMinutes)) return '';
-        endTotalMinutes = startHours * 60 + startMinutes;
-      } else if (appointment.status === 'esperando') {
-        // Si está esperando, usar la hora actual
-        const nowHours = currentTime.getHours();
-        const nowMinutes = currentTime.getMinutes();
-        endTotalMinutes = nowHours * 60 + nowMinutes;
-      } else {
-        return '';
-      }
-      
-      const waitingMinutes = endTotalMinutes - arrivalTotalMinutes;
-      
-      if (waitingMinutes < 0) return '';
-      if (waitingMinutes < 60) return `${waitingMinutes}m`;
-      
-      const hours = Math.floor(waitingMinutes / 60);
-      const minutes = waitingMinutes % 60;
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
       return `${hours}h ${minutes}m`;
     } catch (error) {
       console.error('Error calculando tiempo de espera:', error);
-      return '';
+      return '0 min';
     }
   };
 
@@ -552,169 +627,91 @@ export default function ReceptionPage() {
           </div>
         </div>
 
-        {/* Lista de Citas */}
-        <div className="space-y-4">
+        {/* Tabla de Citas */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {filteredAppointments.length > 0 ? (
-            filteredAppointments.map((appointment) => {
-              const statusConfig = getStatusConfig(appointment.status);
-              const StatusIcon = statusConfig.icon;
-              const waitingTime = getWaitingTime(appointment);
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultorio</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredAppointments.map((appointment) => {
+                    const statusConfig = getStatusConfig(appointment.status);
+                    const StatusIcon = statusConfig.icon;
+                    const waitingTime = getWaitingTime(appointment);
 
-              return (
-                <div 
-                  key={appointment.id} 
-                  className={`bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all overflow-hidden ${statusConfig.bgCard}`}
-                >
-                  <div className="p-6">
-                    <div className="flex items-center justify-between">
-                      
-                      {/* Información principal */}
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <User className="w-6 h-6 text-green-600" />
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {appointment.patientName}
-                            </h3>
-                            
-                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
-                              <StatusIcon className="w-4 h-4" />
-                              {statusConfig.text}
+                    return (
+                      <tr key={appointment.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <User className="h-5 w-5 text-blue-600" />
+                              </div>
                             </div>
-                            
-                            {appointment.isNewPatient && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                Nuevo
-                              </span>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
+                              {waitingTime && <div className="text-xs text-yellow-600">Espera: {waitingTime}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{appointment.time}</div>
+                          <div className="text-xs text-gray-500">{appointment.endTime}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{appointment.doctorName}</div>
+                          <div className="text-xs text-gray-500">{getSpecialtyName(appointment.specialty)}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getConsultingRoomName(appointment.consultorio)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {statusConfig.text}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.patientPhone}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            {appointment.status === 'programada' && (
+                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="Confirmar Llegada">
+                                <Timer className="w-5 h-5" />
+                              </button>
                             )}
-                            
-                            {appointment.priority === 'urgent' && (
-                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                            {appointment.status === 'confirmada' && (
+                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="En Espera">
+                                <Timer className="w-5 h-5" />
+                              </button>
                             )}
-                            
-                            {waitingTime && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                Espera: {waitingTime}
-                              </span>
+                            {appointment.status === 'esperando' && (
+                              <button onClick={() => handleStatusChange(appointment.id, 'en-curso')} className="p-1 text-green-600 hover:text-green-700 transition-colors" title="Pasar a Consulta">
+                                <ArrowRight className="w-5 h-5" />
+                              </button>
+                            )}
+                            {appointment.status === 'programada' && (
+                              <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="p-1 text-red-600 hover:text-red-700 transition-colors" title="No Asistio">
+                                <XCircle className="w-5 h-5" />
+                              </button>
                             )}
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              <span>{appointment.time} - {appointment.endTime}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Stethoscope className="w-4 h-4" />
-                              <span>{appointment.doctorName}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              <span>{appointment.consultorio}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4" />
-                              <span>{appointment.patientPhone}</span>
-                            </div>
-                          </div>
-                          
-                          {appointment.arrivalTime && (
-                            <div className="mt-2 text-sm text-green-600">
-                              Llegó a las {appointment.arrivalTime}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Acciones */}
-                      <div className="flex items-center space-x-2">
-                        
-                        {/* Botones de estado */}
-                        {appointment.status === 'programada' && (
-                          <button
-                            onClick={() => handleStatusChange(appointment.id, 'esperando')}
-                            className="px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm inline-flex items-center gap-1"
-                          >
-                            <Timer className="w-4 h-4" />
-                            Confirmar Llegada
-                          </button>
-                        )}
-                        
-                        {appointment.status === 'confirmada' && (
-                          <button
-                            onClick={() => handleStatusChange(appointment.id, 'esperando')}
-                            className="px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm inline-flex items-center gap-1"
-                          >
-                            <Timer className="w-4 h-4" />
-                            En Espera
-                          </button>
-                        )}
-                        
-                        {appointment.status === 'esperando' && (
-                          <>
-                            <button
-                              onClick={() => handleNotifyDoctor(appointment)}
-                              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm inline-flex items-center gap-1"
-                            >
-                              <Bell className="w-4 h-4" />
-                              Notificar Doctor
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(appointment.id, 'en-curso')}
-                              className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm inline-flex items-center gap-1"
-                            >
-                              <ArrowRight className="w-4 h-4" />
-                              Pasar a Consulta
-                            </button>
-                          </>
-                        )}
-                        
-                        {appointment.status === 'en-curso' && (
-                          <div className="px-3 py-2 bg-green-100 text-green-700 rounded-lg text-sm inline-flex items-center gap-1">
-                            <Activity className="w-4 h-4" />
-                            En Consulta
-                          </div>
-                        )}
-                        
-                        {appointment.status === 'programada' && (
-                          <button
-                            onClick={() => handleStatusChange(appointment.id, 'no-show')}
-                            className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm inline-flex items-center gap-1"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            No Show
-                          </button>
-                        )}
-
-                        {/* Acciones adicionales */}
-                        <Link
-                          href={`/historiales/${appointment.patientId}`}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Ver historial"
-                        >
-                          <Eye className="w-5 h-5" />
-                        </Link>
-                        
-                        <Link
-                          href={`/secretary/appointments/${appointment.id}/edit`}
-                          className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                          title="Editar cita"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="p-12 text-center">
               <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No se encontraron citas
@@ -727,7 +724,7 @@ export default function ReceptionPage() {
               </p>
               <Link 
                 href={buildPath('/secretary/appointments/new')}
-                className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Calendar className="w-5 h-5" />
                 Nuevo Turno

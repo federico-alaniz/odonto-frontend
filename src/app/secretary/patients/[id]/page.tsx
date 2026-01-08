@@ -29,7 +29,9 @@ import Link from 'next/link';
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
+import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { useAuth } from '@/hooks/useAuth';
+import { getAppointmentStatusConfig } from '@/utils/appointment-status';
 
 // Datos temporales vacíos hasta integrar con backend
 interface PatientDetails {
@@ -149,20 +151,64 @@ export default function SecretaryPatientDetailPage() {
         const adminDoctors = adminsData.data.filter((user: any) => user.isDoctor === true);
         const allDoctors = [...doctorsData.data, ...adminDoctors];
 
+        // Cargar especialidades para mapear IDs a nombres
+        const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
+        const specialtiesMap = new Map<string, string>();
+        if (specialtiesRes.success && specialtiesRes.data) {
+          specialtiesRes.data.forEach((spec: any) => {
+            specialtiesMap.set(spec.id, spec.name || spec.nombre);
+          });
+        }
+
+        // Cargar consultorios para mapear IDs a nombres
+        const consultoriosRes = await clinicSettingsService.getConsultingRooms(clinicId);
+        const consultoriosMap = new Map<string, string>();
+        if (consultoriosRes.success && consultoriosRes.data) {
+          consultoriosRes.data.forEach((cons: any) => {
+            consultoriosMap.set(cons.id, cons.nombre || cons.name);
+          });
+        }
+
+        // Fecha actual para comparar
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         // Transformar datos de citas con información de doctores
         const patientAppts: PatientAppointment[] = appointmentsData.data
           .map(apt => {
             const doctor = allDoctors.find(d => d.id === apt.doctorId);
+            
+            // Obtener nombre de especialidad
+            const especialidadId = doctor?.especialidades?.[0];
+            let especialidadNombre = 'No especificada';
+            if (especialidadId) {
+              especialidadNombre = specialtiesMap.get(especialidadId) || especialidadId;
+            }
+            
+            // Obtener nombre de consultorio
+            const consultorioId = doctor?.consultorio;
+            let consultorioNombre = 'Sin asignar';
+            if (consultorioId) {
+              consultorioNombre = consultoriosMap.get(consultorioId) || consultorioId;
+            }
+            
+            // Verificar si la cita es pasada y cambiar estado a 'no_asistio' si está 'programada'
+            const appointmentDate = new Date(apt.fecha + 'T' + apt.horaInicio);
+            let estado = apt.estado;
+            if (appointmentDate < today && estado === 'programada') {
+              estado = 'no_asistio';
+            }
+            
             return {
               id: apt.id,
               fecha: apt.fecha,
               horaInicio: apt.horaInicio,
               doctorId: apt.doctorId,
               doctorName: doctor ? `${doctor.nombres} ${doctor.apellidos}` : 'Doctor no asignado',
-              especialidad: doctor?.especialidades?.[0] || doctor?.specialization || 'No especificada',
+              especialidad: especialidadNombre,
               motivo: apt.motivo || 'Sin motivo especificado',
-              estado: apt.estado,
-              consultorio: doctor?.consultorio || 'Consultorio 1',
+              estado: estado,
+              consultorio: consultorioNombre,
               notas: apt.notas
             };
           })
@@ -207,23 +253,6 @@ export default function SecretaryPatientDetailPage() {
       style: 'currency',
       currency: 'ARS'
     }).format(amount);
-  };
-
-  const getEstadoConfig = (estado: string) => {
-    switch (estado) {
-      case 'programada':
-        return { color: 'bg-blue-100 text-blue-800 border-blue-200', text: 'Programada' };
-      case 'confirmada':
-        return { color: 'bg-orange-100 text-orange-800 border-orange-200', text: 'Confirmada' };
-      case 'completada':
-        return { color: 'bg-green-100 text-green-800 border-green-200', text: 'Completada' };
-      case 'cancelada':
-        return { color: 'bg-red-100 text-red-800 border-red-200', text: 'Cancelada' };
-      case 'no-show':
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: 'No asistió' };
-      default:
-        return { color: 'bg-gray-100 text-gray-800 border-gray-200', text: estado };
-    }
   };
 
   const getBillEstadoConfig = (estado: string) => {
@@ -680,12 +709,38 @@ export default function SecretaryPatientDetailPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {patientAppointments.map(appointment => {
-                      const estadoConfig = getEstadoConfig(appointment.estado);
+                      const estadoConfig = getAppointmentStatusConfig(appointment.estado);
+                      
+                      // Calcular retraso si es turno de hoy y está programado
+                      const now = new Date();
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const appointmentDate = new Date(appointment.fecha + 'T12:00:00');
+                      appointmentDate.setHours(0, 0, 0, 0);
+                      
+                      let delayMinutes = 0;
+                      let showDelay = false;
+                      
+                      if (appointmentDate.getTime() === today.getTime() && appointment.estado === 'programada') {
+                        const [hours, minutes] = appointment.horaInicio.split(':').map(Number);
+                        const appointmentTime = new Date();
+                        appointmentTime.setHours(hours, minutes, 0, 0);
+                        
+                        if (now > appointmentTime) {
+                          delayMinutes = Math.floor((now.getTime() - appointmentTime.getTime()) / (1000 * 60));
+                          showDelay = delayMinutes > 0;
+                        }
+                      }
+                      
                       return (
                         <tr key={appointment.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {formatDate(appointment.fecha)}
+                              {new Date(appointment.fecha + 'T12:00:00').toLocaleDateString('es-AR', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric' 
+                              })}
                             </div>
                             <div className="text-sm text-gray-500">
                               {appointment.horaInicio}
@@ -711,9 +766,15 @@ export default function SecretaryPatientDetailPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${estadoConfig.color}`}>
-                              {estadoConfig.text}
-                            </span>
+                            {showDelay ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                Retraso: {delayMinutes < 60 ? `${delayMinutes}m` : `${Math.floor(delayMinutes / 60)}h ${delayMinutes % 60}m`}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${estadoConfig.color}`}>
+                                {estadoConfig.text}
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                             <div title={appointment.motivo}>
@@ -874,8 +935,8 @@ export default function SecretaryPatientDetailPage() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500">Estado</label>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEstadoConfig(selectedAppointment.estado).color}`}>
-                      {getEstadoConfig(selectedAppointment.estado).text}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getAppointmentStatusConfig(selectedAppointment.estado).color}`}>
+                      {getAppointmentStatusConfig(selectedAppointment.estado).text}
                     </span>
                   </div>
                   <div>

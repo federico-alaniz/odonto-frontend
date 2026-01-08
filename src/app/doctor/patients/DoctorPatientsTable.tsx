@@ -28,6 +28,7 @@ import { DoctorPatientFilters } from './DoctorPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { formatGender, formatCity } from '@/utils/format-helpers';
 
 // Interface para pacientes del doctor con información adicional
 interface DoctorPatient {
@@ -41,7 +42,7 @@ interface DoctorPatient {
   telefono: string;
   email?: string;
   ciudad?: string;
-  tipoSangre?: string;
+  obraSocial?: string;
   alergias?: string[];
   medicamentosActuales?: string[];
   antecedentesPersonales?: string[];
@@ -61,7 +62,7 @@ interface DoctorPatientsTableProps {
   showOnlyAssigned?: boolean;
 }
 
-type SortKey = 'name' | 'age' | 'lastVisit' | 'urgency' | 'document' | 'bloodType';
+type SortKey = 'name' | 'age' | 'lastVisit' | 'urgency' | 'document' | 'obraSocial';
 type SortOrder = 'asc' | 'desc';
 
 export default function DoctorPatientsTable({ filters, showOnlyAssigned = false }: DoctorPatientsTableProps) {
@@ -166,12 +167,13 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
             return {
               ...patient,
+              genero: formatGender(patient.genero),
               age,
               lastVisitType: 'N/A', // TODO: Obtener del historial médico
               urgency,
               riskFactors,
               daysSinceLastVisit,
-              ciudad: patient.direccion?.ciudad
+              ciudad: formatCity(patient.direccion?.ciudad)
             } as DoctorPatient;
           });
 
@@ -217,8 +219,8 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
       // Filtro por género
       if (filters.genero && patient.genero !== filters.genero) return false;
 
-      // Filtro por tipo de sangre
-      if (filters.tipoSangre && patient.tipoSangre !== filters.tipoSangre) return false;
+      // Filtro por obra social
+      if (filters.obraSocial && patient.obraSocial !== filters.obraSocial) return false;
 
       // Filtro por urgencia
       if (filters.urgencia && patient.urgency !== filters.urgencia) return false;
@@ -264,9 +266,9 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
           aValue = a.numeroDocumento;
           bValue = b.numeroDocumento;
           break;
-        case 'bloodType':
-          aValue = a.tipoSangre || '';
-          bValue = b.tipoSangre || '';
+        case 'obraSocial':
+          aValue = a.obraSocial || '';
+          bValue = b.obraSocial || '';
           break;
         default:
           return 0;
@@ -416,14 +418,8 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                       {getSortIcon('age')}
                     </div>
                   </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                    onClick={() => handleSort('bloodType')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Tipo Sangre
-                      {getSortIcon('bloodType')}
-                    </div>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Obra Social
                   </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
@@ -486,13 +482,10 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                       </div>
                     </td>
 
-                    {/* Tipo de sangre */}
+                    {/* Obra Social */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Droplets className="w-4 h-4 text-red-500" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {patient.tipoSangre || 'N/A'}
-                        </span>
+                      <div className="text-sm text-gray-900">
+                        {patient.obraSocial || 'Sin obra social'}
                       </div>
                     </td>
 
@@ -511,12 +504,20 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
                     {/* Última consulta */}
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(patient.ultimaConsulta)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {patient.lastVisitType} • {patient.daysSinceLastVisit} días
-                      </div>
+                      {patient.ultimaConsulta ? (
+                        <>
+                          <div className="text-sm text-gray-900">
+                            {formatDate(patient.ultimaConsulta)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Hace {patient.daysSinceLastVisit} días
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-500 italic">
+                          Sin consultas previas
+                        </div>
+                      )}
                     </td>
 
                     {/* Contacto */}

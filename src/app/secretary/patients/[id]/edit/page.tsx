@@ -31,6 +31,10 @@ interface EditPatientFormData {
   // Información Personal
   nombres: string;
   apellidos: string;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  genero: string;
+  fechaNacimiento: string;
   telefono: string;
   email: string;
   
@@ -78,6 +82,10 @@ export default function EditPatientPage() {
   const [formData, setFormData] = useState<EditPatientFormData>({
     nombres: '',
     apellidos: '',
+    tipoDocumento: '',
+    numeroDocumento: '',
+    genero: '',
+    fechaNacimiento: '',
     telefono: '',
     email: '',
     calle: '',
@@ -134,6 +142,10 @@ export default function EditPatientPage() {
         setFormData({
           nombres: patient.nombres || '',
           apellidos: patient.apellidos || '',
+          tipoDocumento: patient.tipoDocumento || '',
+          numeroDocumento: patient.numeroDocumento || '',
+          genero: patient.genero || '',
+          fechaNacimiento: patient.fechaNacimiento || '',
           telefono: patient.telefono || '',
           email: patient.email || '',
           calle: patient.direccion?.calle || '',
@@ -233,6 +245,10 @@ export default function EditPatientPage() {
       const updateData: UpdatePatientData = {
         nombres: formData.nombres,
         apellidos: formData.apellidos,
+        tipoDocumento: formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero' | undefined,
+        numeroDocumento: formData.numeroDocumento || undefined,
+        genero: formData.genero as 'masculino' | 'femenino' | 'otro' | undefined,
+        fechaNacimiento: formData.fechaNacimiento || undefined,
         telefono: formData.telefono,
         email: formData.email || undefined,
         direccion: {
@@ -388,6 +404,69 @@ export default function EditPatientPage() {
                         }`}
                       />
                       {errors.apellidos && <p className="text-red-500 text-sm mt-1">{errors.apellidos}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de Documento
+                      </label>
+                      <select
+                        name="tipoDocumento"
+                        value={formData.tipoDocumento}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleccionar tipo</option>
+                        <option value="dni">DNI</option>
+                        <option value="le">LE</option>
+                        <option value="lc">LC</option>
+                        <option value="ci">CI</option>
+                        <option value="pasaporte">Pasaporte</option>
+                        <option value="extranjero">Extranjero</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Número de Documento
+                      </label>
+                      <input
+                        type="text"
+                        name="numeroDocumento"
+                        value={formData.numeroDocumento}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Género
+                      </label>
+                      <select
+                        name="genero"
+                        value={formData.genero}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleccionar género</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="femenino">Femenino</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Fecha de Nacimiento
+                      </label>
+                      <input
+                        type="date"
+                        name="fechaNacimiento"
+                        value={formData.fechaNacimiento}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
 
                     <div>

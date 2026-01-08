@@ -98,6 +98,10 @@ export interface CreatePatientData {
 export interface UpdatePatientData {
   nombres?: string;
   apellidos?: string;
+  tipoDocumento?: 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero';
+  numeroDocumento?: string;
+  genero?: 'masculino' | 'femenino' | 'otro';
+  fechaNacimiento?: string;
   telefono?: string;
   email?: string;
   direccion?: Direccion;

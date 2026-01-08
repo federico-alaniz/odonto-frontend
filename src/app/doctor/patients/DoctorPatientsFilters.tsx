@@ -12,7 +12,7 @@ export interface DoctorPatientFilters {
   search: string;
   numeroDocumento: string;
   genero: string;
-  tipoSangre: string;
+  obraSocial: string;
   edadMin: string;
   edadMax: string;
   urgencia: string;
@@ -66,7 +66,7 @@ export default function DoctorPatientsFilters({ filters, onFiltersChange }: Filt
       search: '',
       numeroDocumento: '',
       genero: '',
-      tipoSangre: '',
+      obraSocial: '',
       edadMin: '',
       edadMax: '',
       urgencia: '',
@@ -206,25 +206,16 @@ export default function DoctorPatientsFilters({ filters, onFiltersChange }: Filt
               </div>
             </div>
 
-            {/* Tipo de sangre */}
+            {/* Obra Social */}
             <div className="relative">
-              <label className="sr-only">Tipo de sangre</label>
-              <select
-                value={filters.tipoSangre}
-                onChange={(e) => handleFilterChange('tipoSangre', e.target.value)}
-                className="w-full h-12 px-4 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm appearance-none bg-white cursor-pointer"
-              >
-                {tiposSangre.map(tipo => (
-                  <option key={tipo.value} value={tipo.value}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+              <label className="sr-only">Obra Social</label>
+              <input
+                type="text"
+                placeholder="Obra Social"
+                value={filters.obraSocial}
+                onChange={(e) => handleFilterChange('obraSocial', e.target.value)}
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+              />
             </div>
 
             {/* Edad mínima */}
@@ -295,10 +286,10 @@ export default function DoctorPatientsFilters({ filters, onFiltersChange }: Filt
                 </button>
               </span>
             )}
-            {filters.tipoSangre && (
+            {filters.obraSocial && (
               <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                Sangre: {filters.tipoSangre}
-                <button onClick={() => handleFilterChange('tipoSangre', '')}>
+                Obra Social: {filters.obraSocial}
+                <button onClick={() => handleFilterChange('obraSocial', '')}>
                   <X className="w-3 h-3" />
                 </button>
               </span>

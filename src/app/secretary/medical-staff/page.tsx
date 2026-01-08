@@ -30,6 +30,7 @@ import {
 import { usersService } from '@/services/api/users.service';
 import { avisosService, Aviso as AvisoType } from '@/services/api/avisos.service';
 import { ausenciasService, Ausencia as AusenciaType } from '@/services/api/ausencias.service';
+import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
 import { User } from '@/types/roles';
 
 type TabType = 'profesionales' | 'avisos' | 'ausencias';
@@ -73,6 +74,8 @@ export default function MedicalStaffPage() {
   const [doctors, setDoctors] = useState<DoctorWithStatus[]>([]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [ausencias, setAusencias] = useState<Ausencia[]>([]);
+  const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
+  const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -80,11 +83,50 @@ export default function MedicalStaffPage() {
 
   useEffect(() => {
     if (clinicId) {
-      loadMedicalStaff();
-      loadAvisos();
-      loadAusencias();
+      loadData();
     }
   }, [clinicId]);
+
+  const loadData = async () => {
+    // Cargar consultorios y especialidades primero, luego el resto
+    await Promise.all([
+      loadConsultingRooms(),
+      loadSpecialties()
+    ]);
+    await loadMedicalStaff();
+    loadAvisos();
+    loadAusencias();
+  };
+
+  const loadConsultingRooms = async () => {
+    if (!clinicId) return;
+    
+    try {
+      const response = await clinicSettingsService.getConsultingRooms(clinicId);
+      if (response.success && response.data) {
+        console.log('Consultorios cargados:', response.data);
+        setConsultingRooms(response.data);
+      }
+    } catch (error) {
+      console.error('Error cargando consultorios:', error);
+      setConsultingRooms([]);
+    }
+  };
+
+  const loadSpecialties = async () => {
+    if (!clinicId) return;
+    
+    try {
+      const response = await clinicSettingsService.getSpecialties(clinicId);
+      if (response.success && response.data) {
+        console.log('Especialidades cargadas:', response.data);
+        setSpecialties(response.data);
+      }
+    } catch (error) {
+      console.error('Error cargando especialidades:', error);
+      setSpecialties([]);
+    }
+  };
 
   const loadMedicalStaff = async () => {
     if (!clinicId) {
@@ -111,6 +153,14 @@ export default function MedicalStaffPage() {
       const allDoctors: DoctorWithStatus[] = [...doctorsRes.data, ...adminDoctors].map(doctor => {
         const isOnline = Math.random() > 0.3;
         const isAttending = isOnline && Math.random() > 0.5;
+        
+        // Debug log para verificar datos del doctor
+        console.log(`Doctor: ${doctor.nombres} ${doctor.apellidos}`, {
+          consultorio: doctor.consultorio,
+          especialidades: doctor.especialidades,
+          role: doctor.role
+        });
+        
         return {
           ...doctor,
           isOnline,
@@ -125,6 +175,7 @@ export default function MedicalStaffPage() {
       });
 
       console.log('Total médicos procesados:', allDoctors.length);
+      console.log('Consultorios cargados:', consultingRooms.length);
       setDoctors(allDoctors);
     } catch (error) {
       console.error('Error cargando personal médico:', error);
@@ -201,6 +252,15 @@ export default function MedicalStaffPage() {
   };
 
   const getSpecialtyName = (specialty: string): string => {
+    if (!specialty) return 'Sin especialidad';
+    
+    // Primero intentar buscar por ID en las especialidades cargadas del backend
+    const specialtyById = specialties.find(s => s.id === specialty);
+    if (specialtyById) {
+      return specialtyById.name;
+    }
+    
+    // Fallback: mapeo estático de códigos a nombres
     const names: Record<string, string> = {
       'clinica-medica': 'Clínica Médica',
       'medicina-interna': 'Medicina Interna',
@@ -214,7 +274,46 @@ export default function MedicalStaffPage() {
       'ortopedia': 'Ortopedia',
       'psiquiatria': 'Psiquiatría'
     };
-    return names[specialty] || specialty;
+    
+    // Si es un código conocido, retornar el nombre
+    if (names[specialty]) {
+      return names[specialty];
+    }
+    
+    // Si el valor es un ID largo (número) y no se encontró en el backend
+    if (/^\d{10,}$/.test(specialty)) {
+      console.warn(`Especialidad con ID no encontrado: ${specialty}`, {
+        specialtiesCount: specialties.length,
+        specialties: specialties.map(s => ({ id: s.id, name: s.name }))
+      });
+      return 'Sin especialidad';
+    }
+    
+    return specialty;
+  };
+
+  const getConsultingRoomName = (consultorioId: string | undefined): string => {
+    if (!consultorioId) return 'Sin consultorio';
+    
+    // Buscar por ID
+    const room = consultingRooms.find(r => r.id === consultorioId);
+    if (room) {
+      return room.name;
+    }
+    
+    // Buscar por número de consultorio
+    const roomByNumber = consultingRooms.find(r => r.number === consultorioId);
+    if (roomByNumber) {
+      return roomByNumber.name;
+    }
+    
+    // Si no se encuentra, mostrar el ID como fallback
+    console.warn(`Consultorio no encontrado: ${consultorioId}`, {
+      consultingRoomsCount: consultingRooms.length,
+      consultingRooms: consultingRooms.map(r => ({ id: r.id, number: r.number, name: r.name }))
+    });
+    
+    return `Consultorio ${consultorioId}`;
   };
 
   return (
@@ -374,8 +473,18 @@ export default function MedicalStaffPage() {
                           <tr key={doctor.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                             <td className="py-4 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold relative">
-                                  {doctor.nombres.charAt(0)}{doctor.apellidos.charAt(0)}
+                                <div className="relative">
+                                  {doctor.avatar ? (
+                                    <img
+                                      src={doctor.avatar}
+                                      alt={`${doctor.nombres} ${doctor.apellidos}`}
+                                      className="w-10 h-10 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                      {doctor.nombres.charAt(0)}{doctor.apellidos.charAt(0)}
+                                    </div>
+                                  )}
                                   <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
                                     doctor.isOnline ? 'bg-green-500' : 'bg-gray-400'
                                   }`} />
@@ -384,7 +493,7 @@ export default function MedicalStaffPage() {
                                   <div className="font-medium text-gray-900">
                                     {doctor.nombres} {doctor.apellidos}
                                   </div>
-                                  <div className="text-xs text-gray-500">{doctor.consultorio ? `Consultorio ${doctor.consultorio}` : 'Sin consultorio'}</div>
+                                  <div className="text-xs text-gray-500">{getConsultingRoomName(doctor.consultorio)}</div>
                                 </div>
                               </div>
                             </td>
