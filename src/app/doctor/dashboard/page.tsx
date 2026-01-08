@@ -194,6 +194,7 @@ export default function DoctorDashboard() {
           className: 'bg-yellow-100 text-yellow-800 border border-yellow-200'
         };
       case 'en-curso':
+      case 'en_curso':
         return {
           text: 'En Consulta',
           className: 'bg-green-100 text-green-800 border border-green-200'
@@ -202,6 +203,17 @@ export default function DoctorDashboard() {
         return {
           text: 'Completada',
           className: 'bg-gray-100 text-gray-800 border border-gray-200'
+        };
+      case 'cancelada':
+        return {
+          text: 'Cancelada',
+          className: 'bg-red-100 text-red-800 border border-red-200'
+        };
+      case 'no_asistio':
+      case 'no-show':
+        return {
+          text: 'No Asistió',
+          className: 'bg-red-100 text-red-800 border border-red-200'
         };
       default:
         return {

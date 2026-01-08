@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService, Appointment } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { patientsService, Patient } from '@/services/api/patients.service';
+import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
 import { dateHelper } from '@/utils/date-helper';
 
@@ -69,6 +70,8 @@ export default function ReceptionPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<UserType[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
+  const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
   const [stats, setStats] = useState<WaitingStats>({
     esperando: 0,
     enConsulta: 0,
@@ -116,11 +119,13 @@ export default function ReceptionPage() {
       setLoading(true);
 
       // Cargar datos en paralelo
-      const [appointmentsRes, doctorsRes, adminsRes, patientsRes] = await Promise.all([
+      const [appointmentsRes, doctorsRes, adminsRes, patientsRes, roomsRes, specialtiesRes] = await Promise.all([
         appointmentsService.getAppointments(clinicId),
         usersService.getUsers(clinicId, { role: 'doctor', estado: 'activo' }),
         usersService.getUsers(clinicId, { role: 'admin' }),
-        patientsService.getPatients(clinicId)
+        patientsService.getPatients(clinicId),
+        clinicSettingsService.getConsultingRooms(clinicId),
+        clinicSettingsService.getSpecialties(clinicId)
       ]);
 
       if (appointmentsRes.success && doctorsRes.success && adminsRes.success && patientsRes.success) {
@@ -129,6 +134,14 @@ export default function ReceptionPage() {
         const allDoctors = [...doctorsRes.data, ...adminDoctors];
         setDoctors(allDoctors);
         setPatients(patientsRes.data);
+        
+        // Cargar consultorios y especialidades
+        if (roomsRes.success && roomsRes.data) {
+          setConsultingRooms(roomsRes.data);
+        }
+        if (specialtiesRes.success && specialtiesRes.data) {
+          setSpecialties(specialtiesRes.data);
+        }
 
         // Obtener fecha de hoy (respeta modo debug)
         const today = dateHelper.today();
@@ -251,6 +264,43 @@ export default function ReceptionPage() {
 
     setFilteredAppointments(filtered);
   }, [todayAppointments, selectedFilter, searchTerm]);
+
+  const getSpecialtyName = (specialtyId: string): string => {
+    if (!specialtyId) return 'General';
+    
+    // Buscar por ID en las especialidades cargadas
+    const specialty = specialties.find(s => s.id === specialtyId);
+    if (specialty) {
+      return specialty.name;
+    }
+    
+    // Fallback: mapeo estático
+    const names: Record<string, string> = {
+      'odontologia': 'Odontología',
+      'clinica-medica': 'Clínica Médica',
+      'pediatria': 'Pediatría'
+    };
+    
+    return names[specialtyId] || specialtyId;
+  };
+
+  const getConsultingRoomName = (consultorioId: string): string => {
+    if (!consultorioId || consultorioId === 'N/A') return 'Sin consultorio';
+    
+    // Buscar por ID
+    const room = consultingRooms.find(r => r.id === consultorioId);
+    if (room) {
+      return room.name;
+    }
+    
+    // Buscar por número
+    const roomByNumber = consultingRooms.find(r => r.number === consultorioId);
+    if (roomByNumber) {
+      return roomByNumber.name;
+    }
+    
+    return `Consultorio ${consultorioId}`;
+  };
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -620,9 +670,9 @@ export default function ReceptionPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{appointment.doctorName}</div>
-                          <div className="text-xs text-gray-500">{appointment.specialty}</div>
+                          <div className="text-xs text-gray-500">{getSpecialtyName(appointment.specialty)}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{appointment.consultorio}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getConsultingRoomName(appointment.consultorio)}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusConfig.color}`}>
                             <StatusIcon className="w-3 h-3" />

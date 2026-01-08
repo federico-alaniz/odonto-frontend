@@ -389,6 +389,22 @@ export default function SecretaryAppointmentsPage() {
     });
   };
 
+  const getUpcomingAppointments = () => {
+    const now = new Date();
+    
+    return appointments.filter(apt => {
+      // Crear fecha y hora completa de la cita
+      const aptDateTime = new Date(`${apt.fecha}T${apt.horaInicio}`);
+      
+      // Solo incluir citas futuras (fecha y hora posteriores a ahora)
+      return aptDateTime > now && apt.estado !== 'cancelada';
+    }).sort((a, b) => {
+      const dateA = new Date(`${a.fecha}T${a.horaInicio}`);
+      const dateB = new Date(`${b.fecha}T${b.horaInicio}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+  };
+
   const getDoctorName = (doctorId: string) => {
     const doctor = doctors.find(d => d.id === doctorId);
     return doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : 'Doctor no encontrado';
@@ -864,8 +880,8 @@ export default function SecretaryAppointmentsPage() {
                   </div>
                 ) : (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-4">Próximo Turno</h3>
-                    {getAppointmentsForMonth().slice(0, 3).map((apt, idx) => (
+                    <h3 className="font-semibold text-gray-900 mb-4">Próximos Turnos</h3>
+                    {getUpcomingAppointments().slice(0, 3).map((apt, idx) => (
                       <div key={idx} className="mb-4 pb-4 border-b border-gray-200 last:border-0">
                         <div className="flex items-start gap-3">
                           <div className="text-center">
@@ -891,10 +907,10 @@ export default function SecretaryAppointmentsPage() {
                       </div>
                     ))}
                     
-                    {getAppointmentsForMonth().length === 0 && (
+                    {getUpcomingAppointments().length === 0 && (
                       <div className="text-center py-8">
                         <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-600">No hay turnos este mes</p>
+                        <p className="text-sm text-gray-600">No hay turnos próximos</p>
                       </div>
                     )}
                   </div>
