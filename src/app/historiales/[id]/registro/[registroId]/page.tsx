@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useParams, useRouter } from 'next/navigation';
 import NextImage from 'next/image';
@@ -39,10 +39,15 @@ export default function RegistroDetailPage() {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  // Estado para tabs de odontogramas
+  const [odontogramTab, setOdontogramTab] = useState<'actual' | 'historial'>('actual');
+
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+
   useEffect(() => {
     const loadData = async () => {
-      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      
       if (!clinicId) {
         console.log('⏳ Esperando clinicId...');
         return;
@@ -122,10 +127,10 @@ export default function RegistroDetailPage() {
       }
     };
 
-    if (currentUser) {
+    if (clinicId) {
       loadData();
     }
-  }, [patientId, registroId, currentUser]);
+  }, [patientId, registroId, clinicId]);
 
   const handleBack = () => {
     router.push(`/historiales/${patientId}`);
@@ -775,8 +780,8 @@ export default function RegistroDetailPage() {
             <p className="text-sm text-gray-600 mt-1">Datos generales del registro médico</p>
           </div>
           
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-500">Fecha</label>
                 <div className="flex items-center gap-2">
@@ -813,41 +818,40 @@ export default function RegistroDetailPage() {
                 <p className="text-sm text-gray-600">{formatDateTime(registro.createdAt)}</p>
               </div>
             </div>
+            
+            {/* Motivo de Consulta */}
+            {registro.motivoConsulta && (
+              <div className="border-t border-gray-200 pt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Motivo de Consulta</label>
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{registro.motivoConsulta}</p>
+              </div>
+            )}
+            
+            {/* Observaciones */}
+            {registro.observaciones && (
+              <div className="border-t border-gray-200 pt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{registro.observaciones}</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Motivo de Consulta y Anamnesis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {registro.motivoConsulta && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-orange-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Motivo de Consulta</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Razón de la visita</p>
+        {/* Anamnesis */}
+        {registro.anamnesis && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-blue-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Anamnesis</h3>
               </div>
-              <div className="p-6">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.motivoConsulta}</p>
-              </div>
+              <p className="text-sm text-gray-600 mt-1">Historia clínica del paciente</p>
             </div>
-          )}
-          
-          {registro.anamnesis && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Anamnesis</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Historia clínica del paciente</p>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.anamnesis}</p>
-              </div>
+            <div className="p-6">
+              <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.anamnesis}</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Diagnóstico y Tratamiento */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -977,67 +981,86 @@ export default function RegistroDetailPage() {
           </div>
         )}
 
-        {/* Observaciones y Próxima Cita */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          {/* Observaciones */}
-          {registro.observaciones && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Info className="w-5 h-5 text-yellow-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Observaciones</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Notas adicionales del médico</p>
-              </div>
-              <div className="p-6">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">{registro.observaciones}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Próxima Cita */}
-          {registro.proximaCita && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="border-b border-gray-200 px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-xl font-semibold text-gray-900">Próxima Cita</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">Seguimiento programado</p>
-              </div>
-              <div className="p-6">
-                <div className="flex items-center gap-4 p-4 border border-blue-200 rounded-lg bg-blue-50">
-                  <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-blue-900">
-                      {formatDate(registro.proximaCita)}
-                    </p>
-                    <p className="text-sm text-blue-700">Cita programada</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Odontograma - Solo para especialidad odontología */}
+        {/* Odontogramas con Tabs - Solo para especialidad odontología */}
         {registro.tipoConsulta === 'odontologia' && registro.odontogramas && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Odontograma Actual</h3>
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-600 rounded-lg shadow-sm">
+                  <User className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Odontogramas</h3>
+                  <p className="text-sm text-gray-600 mt-1">Estado dental del paciente</p>
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Estado dental del paciente</p>
             </div>
-            <div className="p-6">
-              <Odontogram
-                initialConditions={registro.odontogramas.actual || []}
-                onUpdate={() => {}} // Solo lectura
-                readOnly={true}
-              />
+            
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setOdontogramTab('actual')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all ${
+                  odontogramTab === 'actual'
+                    ? 'text-green-700 border-b-3 border-green-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                Práctica Actual
+              </button>
+              <button
+                onClick={() => setOdontogramTab('historial')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all ${
+                  odontogramTab === 'historial'
+                    ? 'text-green-700 border-b-3 border-green-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                Historial
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="px-6 py-6">
+              {odontogramTab === 'actual' && (
+                <div className="w-full">
+                  <div className="mb-4">
+                    <h4 className="text-base font-semibold text-gray-900 mb-1">Consulta Actual</h4>
+                    <p className="text-sm text-gray-600">
+                      Tratamientos realizados en esta consulta
+                    </p>
+                  </div>
+                  <div className="w-full">
+                    <Odontogram
+                      initialConditions={registro.odontogramas.actual || []}
+                      onUpdate={() => {}} // Solo lectura
+                      readOnly={true}
+                      showLegend={false}
+                      interventionColor="blue"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {odontogramTab === 'historial' && (
+                <div className="w-full">
+                  <div className="mb-4">
+                    <h4 className="text-base font-semibold text-gray-900 mb-1">Historial de Tratamientos</h4>
+                    <p className="text-sm text-gray-600">
+                      Registro acumulado de tratamientos previos
+                    </p>
+                  </div>
+                  <div className="w-full">
+                    <Odontogram
+                      initialConditions={registro.odontogramas.historico || []}
+                      onUpdate={() => {}} // Solo lectura
+                      readOnly={true}
+                      showLegend={false}
+                      interventionColor="red"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

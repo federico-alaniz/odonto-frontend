@@ -419,15 +419,6 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                   </th>
                   <th 
                     className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                    onClick={() => handleSort('urgency')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Prioridad
-                      {getSortIcon('urgency')}
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
                     onClick={() => handleSort('lastVisit')}
                   >
                     <div className="flex items-center gap-1">
@@ -485,19 +476,6 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                       </div>
                     </td>
 
-                    {/* Prioridad */}
-                    <td className="px-6 py-4">
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getUrgencyClasses(patient.urgency)}`}>
-                        {getUrgencyIcon(patient.urgency)}
-                        {patient.urgency === 'high' ? 'Alta' : patient.urgency === 'medium' ? 'Media' : 'Baja'}
-                      </div>
-                      {patient.riskFactors > 0 && (
-                        <div className="text-xs text-orange-600 mt-1">
-                          {patient.riskFactors} factor{patient.riskFactors > 1 ? 'es' : ''} de riesgo
-                        </div>
-                      )}
-                    </td>
-
                     {/* Última consulta */}
                     <td className="px-6 py-4">
                       {patient.ultimaConsulta ? (
@@ -515,8 +493,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                         </div>
                       )}
                     </td>
-
-                    {/* Contacto */}
+                    
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Phone className="w-4 h-4" />
@@ -525,7 +502,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                       {patient.email && (
                         <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                           <Mail className="w-4 h-4" />
-                          <span className="truncate max-w-32">{patient.email}</span>
+                          <span className="truncate max-w-xs">{patient.email}</span>
                         </div>
                       )}
                     </td>
@@ -533,8 +510,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                     {/* Acciones */}
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Botón de asignación/desasignación */}
-                        {patient.doctorAsignado === currentDoctorId ? (
+                        {patient.doctorAsignado === currentDoctorId && (
                           <button
                             onClick={() => handleUnassignDoctor(patient.id)}
                             className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
@@ -542,15 +518,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
                           >
                             <UserMinus className="w-4 h-4" />
                           </button>
-                        ) : !patient.doctorAsignado ? (
-                          <button
-                            onClick={() => handleAssignDoctor(patient.id)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Asignarme este paciente"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                        ) : null}
+                        )}
                         
                         <button
                           onClick={() => router.push(buildPath(`/historiales/${patient.id}`))}

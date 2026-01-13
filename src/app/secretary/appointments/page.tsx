@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -48,7 +48,7 @@ export default function SecretaryAppointmentsPage() {
   // Search filters
   const [searchDoctor, setSearchDoctor] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
-  const [dateRange, setDateRange] = useState('today');
+  const [dateRange, setDateRange] = useState('week');
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [currentMonth, setCurrentMonth] = useState(dateHelper.now());
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -59,23 +59,26 @@ export default function SecretaryAppointmentsPage() {
   // Calendar for scheduled view
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(dateHelper.now());
 
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+
   useEffect(() => {
-    if (currentUser) {
+    if (clinicId) {
       loadData();
       loadSpecialties();
     }
-  }, [currentUser]);
+  }, [clinicId]);
 
   useEffect(() => {
-    if (doctors.length > 0) {
+    if (doctors.length > 0 && appointments.length >= 0) {
       console.log('Recalculating slots for dateRange:', dateRange);
       loadDoctorSlots(doctors, appointments);
     }
-  }, [dateRange, doctors, appointments]);
+  }, [dateRange]);
 
   const loadData = async () => {
-    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-    
     if (!clinicId) return;
 
     try {
@@ -263,7 +266,6 @@ export default function SecretaryAppointmentsPage() {
   const [consultoriosMap, setConsultoriosMap] = useState<Map<string, string>>(new Map());
 
   const loadSpecialties = async () => {
-    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     if (!clinicId) return;
     
     try {
@@ -463,7 +465,7 @@ export default function SecretaryAppointmentsPage() {
                 onClick={() => setViewMode(viewMode === 'search' ? 'scheduled' : 'search')}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
               >
-                {viewMode === 'search' ? 'Ver Mis Turnos' : 'Buscar Turnos'}
+                {viewMode === 'search' ? 'Ver Calendario de turnos' : 'Buscar Turnos'}
               </button>
               <Link
                 href={buildPath('/secretary/appointments/new')}

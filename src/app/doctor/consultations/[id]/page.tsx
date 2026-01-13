@@ -10,6 +10,7 @@ import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import type { Appointment, Patient } from '@/types';
 import { usersService } from '@/services/api/users.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
 import { 
   ArrowLeft,
   Calendar,
@@ -34,6 +35,7 @@ export default function ConsultationDetailPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [doctorName, setDoctorName] = useState<string>('');
+  const [medicalRecordId, setMedicalRecordId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,6 +93,28 @@ export default function ConsultationDetailPage() {
 
       if (doctor) {
         setDoctorName(`Dr. ${doctor.nombres} ${doctor.apellidos}`);
+      }
+
+      // Cargar registro médico asociado
+      if (foundPatient) {
+        try {
+          const medicalRecordsRes = await medicalRecordsService.getPatientRecords(
+            foundPatient.id,
+            clinicId,
+            1,
+            1000
+          );
+          
+          const associatedRecord = medicalRecordsRes.data?.find(
+            (record: any) => record.appointmentId === appointmentId
+          );
+          
+          if (associatedRecord) {
+            setMedicalRecordId(associatedRecord.id);
+          }
+        } catch (recordErr) {
+          console.error('Error cargando registro médico:', recordErr);
+        }
       }
 
     } catch (err: any) {
@@ -240,11 +264,71 @@ export default function ConsultationDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
+          {/* Sidebar - Información del Paciente */}
+          <div className="lg:col-span-1">
+            {patient && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Información del Paciente
+                </h2>
+                
+                <div className="flex flex-col items-center text-center mb-6">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                    <User className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-lg">
+                    {patient.nombres} {patient.apellidos}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    DNI: {patient.numeroDocumento}
+                  </p>
+                </div>
+
+                <div className="space-y-3 border-t border-gray-200 pt-4">
+                  {patient.telefono && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-700">{patient.telefono}</span>
+                    </div>
+                  )}
+                  
+                  {patient.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-700 break-all">{patient.email}</span>
+                    </div>
+                  )}
+                  
+                  {patient.direccion && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700">
+                        {typeof patient.direccion === 'string' 
+                          ? patient.direccion 
+                          : `${patient.direccion.calle || ''} ${patient.direccion.numero || ''}, ${patient.direccion.ciudad || ''}, ${patient.direccion.provincia || ''} ${patient.direccion.codigoPostal || ''}`.trim()
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <Link
+                  href={buildPath(`/historiales/${patient.id}`)}
+                  className="mt-6 block w-full text-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  Ver Historia clínica
+                </Link>
+              </div>
+            )}
+          </div>
+
           {/* Columna Principal */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-3 space-y-6">
             
             {/* Información de la Cita */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -308,6 +392,24 @@ export default function ConsultationDetailPage() {
               <p className="text-gray-700 whitespace-pre-wrap">
                 {appointment.motivo || 'No especificado'}
               </p>
+              
+              {patient && medicalRecordId && (
+                <Link
+                  href={buildPath(`/historiales/${patient.id}/registro/${medicalRecordId}`)}
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <FileText className="w-4 h-4" />
+                  Ver registro médico asociado
+                </Link>
+              )}
+              
+              {patient && !medicalRecordId && appointment.estado === 'completada' && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    No se encontró un registro médico asociado a esta consulta.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Notas */}
@@ -335,95 +437,53 @@ export default function ConsultationDetailPage() {
                 </p>
               </div>
             )}
-          </div>
 
-          {/* Columna Lateral */}
-          <div className="space-y-6">
-            
-            {/* Información del Paciente */}
-            {patient && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  Información del Paciente
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {patient.nombres} {patient.apellidos}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {patient.tipoDocumento?.toUpperCase() || 'DNI'}: {patient.numeroDocumento}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-200 space-y-3">
-                    {patient.telefono && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-700">{patient.telefono}</span>
-                      </div>
-                    )}
-                    
-                    {patient.email && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-gray-700">{patient.email}</span>
-                      </div>
-                    )}
-                    
-                    {patient.direccion && (
-                      <div className="flex items-start gap-2 text-sm">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-                        <span className="text-gray-700">
-                          {typeof patient.direccion === 'string' 
-                            ? patient.direccion 
-                            : `${patient.direccion.calle || ''} ${patient.direccion.numero || ''}, ${patient.direccion.ciudad || ''}, ${patient.direccion.provincia || ''} ${patient.direccion.codigoPostal || ''}`.trim()
-                          }
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <Link
-                    href={buildPath(`/historiales/${patient.id}`)}
-                    className="mt-4 block w-full text-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-                  >
-                    Ver Historial Completo
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {/* Metadatos */}
+            {/* Metadatos del Sistema */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Metadatos</h2>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Metadatos del Sistema
+              </h2>
               
-              <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <label className="text-gray-500">Creada</label>
-                  <p className="text-gray-900 mt-1">
-                    {new Date(appointment.createdAt).toLocaleString('es-AR')}
+                  <label className="text-gray-500 block mb-1">Registro Creado</label>
+                  <p className="text-gray-900">
+                    {new Date(appointment.createdAt).toLocaleDateString('es-AR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {new Date(appointment.createdAt).toLocaleTimeString('es-AR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </p>
                 </div>
                 
                 <div>
-                  <label className="text-gray-500">Última actualización</label>
-                  <p className="text-gray-900 mt-1">
-                    {new Date(appointment.updatedAt).toLocaleString('es-AR')}
+                  <label className="text-gray-500 block mb-1">Última Actualización</label>
+                  <p className="text-gray-900">
+                    {new Date(appointment.updatedAt).toLocaleDateString('es-AR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    {new Date(appointment.updatedAt).toLocaleTimeString('es-AR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </p>
                 </div>
 
                 {appointment.canceladaAt && (
-                  <div>
-                    <label className="text-gray-500">Cancelada</label>
-                    <p className="text-gray-900 mt-1">
+                  <div className="col-span-2">
+                    <label className="text-gray-500 block mb-1">Cancelada</label>
+                    <p className="text-gray-900">
                       {new Date(appointment.canceladaAt).toLocaleString('es-AR')}
                     </p>
                   </div>

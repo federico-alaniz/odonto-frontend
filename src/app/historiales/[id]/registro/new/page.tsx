@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import Odontogram, { ToothCondition } from '../../../components/Odontogram';
@@ -25,8 +25,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Phone,
-  Printer
+  Phone
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 
@@ -77,6 +76,12 @@ export default function NewMedicalRecordPage() {
   const [showObservaciones, setShowObservaciones] = useState(false);
   const [showImagenes, setShowImagenes] = useState(false);
   
+  // Estado para tabs de odontogramas
+  const [odontogramTab, setOdontogramTab] = useState<'actual' | 'historial'>('actual');
+  
+  // Estado para tabs de información clínica
+  const [clinicalTab, setClinicalTab] = useState<'diagnostico' | 'tratamiento' | 'observaciones' | 'imagenes'>('diagnostico');
+  
   // Odontogramas
   const [historicalOdontogram, setHistoricalOdontogram] = useState<ToothCondition[]>([]);
   const [currentOdontogram, setCurrentOdontogram] = useState<ToothCondition[]>([]);
@@ -94,11 +99,17 @@ export default function NewMedicalRecordPage() {
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isDraft, setIsDraft] = useState(false);
 
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+
+  const userId = useMemo(() => {
+    return (currentUser as any)?.id;
+  }, [currentUser?.id]);
+
   // Cargar datos del paciente y registro borrador si existe
   useEffect(() => {
     const loadPatient = async () => {
-      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      
       if (!clinicId) {
         console.log('⏳ Esperando clinicId...');
         return;
@@ -126,18 +137,15 @@ export default function NewMedicalRecordPage() {
       }
     };
 
-    if (currentUser) {
+    if (clinicId) {
       loadPatient();
     }
-  }, [patientId, currentUser]);
+  }, [patientId, clinicId]);
 
   // Cargar datos de la cita y registro borrador si existe appointmentId
   useEffect(() => {
     const loadAppointmentAndDraft = async () => {
-      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      const doctorId = (currentUser as any)?.id;
-      
-      if (!clinicId || !appointmentId || !doctorId) {
+      if (!clinicId || !appointmentId || !userId) {
         return;
       }
 
@@ -209,10 +217,10 @@ export default function NewMedicalRecordPage() {
       }
     };
 
-    if (currentUser && appointmentId) {
+    if (clinicId && userId && appointmentId) {
       loadAppointmentAndDraft();
     }
-  }, [appointmentId, currentUser, patientId]);
+  }, [appointmentId, clinicId, userId, patientId]);
 
   // Inicializar odontograma actual con dientes extraídos como ausentes
   useEffect(() => {
@@ -228,12 +236,6 @@ export default function NewMedicalRecordPage() {
   // Cargar registros médicos previos para construir el odontograma histórico
   useEffect(() => {
     const loadHistoricalOdontogram = async () => {
-      if (!currentUser) {
-        return;
-      }
-
-      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      
       if (!clinicId || !patientId) {
         return;
       }
@@ -302,8 +304,10 @@ export default function NewMedicalRecordPage() {
       }
     };
 
-    loadHistoricalOdontogram();
-  }, [patientId]);
+    if (clinicId) {
+      loadHistoricalOdontogram();
+    }
+  }, [patientId, clinicId]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -638,13 +642,15 @@ export default function NewMedicalRecordPage() {
           </div>
 
           {/* 2. Información General */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <button
               onClick={() => setShowInfoGeneral(!showInfoGeneral)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-all"
             >
               <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
                 <h2 className="text-lg font-semibold text-gray-900">Información General</h2>
               </div>
               {showInfoGeneral ? (
@@ -656,67 +662,34 @@ export default function NewMedicalRecordPage() {
             
             {showInfoGeneral && (
               <div className="px-6 pb-6 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Consulta *
-                </label>
-                <select
-                  value={consultationType}
-                  onChange={(e) => setConsultationType(e.target.value as 'general' | 'odontologia')}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="general">Consulta General</option>
-                  <option value="odontologia">Consulta Odontológica</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fecha de Consulta *
-                </label>
-                <input
-                  type="date"
-                  value={formData.fecha}
-                  onChange={(e) => handleInputChange('fecha', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Próximo Control
-                </label>
-                <input
-                  type="date"
-                  value={formData.proximoControl}
-                  onChange={(e) => handleInputChange('proximoControl', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de Consulta
+                    </label>
+                    <div className="w-full px-4 py-2.5 border border-gray-200 bg-gray-50 rounded-lg text-gray-700">
+                      {new Date(formData.fecha).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Próximo Control
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.proximoControl}
+                      onChange={(e) => handleInputChange('proximoControl', e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* 3. Motivo de Consulta y Antecedentes (2 columnas) */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowMotivoAntecedentes(!showMotivoAntecedentes)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Motivo de Consulta y Antecedentes</h2>
-              </div>
-              {showMotivoAntecedentes ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-            
-            {showMotivoAntecedentes && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                {/* Motivo de Consulta y Antecedentes */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                   {/* Motivo de Consulta */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -749,178 +722,19 @@ export default function NewMedicalRecordPage() {
             )}
           </div>
 
-          {/* Signos Vitales - Colapsable */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowSignosVitales(!showSignosVitales)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Activity className="w-5 h-5 text-gray-400" />
-                <div className="text-left">
-                  <h2 className="text-lg font-semibold text-gray-900">Signos Vitales</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Opcional para consultas odontológicas</p>
-                </div>
-              </div>
-              {showSignosVitales ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-            
-            {showSignosVitales && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Presión Arterial
-                </label>
-                <input
-                  type="text"
-                  value={formData.presionArterial}
-                  onChange={(e) => handleInputChange('presionArterial', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="120/80"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Frecuencia Cardíaca
-                </label>
-                <input
-                  type="text"
-                  value={formData.frecuenciaCardiaca}
-                  onChange={(e) => handleInputChange('frecuenciaCardiaca', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="70 bpm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Temperatura
-                </label>
-                <input
-                  type="text"
-                  value={formData.temperatura}
-                  onChange={(e) => handleInputChange('temperatura', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="36.5°C"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Peso
-                </label>
-                <input
-                  type="text"
-                  value={formData.peso}
-                  onChange={(e) => handleInputChange('peso', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="70 kg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Talla
-                </label>
-                <input
-                  type="text"
-                  value={formData.talla}
-                  onChange={(e) => handleInputChange('talla', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="170 cm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Saturación O₂
-                </label>
-                <input
-                  type="text"
-                  value={formData.saturacionOxigeno}
-                  onChange={(e) => handleInputChange('saturacionOxigeno', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="98%"
-                />
-              </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 4 y 5. Secciones Odontológicas (Solo para consultas odontológicas) */}
+          {/* Secciones Odontológicas (Solo para consultas odontológicas) */}
           {consultationType === 'odontologia' && (
             <>
-            {/* Datos Odontológicos */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setShowDatosOdonto(!showDatosOdonto)}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-blue-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Datos Odontológicos</h2>
-                </div>
-                {showDatosOdonto ? (
-                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                )}
-              </button>
-              
-              {showDatosOdonto && (
-                <div className="px-6 pb-6 border-t border-gray-100">
-                  <div className="space-y-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Piezas Dentales Tratadas
-                </label>
-                <input
-                  type="text"
-                  value={formData.piezasDentales}
-                  onChange={(e) => handleInputChange('piezasDentales', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ej: 16, 17, 26"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Procedimiento Realizado
-                </label>
-                <textarea
-                  value={formData.procedimiento}
-                  onChange={(e) => handleInputChange('procedimiento', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={3}
-                  placeholder="Descripción del procedimiento odontológico..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Materiales Utilizados
-                </label>
-                <input
-                  type="text"
-                  value={formData.materiales}
-                  onChange={(e) => handleInputChange('materiales', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ej: Resina compuesta, amalgama..."
-                />
-              </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-          {/* 5. Odontogramas (Solo para consultas odontológicas) */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          {/* Odontogramas */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <button
               onClick={() => setShowOdontogramas(!showOdontogramas)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-all"
             >
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-green-600 rounded-lg shadow-sm">
+                  <User className="w-5 h-5 text-white" />
+                </div>
                 <h2 className="text-lg font-semibold text-gray-900">Odontogramas</h2>
               </div>
               {showOdontogramas ? (
@@ -931,45 +745,72 @@ export default function NewMedicalRecordPage() {
             </button>
             
             {showOdontogramas && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <div className="flex flex-col gap-8 mt-4">
-                  {/* Odontograma Histórico */}
-                  <div className="w-full">
-                    <div className="mb-4">
-                      <h3 className="text-base font-semibold text-gray-900 mb-1">Historial de Tratamientos</h3>
-                      <p className="text-sm text-gray-600">
-                        Registro acumulado de tratamientos previos
-                      </p>
-                    </div>
-                    <div className="w-full">
-                      <Odontogram
-                        initialConditions={historicalOdontogram}
-                        onUpdate={setHistoricalOdontogram}
-                        readOnly={true}
-                        showLegend={false}
-                        interventionColor="red"
-                      />
-                    </div>
-                  </div>
+              <div className="border-t border-gray-100">
+                {/* Tabs */}
+                <div className="flex border-b border-gray-200 bg-gray-50">
+                  <button
+                    onClick={() => setOdontogramTab('actual')}
+                    className={`flex-1 px-6 py-3 text-sm font-medium transition-all ${
+                      odontogramTab === 'actual'
+                        ? 'text-green-700 border-b-3 border-green-600 bg-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Práctica Actual
+                  </button>
+                  <button
+                    onClick={() => setOdontogramTab('historial')}
+                    className={`flex-1 px-6 py-3 text-sm font-medium transition-all ${
+                      odontogramTab === 'historial'
+                        ? 'text-green-700 border-b-3 border-green-600 bg-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    Historial
+                  </button>
+                </div>
 
-                  {/* Odontograma de Consulta Actual */}
-                  <div className="w-full">
-                    <div className="mb-4">
-                      <h3 className="text-base font-semibold text-gray-900 mb-1">Consulta Actual</h3>
-                      <p className="text-sm text-gray-600">
-                        Registre los tratamientos de esta consulta
-                      </p>
-                    </div>
+                {/* Tab Content */}
+                <div className="px-6 py-6">
+                  {odontogramTab === 'actual' && (
                     <div className="w-full">
-                      <Odontogram
-                        initialConditions={currentOdontogram}
-                        onUpdate={setCurrentOdontogram}
-                        readOnly={false}
-                        showLegend={true}
-                        interventionColor="blue"
-                      />
+                      <div className="mb-4">
+                        <h3 className="text-base font-semibold text-gray-900 mb-1">Consulta Actual</h3>
+                        <p className="text-sm text-gray-600">
+                          Registre los tratamientos de esta consulta
+                        </p>
+                      </div>
+                      <div className="w-full">
+                        <Odontogram
+                          initialConditions={currentOdontogram}
+                          onUpdate={setCurrentOdontogram}
+                          readOnly={false}
+                          showLegend={false}
+                          interventionColor="blue"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {odontogramTab === 'historial' && (
+                    <div className="w-full">
+                      <div className="mb-4">
+                        <h3 className="text-base font-semibold text-gray-900 mb-1">Historial de Tratamientos</h3>
+                        <p className="text-sm text-gray-600">
+                          Registro acumulado de tratamientos previos
+                        </p>
+                      </div>
+                      <div className="w-full">
+                        <Odontogram
+                          initialConditions={historicalOdontogram}
+                          onUpdate={setHistoricalOdontogram}
+                          readOnly={true}
+                          showLegend={false}
+                          interventionColor="red"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -977,173 +818,167 @@ export default function NewMedicalRecordPage() {
             </>
           )}
 
-          {/* Diagnóstico */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowDiagnostico(!showDiagnostico)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
+          {/* Información Clínica con Tabs */}
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <TestTube className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Diagnóstico</h2>
+                <div className="p-2 bg-purple-600 rounded-lg shadow-sm">
+                  <ClipboardList className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Información Clínica</h2>
               </div>
-              {showDiagnostico ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
+            </div>
             
-            {showDiagnostico && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <textarea
-                  value={formData.diagnostico}
-                  onChange={(e) => handleInputChange('diagnostico', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mt-4"
-                  rows={3}
-              placeholder="Diagnóstico presuntivo o definitivo..."
-                />
-              </div>
-            )}
-          </div>
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 overflow-x-auto bg-gray-50">
+              <button
+                onClick={() => setClinicalTab('diagnostico')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all whitespace-nowrap ${
+                  clinicalTab === 'diagnostico'
+                    ? 'text-purple-700 border-b-3 border-purple-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <TestTube className="w-4 h-4" />
+                  <span>Diagnóstico</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setClinicalTab('tratamiento')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all whitespace-nowrap ${
+                  clinicalTab === 'tratamiento'
+                    ? 'text-purple-700 border-b-3 border-purple-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Pill className="w-4 h-4" />
+                  <span>Tratamiento</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setClinicalTab('observaciones')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all whitespace-nowrap ${
+                  clinicalTab === 'observaciones'
+                    ? 'text-purple-700 border-b-3 border-purple-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Heart className="w-4 h-4" />
+                  <span>Observaciones</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setClinicalTab('imagenes')}
+                className={`flex-1 px-6 py-3 text-sm font-medium transition-all whitespace-nowrap ${
+                  clinicalTab === 'imagenes'
+                    ? 'text-purple-700 border-b-3 border-purple-600 bg-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Imágenes</span>
+                </div>
+              </button>
+            </div>
 
-          {/* Tratamiento */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowTratamiento(!showTratamiento)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Pill className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Tratamiento</h2>
-              </div>
-              {showTratamiento ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-            
-            {showTratamiento && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <textarea
-                  value={formData.tratamiento}
-                  onChange={(e) => handleInputChange('tratamiento', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mt-4"
-                  rows={4}
-                  placeholder="Medicación, indicaciones, estudios complementarios..."
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Observaciones */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowObservaciones(!showObservaciones)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Heart className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Observaciones</h2>
-              </div>
-              {showObservaciones ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-            
-            {showObservaciones && (
-              <div className="px-6 pb-6 border-t border-gray-100">
-                <textarea
-                  value={formData.observaciones}
-                  onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none mt-4"
-                  rows={3}
-                  placeholder="Observaciones adicionales..."
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Imágenes */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setShowImagenes(!showImagenes)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <ImageIcon className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Imágenes</h2>
-              </div>
-              {showImagenes ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-            
-            {showImagenes && (
-              <div className="px-6 pb-6 border-t border-gray-100 mt-4">
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm text-gray-600 mb-1">
-                      <span className="text-blue-600 font-medium">Haga clic para subir</span> o arrastre archivos aquí
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, PDF hasta 10MB</p>
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf"
-                    onChange={handleImageUpload}
-                    className="hidden"
+            {/* Tab Content */}
+            <div className="px-6 py-6">
+              {clinicalTab === 'diagnostico' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Diagnóstico
+                  </label>
+                  <textarea
+                    value={formData.diagnostico}
+                    onChange={(e) => handleInputChange('diagnostico', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={6}
+                    placeholder="Diagnóstico presuntivo o definitivo..."
                   />
-                </label>
-              </div>
-
-              {imagePreviews.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-200"
-                      />
-                      <button
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
                 </div>
               )}
+
+              {clinicalTab === 'tratamiento' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tratamiento
+                  </label>
+                  <textarea
+                    value={formData.tratamiento}
+                    onChange={(e) => handleInputChange('tratamiento', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={6}
+                    placeholder="Medicación, indicaciones, estudios complementarios..."
+                  />
                 </div>
-              </div>
-            )}
+              )}
+
+              {clinicalTab === 'observaciones' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Observaciones
+                  </label>
+                  <textarea
+                    value={formData.observaciones}
+                    onChange={(e) => handleInputChange('observaciones', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={6}
+                    placeholder="Observaciones adicionales..."
+                  />
+                </div>
+              )}
+
+              {clinicalTab === 'imagenes' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                        <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm text-gray-600 mb-1">
+                          <span className="text-blue-600 font-medium">Haga clic para subir</span> o arrastre archivos aquí
+                        </p>
+                        <p className="text-xs text-gray-500">PNG, JPG, PDF hasta 10MB</p>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                          />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Botones de acción */}
-          <div className="flex items-center justify-between pt-6 pb-8">
-            <div>
-              {consultationType === 'odontologia' && (
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  <Printer className="w-5 h-5" />
-                  Imprimir Ficha Dental
-                </button>
-              )}
-            </div>
+          <div className="flex items-center justify-end pt-6 pb-8">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.back()}

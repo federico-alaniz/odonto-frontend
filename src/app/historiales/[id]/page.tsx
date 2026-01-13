@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
@@ -33,10 +33,12 @@ export default function HistoryDetailPage() {
   });
   const [showFilters, setShowFilters] = useState(false);
 
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+
   useEffect(() => {
     const loadPatientData = async () => {
-      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-      
       if (!clinicId) {
         console.log('⏳ Esperando clinicId...');
         return;
@@ -67,10 +69,10 @@ export default function HistoryDetailPage() {
       }
     };
 
-    if (currentUser) {
+    if (clinicId) {
       loadPatientData();
     }
-  }, [patientId, currentUser]);
+  }, [patientId, clinicId]);
 
   const handleNewRecord = () => {
     router.push(`/historiales/${patientId}/registro/new`);

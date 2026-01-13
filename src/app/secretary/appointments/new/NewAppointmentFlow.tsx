@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
@@ -67,18 +67,24 @@ export default function NewAppointmentFlow() {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [motivo, setMotivo] = useState('');
   const [specialtiesMap, setSpecialtiesMap] = useState<Map<string, string>>(new Map());
+  const [showMotivoModal, setShowMotivoModal] = useState(false);
+  const [selectedPatientForModal, setSelectedPatientForModal] = useState<Patient | null>(null);
 
-  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+  
   const doctorIdParam = searchParams?.get('doctorId');
   const dateParam = searchParams?.get('date');
   const timeParam = searchParams?.get('time');
 
   useEffect(() => {
-    if (currentUser && clinicId) {
+    if (clinicId) {
       loadPatients();
       loadDoctors();
     }
-  }, [currentUser, clinicId]);
+  }, [clinicId]);
 
   useEffect(() => {
     if (doctorIdParam && doctors.length > 0) {
@@ -99,10 +105,10 @@ export default function NewAppointmentFlow() {
   }, [dateParam, timeParam]);
 
   useEffect(() => {
-    if (selectedDoctor && selectedDate) {
+    if (selectedDoctor && selectedDate && clinicId) {
       loadDoctorSchedule();
     }
-  }, [selectedDate, selectedDoctor]);
+  }, [selectedDate, selectedDoctor?.id, clinicId]);
 
   const loadDoctors = async () => {
     if (!clinicId) return;
@@ -234,21 +240,36 @@ export default function NewAppointmentFlow() {
       return;
     }
 
+    // Abrir modal para solicitar motivo de consulta
+    setSelectedPatientForModal(patient);
+    setMotivo(''); // Reset motivo
+    setShowMotivoModal(true);
+  };
+
+  const handleConfirmWithMotivo = () => {
     if (!motivo.trim()) {
       showWarning('Motivo requerido', 'Por favor ingrese el motivo de la consulta');
       return;
     }
 
+    if (!selectedPatientForModal || !selectedDoctor) return;
+
     // Redirigir a la página de confirmación con todos los datos
     const params = new URLSearchParams({
       doctorId: selectedDoctor.id,
-      patientId: patient.id,
+      patientId: selectedPatientForModal.id,
       date: selectedDate,
       time: selectedTime,
       motivo: motivo.trim()
     });
 
     router.push(buildPath(`/secretary/appointments/confirm?${params.toString()}`));
+  };
+
+  const handleCloseModal = () => {
+    setShowMotivoModal(false);
+    setSelectedPatientForModal(null);
+    setMotivo('');
   };
 
   const formatDate = (dateStr: string) => {
@@ -343,22 +364,6 @@ export default function NewAppointmentFlow() {
               </div>
             </div>
 
-            {/* Motivo de Consulta */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo de Consulta *
-              </label>
-              <textarea
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Ej: Control de rutina, dolor de cabeza, seguimiento de tratamiento..."
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Este campo es obligatorio. Describa brevemente el motivo de la consulta.
-              </p>
-            </div>
           </div>
         )}
 
@@ -543,6 +548,111 @@ export default function NewAppointmentFlow() {
           </div>
         </div>
       </div>
+
+      {/* Modal - Motivo de Consulta */}
+      {showMotivoModal && selectedPatientForModal && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white bg-opacity-20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                    <Stethoscope className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Motivo de Consulta</h3>
+                    <p className="text-sm text-blue-100">Complete la información para continuar</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCloseModal}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-all"
+                >
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6">
+              {/* Resumen del Turno */}
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 mb-6 border border-blue-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-white" />
+                  </div>
+                  <h4 className="text-sm font-bold text-blue-900 uppercase tracking-wide">Resumen del Turno</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                    <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Paciente</span>
+                    <p className="text-gray-900 font-bold mt-1">
+                      {selectedPatientForModal.nombres} {selectedPatientForModal.apellidos}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">DNI: {selectedPatientForModal.numeroDocumento}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm">
+                    <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Profesional</span>
+                    <p className="text-gray-900 font-bold mt-1">{selectedDoctor?.name}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{selectedDoctor?.specialty}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm col-span-2">
+                    <span className="text-xs text-blue-600 font-semibold uppercase tracking-wide">Fecha y Hora</span>
+                    <p className="text-gray-900 font-bold mt-1">
+                      {formatDate(selectedDate)} a las {formatTime(selectedTime)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Input Motivo */}
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">!</span>
+                  </div>
+                  Motivo de Consulta <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Ej: Control de rutina, dolor de cabeza, seguimiento de tratamiento..."
+                  rows={4}
+                  autoFocus
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all"
+                />
+                <div className="mt-3 flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-yellow-800">
+                    <span className="font-semibold">Campo obligatorio.</span> Describa brevemente el motivo de la consulta para continuar con la reserva del turno.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3">
+              <button
+                onClick={handleCloseModal}
+                className="px-6 py-2.5 border-2 border-gray-300 rounded-lg hover:bg-white hover:border-gray-400 transition-all font-semibold text-gray-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmWithMotivo}
+                disabled={!motivo.trim()}
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md"
+              >
+                Continuar con la Reserva
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
