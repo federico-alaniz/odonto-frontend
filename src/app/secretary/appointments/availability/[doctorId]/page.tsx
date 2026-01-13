@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
@@ -40,7 +40,10 @@ export default function DoctorAvailabilityPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [specialtiesMap, setSpecialtiesMap] = useState<Map<string, string>>(new Map());
 
-  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
 
   function getWeekStart(date: Date): Date {
     const d = new Date(date);
@@ -54,13 +57,14 @@ export default function DoctorAvailabilityPage() {
   }
 
   useEffect(() => {
-    if (currentUser && clinicId && doctorId) {
+    if (clinicId && doctorId) {
       loadDoctorData();
     }
-  }, [currentUser, clinicId, doctorId]);
+  }, [clinicId, doctorId]);
 
+  // Generate week slots when doctor, appointments, or currentWeekStart change
   useEffect(() => {
-    if (doctor && appointments) {
+    if (doctor) {
       generateWeekSlots();
     }
   }, [currentWeekStart, doctor, appointments]);

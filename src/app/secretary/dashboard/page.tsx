@@ -30,7 +30,8 @@ import {
   Activity,
   Eye,
   FileText,
-  PhoneCall
+  PhoneCall,
+  RefreshCw
 } from 'lucide-react';
 
 interface SecretaryStats {
@@ -79,6 +80,7 @@ export default function SecretaryDashboard() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<TodayAppointment | null>(null);
   const [confirmingArrival, setConfirmingArrival] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -277,6 +279,12 @@ export default function SecretaryDashboard() {
     // Aquí se integraría con sistema de telefonía
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadSecretaryData();
+    setRefreshing(false);
+  };
+
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
@@ -304,6 +312,14 @@ export default function SecretaryDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="px-4 py-3 border-2 border-gray-300 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-400 transition-all focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                <span>Actualizar</span>
+              </button>
               <Link
                 href={buildPath('/secretary/appointments/new')}
                 className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-md inline-flex items-center space-x-2"

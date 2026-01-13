@@ -12,7 +12,6 @@ import { patientsService } from '@/services/api/patients.service';
 export default function SecretaryPatientsPage() {
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
-  const [activeTab, setActiveTab] = useState<'all' | 'assigned'>('all');
   const [filters, setFilters] = useState<SecretaryPatientFilters>({
     search: '',
     numeroDocumento: '',
@@ -126,42 +125,6 @@ export default function SecretaryPatientsPage() {
       {/* Content Container */}
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`
-                flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all
-                ${activeTab === 'all'
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
-                }
-              `}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Users className="w-5 h-5" />
-                <span>Todos los Pacientes</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('assigned')}
-              className={`
-                flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all
-                ${activeTab === 'assigned'
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
-                }
-              `}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Stethoscope className="w-5 h-5" />
-                <span>Pacientes Asignados</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -223,7 +186,6 @@ export default function SecretaryPatientsPage() {
         {/* Table */}
         <SecretaryPatientsTable 
           filters={filters} 
-          showOnlyAssigned={activeTab === 'assigned'}
         />
       </div>
     </div>

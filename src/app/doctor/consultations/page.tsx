@@ -23,7 +23,9 @@ import {
   Edit,
   Filter,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Play,
+  XCircle
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Spinner } from '@/components/ui/Spinner';
@@ -37,7 +39,7 @@ interface Consultation {
   time: string;
   reason: string;
   diagnosis: string;
-  status: 'completed' | 'in-progress' | 'pending';
+  status: 'completed' | 'in-progress' | 'pending' | 'cancelled' | 'no-show';
   type: 'consultation' | 'follow-up' | 'emergency';
 }
 
@@ -54,6 +56,8 @@ export default function ConsultationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [finishingConsultation, setFinishingConsultation] = useState<string | null>(null);
   const [consultationsWithRecords, setConsultationsWithRecords] = useState<Set<string>>(new Set());
+  const [startingConsultation, setStartingConsultation] = useState<string | null>(null);
+  const [cancellingConsultation, setCancellingConsultation] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchConsultations = async () => {
@@ -92,8 +96,9 @@ export default function ConsultationsPage() {
             case 'confirmada':
               return 'pending';
             case 'cancelada':
+              return 'cancelled';
             case 'no_asistio':
-              return 'pending';
+              return 'no-show';
             default:
               return 'pending';
           }
@@ -177,8 +182,9 @@ export default function ConsultationsPage() {
               case 'confirmada':
                 return 'pending';
               case 'cancelada':
+                return 'cancelled';
               case 'no_asistio':
-                return 'pending';
+                return 'no-show';
               default:
                 return 'pending';
             }
@@ -235,6 +241,96 @@ export default function ConsultationsPage() {
     window.location.reload();
   };
 
+  const handleStartConsultation = async (consultation: Consultation) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    if (!clinicId || !userId) {
+      showError('Error', 'No se pudo obtener la información del usuario');
+      return;
+    }
+
+    try {
+      setStartingConsultation(consultation.id);
+      
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        consultation.id,
+        { estado: 'en_curso' }
+      );
+
+      if (response.success) {
+        showSuccess('Consulta iniciada', 'La consulta ha comenzado exitosamente');
+        
+        setConsultations(prev => 
+          prev.map(c => 
+            c.id === consultation.id 
+              ? { ...c, status: 'in-progress' as const }
+              : c
+          )
+        );
+      } else {
+        throw new Error(response.message || 'Error al iniciar la consulta');
+      }
+    } catch (error: any) {
+      console.error('Error al iniciar consulta:', error);
+      showError('Error', error.message || 'No se pudo iniciar la consulta');
+    } finally {
+      setStartingConsultation(null);
+    }
+  };
+
+  const handleNoShow = async (consultation: Consultation) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    const userId = (currentUser as any)?.id;
+    
+    console.log(' [FRONTEND] handleNoShow called');
+    console.log(' [FRONTEND] Consultation ID:', consultation.id);
+    console.log(' [FRONTEND] Clinic ID:', clinicId);
+    console.log(' [FRONTEND] User ID:', userId);
+    
+    if (!clinicId || !userId) {
+      showError('Error', 'No se pudo obtener la información del usuario');
+      return;
+    }
+
+    try {
+      setCancellingConsultation(consultation.id);
+      
+      console.log(' [FRONTEND] Sending update request with estado: no_asistio');
+      
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        consultation.id,
+        { estado: 'no_asistio' }
+      );
+
+      console.log(' [FRONTEND] Response received:', response);
+
+      if (response.success) {
+        console.log(' [FRONTEND] Update successful, new estado:', response.data?.estado);
+        showSuccess('Consulta cerrada', 'La consulta se marcó como "No asistió"');
+        
+        setConsultations(prev => 
+          prev.map(c => 
+            c.id === consultation.id 
+              ? { ...c, status: 'no-show' as const }
+              : c
+          )
+        );
+      } else {
+        throw new Error(response.message || 'Error al marcar como no asistió');
+      }
+    } catch (error: any) {
+      console.error(' [FRONTEND] Error al marcar no asistió:', error);
+      showError('Error', error.message || 'No se pudo completar la acción');
+    } finally {
+      setCancellingConsultation(null);
+    }
+  };
+
   const handleConsultationAction = async (consultation: Consultation) => {
     const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     const userId = (currentUser as any)?.id;
@@ -247,7 +343,6 @@ export default function ConsultationsPage() {
     try {
       setFinishingConsultation(consultation.id);
       
-      // Verificar si existe un registro médico guardado (no borrador) para esta consulta específica
       const medicalRecordsResponse = await medicalRecordsService.getPatientRecords(
         consultation.patientId,
         clinicId,
@@ -255,7 +350,6 @@ export default function ConsultationsPage() {
         1000
       );
       
-      // Verificar si hay un registro médico guardado asociado a esta cita específica
       const hasRecordForConsultation = medicalRecordsResponse.success && 
                                        medicalRecordsResponse.data && 
                                        medicalRecordsResponse.data.some(record => 
@@ -264,7 +358,6 @@ export default function ConsultationsPage() {
                                        );
 
       if (!hasRecordForConsultation) {
-        // No hay registro médico, redirigir a crear uno
         showError(
           'Registro médico requerido', 
           'Debe crear un registro médico antes de finalizar la consulta'
@@ -273,7 +366,6 @@ export default function ConsultationsPage() {
         return;
       }
 
-      // Si hay registro médico, proceder a finalizar la consulta
       const response = await appointmentsService.updateAppointment(
         clinicId,
         userId,
@@ -284,7 +376,6 @@ export default function ConsultationsPage() {
       if (response.success) {
         showSuccess('Consulta finalizada', 'La consulta se ha completado exitosamente');
         
-        // Actualizar la lista de consultas
         setConsultations(prev => 
           prev.map(c => 
             c.id === consultation.id 
@@ -293,7 +384,6 @@ export default function ConsultationsPage() {
           )
         );
         
-        // Marcar que esta consulta tiene registro médico
         setConsultationsWithRecords(prev => new Set(prev).add(consultation.id));
       } else {
         throw new Error(response.message || 'Error al finalizar la consulta');
@@ -301,7 +391,6 @@ export default function ConsultationsPage() {
     } catch (error: any) {
       console.error('Error en acción de consulta:', error);
       
-      // Si el error es porque no existe historia clínica, redirigir a crear registro
       if (error.message?.includes('no encontrada') || error.message?.includes('not found')) {
         showError(
           'Registro médico requerido', 
@@ -344,6 +433,10 @@ export default function ConsultationsPage() {
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'no-show':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -354,6 +447,8 @@ export default function ConsultationsPage() {
       case 'completed': return 'Completada';
       case 'in-progress': return 'En Curso';
       case 'pending': return 'Pendiente';
+      case 'cancelled': return 'Cancelada';
+      case 'no-show': return 'No Asistió';
       default: return status;
     }
   };
@@ -471,6 +566,8 @@ export default function ConsultationsPage() {
                 <option value="completed">Completadas</option>
                 <option value="in-progress">En Curso</option>
                 <option value="pending">Pendientes</option>
+                <option value="cancelled">Canceladas</option>
+                <option value="no-show">No Asistió</option>
               </select>
             </div>
           </div>
@@ -547,43 +644,97 @@ export default function ConsultationsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Link
-                              href={`/doctor/consultations/${consultation.id}`}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Ver detalles"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Link>
-
-                            {consultation.status === 'in-progress' && (
-                              <button
-                                onClick={() => handleConsultationAction(consultation)}
-                                disabled={finishingConsultation === consultation.id}
-                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
-                                title="Finalizar consulta o crear registro médico"
-                              >
-                                {finishingConsultation === consultation.id ? (
-                                  <>
-                                    <Spinner size="sm" color="white" />
-                                    <span>Procesando...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <CheckCircle className="w-4 h-4" />
-                                    <span>Finalizar Consulta</span>
-                                  </>
-                                )}
-                              </button>
+                            {consultation.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleStartConsultation(consultation)}
+                                  disabled={startingConsultation === consultation.id || cancellingConsultation === consultation.id}
+                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  title="Iniciar consulta"
+                                >
+                                  {startingConsultation === consultation.id ? (
+                                    <>
+                                      <Spinner size="sm" color="white" />
+                                      <span>Iniciando...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="w-4 h-4" />
+                                      <span>Iniciar Consulta</span>
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleNoShow(consultation)}
+                                  disabled={startingConsultation === consultation.id || cancellingConsultation === consultation.id}
+                                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  title="Marcar como no asistió"
+                                >
+                                  {cancellingConsultation === consultation.id ? (
+                                    <>
+                                      <Spinner size="sm" color="white" />
+                                      <span>Procesando...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-4 h-4" />
+                                      <span>No Asistió</span>
+                                    </>
+                                  )}
+                                </button>
+                              </>
                             )}
 
-                            {consultation.status !== 'completed' && consultation.status !== 'in-progress' && (
-                              <Link
-                                href={`/doctor/consultations/${consultation.id}/edit`}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Editar consulta"
+                            {consultation.status === 'in-progress' && (
+                              <>
+                                <button
+                                  onClick={() => handleConsultationAction(consultation)}
+                                  disabled={finishingConsultation === consultation.id || cancellingConsultation === consultation.id}
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  title="Finalizar consulta o crear registro médico"
+                                >
+                                  {finishingConsultation === consultation.id ? (
+                                    <>
+                                      <Spinner size="sm" color="white" />
+                                      <span>Procesando...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4" />
+                                      <span>Finalizar Consulta</span>
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleNoShow(consultation)}
+                                  disabled={finishingConsultation === consultation.id || cancellingConsultation === consultation.id}
+                                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  title="Marcar como no asistió"
+                                >
+                                  {cancellingConsultation === consultation.id ? (
+                                    <>
+                                      <Spinner size="sm" color="white" />
+                                      <span>Procesando...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <XCircle className="w-4 h-4" />
+                                      <span>No Asistió</span>
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            )}
+
+                            {consultation.status === 'completed' && (
+                              <button
+                                onClick={() => router.push(buildPath(`/doctor/consultations/${consultation.id}`))}
+                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+                                title="Ver detalles de la consulta"
                               >
-                                <Edit className="w-4 h-4" />
-                              </Link>
+                                <Eye className="w-4 h-4" />
+                                <span>Ver Detalles</span>
+                              </button>
                             )}
                           </div>
                         </td>

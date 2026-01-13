@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
@@ -44,13 +44,16 @@ function ConfirmAppointmentContent() {
   const [creating, setCreating] = useState(false);
   const [specialtyName, setSpecialtyName] = useState<string>('');
 
-  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
 
   useEffect(() => {
-    if (currentUser && clinicId && doctorId && patientId) {
+    if (clinicId && doctorId && patientId) {
       loadData();
     }
-  }, [currentUser, clinicId, doctorId, patientId]);
+  }, [clinicId, doctorId, patientId]);
 
   const loadData = async () => {
     if (!clinicId || !doctorId || !patientId) return;
