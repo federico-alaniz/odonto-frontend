@@ -82,7 +82,6 @@ export default function SecretaryAppointmentsPage() {
 
   useEffect(() => {
     if (doctors.length > 0 && appointments.length >= 0) {
-      console.log('Recalculating slots for dateRange:', dateRange);
       loadDoctorSlots(doctors, appointments);
     }
   }, [dateRange]);
@@ -101,11 +100,6 @@ export default function SecretaryAppointmentsPage() {
 
       const adminDoctors = adminsRes.data.filter((user: UserType) => user.isDoctor === true);
       const allDoctors = [...doctorsRes.data, ...adminDoctors].map(doc => {
-        console.log('Doctor data:', {
-          name: `${doc.nombres} ${doc.apellidos}`,
-          especialidades: doc.especialidades,
-          role: doc.role
-        });
         return {
           ...doc,
           rating: 4.5 + Math.random() * 0.5,
@@ -127,7 +121,6 @@ export default function SecretaryAppointmentsPage() {
   };
 
   const loadDoctorSlots = (doctors: DoctorWithRating[], appointments: Appointment[]) => {
-    console.log('loadDoctorSlots called with dateRange:', dateRange, 'doctors:', doctors.length, 'appointments:', appointments.length);
     const slotsMap = new Map<string, string[]>();
     
     if (dateRange === 'today') {
@@ -142,11 +135,6 @@ export default function SecretaryAppointmentsPage() {
           (h) => h.activo && h.dia === backendDay
         );
         
-        console.log(`Doctor ${doctor.nombres} ${doctor.apellidos}:`, {
-          hasSchedule: !!horario,
-          dayOfWeek: backendDay,
-          schedules: (doctor as any).horariosAtencion
-        });
         
         if (!horario) {
           slotsMap.set(doctor.id, []);
@@ -166,7 +154,6 @@ export default function SecretaryAppointmentsPage() {
         let currentMin = startMin;
         const currentTime = today.getHours() * 60 + today.getMinutes();
         
-        console.log(`  Schedule: ${horario.horaInicio} - ${horario.horaFin}, Current time: ${today.getHours()}:${today.getMinutes()}`);
         
         while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
           const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
@@ -183,7 +170,6 @@ export default function SecretaryAppointmentsPage() {
           }
         }
         
-        console.log(`  Generated ${slots.length} slots:`, slots.slice(0, 5));
         slotsMap.set(doctor.id, slots);
       });
     } else if (dateRange === 'week') {

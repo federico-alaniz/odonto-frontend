@@ -40,7 +40,6 @@ export default function HistoryDetailPage() {
   useEffect(() => {
     const loadPatientData = async () => {
       if (!clinicId) {
-        console.log('⏳ Esperando clinicId...');
         return;
       }
 

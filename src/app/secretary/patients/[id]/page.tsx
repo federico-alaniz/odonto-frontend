@@ -104,14 +104,12 @@ export default function SecretaryPatientDetailPage() {
   const loadPatientData = useCallback(async () => {
     const clinicId = currentUser?.clinicId;
     if (!clinicId || !patientId) {
-      console.log('No clinicId o patientId, redirigiendo...');
       router.push(buildPath('/secretary/patients'));
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Cargando datos del paciente:', patientId);
 
       // Cargar datos en paralelo
       const [patientResponse, appointmentsData, doctorsData, adminsData] = await Promise.all([
@@ -122,8 +120,7 @@ export default function SecretaryPatientDetailPage() {
       ]);
 
       if (!patientResponse?.data) {
-        console.log('Paciente no encontrado en la respuesta:', patientResponse);
-        router.push(buildPath('/secretary/patients'));
+          router.push(buildPath('/secretary/patients'));
         return;
       }
 
@@ -249,11 +246,9 @@ export default function SecretaryPatientDetailPage() {
     const handlePageFocus = () => {
       const now = Date.now();
       if (now - lastLoadTime < RELOAD_COOLDOWN) {
-        console.log('Recarga muy reciente, ignorando...');
         return;
       }
       
-      console.log('Página enfocada, verificando si se necesita recargar...');
       if (patientId && currentUser?.clinicId) {
         lastLoadTime = now;
         loadPatientData();
@@ -263,11 +258,9 @@ export default function SecretaryPatientDetailPage() {
     const handleVisibilityChange = () => {
       const now = Date.now();
       if (now - lastLoadTime < RELOAD_COOLDOWN) {
-        console.log('Recarga muy reciente, ignorando cambio de visibilidad...');
         return;
       }
       
-      console.log('Visibilidad cambiada a:', document.visibilityState);
       if (document.visibilityState === 'visible' && patientId && currentUser?.clinicId) {
         lastLoadTime = now;
         loadPatientData();

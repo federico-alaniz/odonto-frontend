@@ -95,7 +95,6 @@ export default function SecretaryDashboardPage() {
 
   const loadSecretaryData = async () => {
     if (!clinicId) {
-      console.log('No clinicId available');
       setLoading(false);
       return;
     }

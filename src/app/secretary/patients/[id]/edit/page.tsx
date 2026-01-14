@@ -187,7 +187,6 @@ export default function EditPatientPage() {
     
     // Debug para el campo género
     if (name === 'genero') {
-      console.log('Cambiando género a:', value);
     }
     
     setFormData(prev => ({
@@ -249,7 +248,6 @@ export default function EditPatientPage() {
     try {
       setSubmitting(true);
 
-      console.log('Guardando género:', formData.genero);
       const updateData: UpdatePatientData = {
         nombres: formData.nombres,
         apellidos: formData.apellidos,

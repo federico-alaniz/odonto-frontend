@@ -63,7 +63,6 @@ export default function LoginPage() {
     const role = (session as any)?.user?.role as UserRole | undefined;
     if (!role) return;
     const redirectPath = getRoleRedirectPath(role);
-    console.log('🔐 [LOGIN] Redirecting to:', redirectPath);
     router.push(redirectPath);
   }, [session, status, router]);
 
