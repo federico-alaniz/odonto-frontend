@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -35,7 +35,7 @@ interface DoctorWithRating extends UserType {
   reviewCount?: number;
 }
 
-export default function SecretaryAppointmentsPage() {
+function SecretaryAppointmentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
@@ -918,5 +918,13 @@ export default function SecretaryAppointmentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SecretaryAppointmentsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="Cargando..." />}>
+      <SecretaryAppointmentsContent />
+    </Suspense>
   );
 }

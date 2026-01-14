@@ -4,8 +4,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { UserPlus, Info, ArrowLeft } from 'lucide-react';
 import NewPatientForm from "./NewPatientForm";
+import { Suspense } from 'react';
 
 export default function NewPatientPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewPatientContent />
+    </Suspense>
+  );
+}
+
+function NewPatientContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { buildPath } = useTenant();
