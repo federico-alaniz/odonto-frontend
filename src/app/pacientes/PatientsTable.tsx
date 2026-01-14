@@ -25,6 +25,8 @@ import ViewPatientModal from './modals/ViewPatientModal';
 import NewAppointmentModal from './modals/NewAppointmentModal';
 import DeletePatientModal from './modals/DeletePatientModal';
 import EditPatientModal from './modals/EditPatientModal';
+import { formatGender, formatCity } from '@/utils/format-helpers';
+import { formatDocumentType, formatDocumentNumber } from '@/utils/document-formatters';
 import { PatientFilters } from './PatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -420,18 +422,6 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
                       <User className="w-3 h-3 flex-shrink-0" />
                       <span className="truncate">{patient.genero === 'masculino' ? 'M' : 'F'} • {patient.ciudad}</span>
                     </div>
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  <div className="text-sm text-gray-900 truncate">
-                    <div className="font-medium">{patient.numeroDocumento}</div>
-                    <div className="text-xs text-gray-700">{getDocumentTypeLabel(patient.tipoDocumento).slice(0, 10)}</div>
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  <div className="text-sm text-gray-900">
-                    <div className="font-medium">{calculateAge(patient.fechaNacimiento)}</div>
-                    <div className="text-xs text-gray-700">años</div>
                   </div>
                 </td>
                 <td className="px-4 py-4">

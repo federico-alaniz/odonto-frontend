@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -37,6 +37,7 @@ interface DoctorWithRating extends UserType {
 
 export default function SecretaryAppointmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
   const [viewMode, setViewMode] = useState<ViewMode>('search');
@@ -70,6 +71,14 @@ export default function SecretaryAppointmentsPage() {
       loadSpecialties();
     }
   }, [clinicId]);
+
+  // Read view parameter from URL
+  useEffect(() => {
+    const viewParam = searchParams?.get('view');
+    if (viewParam === 'scheduled') {
+      setViewMode('scheduled');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (doctors.length > 0 && appointments.length >= 0) {

@@ -417,7 +417,7 @@ export default function NewAppointmentFlow() {
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <p className="text-sm text-gray-600 mb-3">¿El paciente no existe?</p>
                 <button 
-                  onClick={() => router.push(buildPath('/secretary/patients/new'))}
+                  onClick={() => router.push(buildPath(`/pacientes/nuevo?from=appointments&doctorId=${selectedDoctor?.id}&date=${selectedDate}&time=${selectedTime}`))}
                   className="w-full border-2 border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <UserPlus className="w-4 h-4" />

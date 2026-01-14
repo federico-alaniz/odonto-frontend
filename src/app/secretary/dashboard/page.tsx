@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
@@ -64,9 +64,10 @@ interface Reminder {
   count?: number;
 }
 
-export default function SecretaryDashboard() {
+export default function SecretaryDashboardPage() {
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SecretaryStats>({
     citasHoy: 0,
     pacientesEsperando: 0,
@@ -76,21 +77,23 @@ export default function SecretaryDashboard() {
   
   const [todayAppointments, setTodayAppointments] = useState<TodayAppointment[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [loading, setLoading] = useState(true);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<TodayAppointment | null>(null);
   const [confirmingArrival, setConfirmingArrival] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
+
   useEffect(() => {
-    if (currentUser) {
+    if (clinicId) {
       loadSecretaryData();
     }
-  }, [currentUser]);
+  }, [clinicId]);
 
   const loadSecretaryData = async () => {
-    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-    
     if (!clinicId) {
       console.log('No clinicId available');
       setLoading(false);
@@ -404,7 +407,7 @@ export default function SecretaryDashboard() {
                     </div>
                   </div>
                   <Link 
-                    href={buildPath('/secretary/appointments')}
+                    href={buildPath('/secretary/appointments?view=scheduled')}
                     className="text-purple-600 hover:text-purple-700 text-sm font-medium"
                   >
                     Ver todos
