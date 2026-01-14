@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService } from '@/services/api/appointments.service';
@@ -47,19 +47,12 @@ export default function BillingPage() {
   const [dateFilter, setDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
-  useEffect(() => {
-    if (currentUser) {
-      loadPayments();
-    }
-  }, [currentUser]);
+  // Memoize clinicId to prevent unnecessary re-renders
+  const clinicId = useMemo(() => {
+    return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  }, [currentUser?.id]);
 
-  useEffect(() => {
-    filterPayments();
-  }, [searchTerm, dateFilter, statusFilter, payments]);
-
-  const loadPayments = async () => {
-    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-    
+  const loadPayments = useCallback(async () => {
     if (!clinicId) {
       setLoading(false);
       return;
@@ -117,7 +110,17 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [clinicId]);
+
+  useEffect(() => {
+    if (clinicId) {
+      loadPayments();
+    }
+  }, [clinicId, loadPayments]);
+
+  useEffect(() => {
+    filterPayments();
+  }, [searchTerm, dateFilter, statusFilter, payments]);
 
   const parsePaymentInfo = (notas: string): { sena: number; complemento: number; total: number; pagado: boolean } => {
     const senaMatch = notas.match(/Seña: \$?([\d.]+)/);
@@ -133,7 +136,7 @@ export default function BillingPage() {
     };
   };
 
-  const filterPayments = () => {
+  const filterPayments = useCallback(() => {
     let filtered = [...payments];
 
     if (searchTerm) {
@@ -156,11 +159,22 @@ export default function BillingPage() {
     }
 
     setFilteredPayments(filtered);
-  };
+  }, [payments, searchTerm, dateFilter, statusFilter]);
 
-  const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.total, 0);
-  const totalPaid = filteredPayments.filter(p => p.pagado).reduce((sum, p) => sum + p.total, 0);
-  const totalPending = filteredPayments.filter(p => !p.pagado).reduce((sum, p) => sum + p.total, 0);
+  // Memoize calculations to prevent unnecessary re-renders
+  const paymentStats = useMemo(() => {
+    const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.total, 0);
+    const totalPaid = filteredPayments.filter(p => p.pagado).reduce((sum, p) => sum + p.total, 0);
+    const totalPending = filteredPayments.filter(p => !p.pagado).reduce((sum, p) => sum + p.total, 0);
+    
+    return {
+      totalRevenue,
+      totalPaid,
+      totalPending,
+      paidCount: filteredPayments.filter(p => p.pagado).length,
+      pendingCount: filteredPayments.filter(p => !p.pagado).length
+    };
+  }, [filteredPayments]);
 
   if (loading) {
     return (
@@ -201,7 +215,7 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Facturado</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">${totalRevenue.toFixed(2)}</p>
+                <p className="text-3xl font-bold mt-2 text-gray-900">${paymentStats.totalRevenue.toFixed(2)}</p>
                 <p className="text-sm text-gray-500 mt-1">{filteredPayments.length} registros</p>
               </div>
               <div className="p-3 rounded-lg bg-blue-100">
@@ -214,8 +228,8 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pagos Completados</p>
-                <p className="text-3xl font-bold mt-2 text-green-600">${totalPaid.toFixed(2)}</p>
-                <p className="text-sm text-gray-500 mt-1">{filteredPayments.filter(p => p.pagado).length} pagos</p>
+                <p className="text-3xl font-bold mt-2 text-green-600">${paymentStats.totalPaid.toFixed(2)}</p>
+                <p className="text-sm text-gray-500 mt-1">{paymentStats.paidCount} pagos</p>
               </div>
               <div className="p-3 rounded-lg bg-green-100">
                 <CheckCircle className="w-7 h-7 text-green-600" />
@@ -227,8 +241,8 @@ export default function BillingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pagos Pendientes</p>
-                <p className="text-3xl font-bold mt-2 text-yellow-600">${totalPending.toFixed(2)}</p>
-                <p className="text-sm text-gray-500 mt-1">{filteredPayments.filter(p => !p.pagado).length} pendientes</p>
+                <p className="text-3xl font-bold mt-2 text-yellow-600">${paymentStats.totalPending.toFixed(2)}</p>
+                <p className="text-sm text-gray-500 mt-1">{paymentStats.pendingCount} pendientes</p>
               </div>
               <div className="p-3 rounded-lg bg-yellow-100">
                 <Clock className="w-7 h-7 text-yellow-600" />
