@@ -151,28 +151,20 @@ export default function NewAppointmentWizard() {
 
   const loadPatients = async () => {
     if (!clinicId) {
-      console.log('No clinicId available for loading patients');
       return;
     }
     
     try {
       setLoadingPatients(true);
-      console.log('🏥 Loading patients for clinicId:', clinicId);
-      console.log('👤 Current user:', currentUser);
       
       const response = await patientsService.getPatients(clinicId, {
         limit: 1000
       });
       
-      console.log('📋 Patients API Response:', response);
-      console.log('📋 Patients data:', response.data);
-      console.log('📋 Patients count:', response.data?.length);
       
       if (response.success && response.data) {
-        console.log('📋 Setting patients state with:', response.data);
-        setPatients(response.data);
+          setPatients(response.data);
       } else {
-        console.log('❌ Response not successful or no data');
       }
     } catch (error) {
       console.error('Error loading patients:', error);
@@ -236,9 +228,6 @@ export default function NewAppointmentWizard() {
     );
   });
 
-  console.log('🔍 Current patients state:', patients);
-  console.log('🔍 Filtered patients:', filteredPatients);
-  console.log('🔍 Search term:', searchTerm);
 
   // Filtrar doctores por especialidad
   const filteredDoctors = selectedSpecialty

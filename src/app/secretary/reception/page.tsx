@@ -112,10 +112,6 @@ export default function ReceptionPage() {
   }, [clinicId]);
 
   const loadReceptionData = async () => {
-    if (!clinicId) {
-      console.log('⏳ Esperando clinicId...');
-      return;
-    }
 
     try {
       setLoading(true);
@@ -372,7 +368,6 @@ export default function ReceptionPage() {
     }
 
     try {
-      console.log('🔄 Cambiando estado de cita:', { appointmentId, newStatus });
 
       // Convertir estado frontend a backend (esperando -> confirmada, en-curso -> en_curso, no-show -> no_asistio)
       let backendStatus: string = newStatus;
@@ -388,7 +383,6 @@ export default function ReceptionPage() {
         { estado: backendStatus as any }
       );
 
-      console.log('📥 Respuesta del backend:', response);
 
       if (response.success) {
         // Actualizar estado local solo si el backend confirma
@@ -414,7 +408,6 @@ export default function ReceptionPage() {
                 updatedApt.consultationStartTime = currentTime;
               }
               
-              console.log('✅ Estado actualizado localmente:', updatedApt.status);
               return updatedApt;
             }
             return apt;

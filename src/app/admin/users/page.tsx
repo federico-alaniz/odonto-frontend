@@ -29,9 +29,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usersService } from '@/services/api/users.service';
-import { User } from '@/types/roles';
+import { formatGender, formatCity } from '@/utils/format-helpers';
+import { formatDocument } from '@/utils/document-formatters';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { User } from '@/types/roles';
 import UserPermissionsModal from '@/components/UserPermissionsModal';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 
@@ -617,7 +619,7 @@ export default function AdminUsersPage() {
                               {user.nombres} {user.apellidos}
                             </p>
                             <p className="text-sm text-gray-600">
-                              {user.tipoDocumento} {user.numeroDocumento}
+                              {formatDocument(user.tipoDocumento, user.numeroDocumento)}
                             </p>
                           </div>
                         </div>
@@ -873,7 +875,7 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Documento</label>
-                      <p className="text-gray-900">{selectedUserForView.tipoDocumento} {selectedUserForView.numeroDocumento}</p>
+                      <p className="text-gray-900">{formatDocument(selectedUserForView.tipoDocumento, selectedUserForView.numeroDocumento)}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600">Fecha de Nacimiento</label>

@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
-import { Users, UserPlus, Info, Calendar, ClipboardList, Stethoscope } from 'lucide-react';
+import { Users, UserPlus, Info, Calendar, ClipboardList, Stethoscope, Search, X } from 'lucide-react';
 import SecretaryPatientsTable from './SecretaryPatientsTable';
-import SecretaryPatientsFilters, { SecretaryPatientFilters } from './SecretaryPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
 
 export default function SecretaryPatientsPage() {
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
-  const [filters, setFilters] = useState<SecretaryPatientFilters>({
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
     search: '',
     numeroDocumento: '',
     genero: '',
@@ -91,6 +91,32 @@ export default function SecretaryPatientsPage() {
             </div>
             
             <div className="flex items-center space-x-3">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setFilters(prev => ({ ...prev, search: e.target.value }));
+                  }}
+                  placeholder="Buscar paciente..."
+                  className="w-80 pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setFilters(prev => ({ ...prev, search: '' }));
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
               <Link
                 href={buildPath('/secretary/appointments/new')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
@@ -179,9 +205,6 @@ export default function SecretaryPatientsPage() {
             </div>
           </div>
         </div>
-
-        {/* Filters */}
-        <SecretaryPatientsFilters onFiltersChange={setFilters} />
 
         {/* Table */}
         <SecretaryPatientsTable 

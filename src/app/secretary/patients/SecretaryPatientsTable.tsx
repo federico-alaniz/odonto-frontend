@@ -34,6 +34,7 @@ import type { Patient } from '@/types';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { formatGender, formatCity } from '@/utils/format-helpers';
+import { formatDocumentType, formatDocumentNumber } from '@/utils/document-formatters';
 
 // Interface adaptada para secretaria
 interface SecretaryPatient {
@@ -75,7 +76,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState<SortField>('fechaRegistro');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const [selectedPatients, setSelectedPatients] = useState<string[]>([]);
 
   // Modales
   const [viewModal, setViewModal] = useState<{ open: boolean; patient?: SecretaryPatient }>({ open: false });
@@ -289,20 +289,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selectedPatients.length === currentPatients.length && currentPatients.length > 0}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedPatients(currentPatients.map((p: SecretaryPatient) => p.id));
-                    } else {
-                      setSelectedPatients([]);
-                    }
-                  }}
-                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                />
-              </th>
               <th 
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('nombres')}
@@ -356,20 +342,6 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                 return (
                   <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedPatients.includes(patient.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedPatients([...selectedPatients, patient.id]);
-                          } else {
-                            setSelectedPatients(selectedPatients.filter(id => id !== patient.id));
-                          }
-                        }}
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                    </td>
-                    <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                           <User className="w-5 h-5 text-purple-600" />
@@ -379,7 +351,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                             {patient.nombres} {patient.apellidos}
                           </div>
                           <div className="text-sm text-gray-500 flex items-center gap-2">
-                            <span>{patient.tipoDocumento}</span>
+                            <span className="font-medium">{formatDocumentType(patient.tipoDocumento)}</span>
                             {patient.requiereSeguimiento && (
                               <div title="Requiere seguimiento">
                                 <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -390,7 +362,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {patient.numeroDocumento}
+                      {formatDocumentNumber(patient.numeroDocumento)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">

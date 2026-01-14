@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +19,8 @@ import {
   getDepartamentosPorProvincia, 
   getCiudadesPorProvincia
 } from '@/utils';
-import { patientsService, CreatePatientData } from '@/services/api/patients.service';
+import { patientsService } from '@/services/api/patients.service';
+import { CreatePatientData } from '@/types';
 
 interface PatientFormData {
   // Información Personal
@@ -61,9 +62,16 @@ interface FormErrors {
 
 export default function NewPatientForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { buildPath } = useTenant();
   const { showSuccess, showError } = useToast();
   const { currentUser } = useAuth();
+  
+  // Detectar si viene del flujo de citas
+  const fromAppointments = searchParams?.get('from') === 'appointments';
+  const doctorId = searchParams?.get('doctorId');
+  const date = searchParams?.get('date');
+  const time = searchParams?.get('time');
   
   const [formData, setFormData] = useState<PatientFormData>({
     nombres: '',
@@ -270,8 +278,14 @@ export default function NewPatientForm() {
         `Se ha creado la historia clínica N° ${response.data.numeroHistoriaClinica}`
       );
       
-      // Navegar de vuelta a la lista de pacientes
-      router.push(buildPath('/pacientes'));
+      // Redirigir según el origen
+      if (fromAppointments && doctorId && date && time) {
+        // Volver al flujo de citas con los parámetros originales
+        router.push(buildPath(`/secretary/appointments/new?doctorId=${doctorId}&date=${date}&time=${time}`));
+      } else {
+        // Redirigir a la lista de pacientes de secretaría
+        router.push(buildPath('/secretary/patients'));
+      }
       
     } catch (error: any) {
       console.error('Error al registrar paciente:', error);
@@ -295,11 +309,20 @@ export default function NewPatientForm() {
       );
       
       if (confirmCancel) {
-        router.push(buildPath('/pacientes'));
+        if (fromAppointments && doctorId && date && time) {
+          // Volver al flujo de citas
+          router.push(buildPath(`/secretary/appointments/new?doctorId=${doctorId}&date=${date}&time=${time}`));
+        } else {
+          router.push(buildPath('/secretary/patients'));
+        }
       }
     } else {
-      // Si no hay cambios, navegar directamente
-      router.push(buildPath('/pacientes'));
+      // Si no hay cambios, navegar según el origen
+      if (fromAppointments && doctorId && date && time) {
+        router.push(buildPath(`/secretary/appointments/new?doctorId=${doctorId}&date=${date}&time=${time}`));
+      } else {
+        router.push(buildPath('/secretary/patients'));
+      }
     }
   };
 

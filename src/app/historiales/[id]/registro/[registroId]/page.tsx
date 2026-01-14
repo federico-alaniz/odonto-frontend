@@ -49,7 +49,6 @@ export default function RegistroDetailPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!clinicId) {
-        console.log('⏳ Esperando clinicId...');
         return;
       }
 
@@ -69,44 +68,30 @@ export default function RegistroDetailPage() {
           
           // Load doctor information if doctorId exists, otherwise use createdBy
           const userIdToLoad = recordResponse.data.doctorId || recordResponse.data.createdBy;
-          console.log('🔍 Cargando información del doctor:', {
-            doctorId: recordResponse.data.doctorId,
-            createdBy: recordResponse.data.createdBy,
-            userIdToLoad
-          });
           
           if (userIdToLoad) {
             try {
               if (userIdToLoad === 'system') {
-                console.log('⚠️ Usuario es system');
                 setDoctorName('N/A');
                 setDoctorLicense('');
               } else if (userIdToLoad.includes('@')) {
-                console.log('📧 Buscando doctor por email:', userIdToLoad);
                 const doctorResponse = await usersService.authenticateByEmail(userIdToLoad, clinicId);
-                console.log('📧 Respuesta authenticateByEmail:', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
-                  console.log('✅ Nombre del doctor encontrado:', fullName);
                   setDoctorName(fullName || 'N/A');
                   setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
                 } else {
-                  console.log('❌ No se pudo obtener datos del doctor por email');
                   setDoctorName('N/A');
                 }
               } else {
-                console.log('🆔 Buscando doctor por ID:', userIdToLoad);
                 const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
-                console.log('🆔 Respuesta getUserById:', doctorResponse);
                 if (doctorResponse.success && doctorResponse.data) {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
-                  console.log('✅ Nombre del doctor encontrado:', fullName);
                   setDoctorName(fullName || 'N/A');
                   setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
                 } else {
-                  console.log('❌ No se pudo obtener datos del doctor por ID');
                   setDoctorName('N/A');
                 }
               }
@@ -116,7 +101,6 @@ export default function RegistroDetailPage() {
               setDoctorLicense('');
             }
           } else {
-            console.log('⚠️ No hay userIdToLoad disponible');
             setDoctorName('N/A');
           }
         }

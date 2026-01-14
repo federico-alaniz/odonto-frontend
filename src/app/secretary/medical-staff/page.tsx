@@ -106,7 +106,6 @@ export default function MedicalStaffPage() {
     try {
       const response = await clinicSettingsService.getConsultingRooms(clinicId);
       if (response.success && response.data) {
-        console.log('Consultorios cargados:', response.data);
         setConsultingRooms(response.data);
       }
     } catch (error) {
@@ -121,7 +120,6 @@ export default function MedicalStaffPage() {
     try {
       const response = await clinicSettingsService.getSpecialties(clinicId);
       if (response.success && response.data) {
-        console.log('Especialidades cargadas:', response.data);
         setSpecialties(response.data);
       }
     } catch (error) {
@@ -132,36 +130,25 @@ export default function MedicalStaffPage() {
 
   const loadMedicalStaff = async () => {
     if (!clinicId) {
-      console.log('No clinicId disponible');
       setLoading(false);
       return;
     }
     
     try {
       setLoading(true);
-      console.log('Cargando médicos para clinicId:', clinicId);
       
       const [doctorsRes, adminsRes] = await Promise.all([
         usersService.getUsers(clinicId, { role: 'doctor', limit: 100 }),
         usersService.getUsers(clinicId, { role: 'admin', limit: 100 })
       ]);
 
-      console.log('Doctores recibidos:', doctorsRes.data?.length || 0);
-      console.log('Admins recibidos:', adminsRes.data?.length || 0);
-
       const adminDoctors = adminsRes.data.filter((user: User) => user.isDoctor === true);
-      console.log('Admin-doctores filtrados:', adminDoctors.length);
       
       const allDoctors: DoctorWithStatus[] = [...doctorsRes.data, ...adminDoctors].map(doctor => {
         const isOnline = Math.random() > 0.3;
         const isAttending = isOnline && Math.random() > 0.5;
         
         // Debug log para verificar datos del doctor
-        console.log(`Doctor: ${doctor.nombres} ${doctor.apellidos}`, {
-          consultorio: doctor.consultorio,
-          especialidades: doctor.especialidades,
-          role: doctor.role
-        });
         
         return {
           ...doctor,
@@ -176,8 +163,6 @@ export default function MedicalStaffPage() {
         };
       });
 
-      console.log('Total médicos procesados:', allDoctors.length);
-      console.log('Consultorios cargados:', consultingRooms.length);
       setDoctors(allDoctors);
     } catch (error) {
       console.error('Error cargando personal médico:', error);
@@ -282,10 +267,6 @@ export default function MedicalStaffPage() {
     }
     
     // Si no se encuentra, mostrar el ID como fallback
-    console.warn(`Consultorio no encontrado: ${consultorioId}`, {
-      consultingRoomsCount: consultingRooms.length,
-      consultingRooms: consultingRooms.map(r => ({ id: r.id, number: r.number, name: r.name }))
-    });
     
     return `Consultorio ${consultorioId}`;
   };

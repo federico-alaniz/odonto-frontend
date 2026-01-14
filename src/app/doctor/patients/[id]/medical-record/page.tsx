@@ -61,7 +61,6 @@ export default function MedicalRecordPage() {
     const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     
     if (!clinicId) {
-      console.log('⏳ Esperando clinicId...');
       return;
     }
 

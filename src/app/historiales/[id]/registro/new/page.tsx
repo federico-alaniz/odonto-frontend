@@ -111,7 +111,6 @@ export default function NewMedicalRecordPage() {
   useEffect(() => {
     const loadPatient = async () => {
       if (!clinicId) {
-        console.log('⏳ Esperando clinicId...');
         return;
       }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { LoadingSpinner } from '@/components/ui/Spinner';
@@ -27,6 +27,8 @@ import {
   Pill
 } from 'lucide-react';
 import Link from 'next/link';
+import { formatGender, formatCity } from '@/utils/format-helpers';
+import { formatDocument } from '@/utils/document-formatters';
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
@@ -99,143 +101,180 @@ export default function SecretaryPatientDetailPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<PatientAppointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  useEffect(() => {
-    const loadPatientData = async () => {
-      const clinicId = currentUser?.clinicId;
-      if (!clinicId || !patientId) {
-        router.push(buildPath('/secretary/patients'));
+  const loadPatientData = useCallback(async () => {
+    const clinicId = currentUser?.clinicId;
+    if (!clinicId || !patientId) {
+      router.push(buildPath('/secretary/patients'));
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Cargar datos en paralelo
+      const [patientResponse, appointmentsData, doctorsData, adminsData] = await Promise.all([
+        patientsService.getPatientById(patientId, clinicId),
+        appointmentsService.getAppointments(clinicId, { patientId }),
+        usersService.getUsers(clinicId, { role: 'doctor' }),
+        usersService.getUsers(clinicId, { role: 'admin' })
+      ]);
+
+      if (!patientResponse?.data) {
+          router.push(buildPath('/secretary/patients'));
         return;
       }
 
-      try {
-        setLoading(true);
+      const patientData = patientResponse.data;
 
-        // Cargar datos en paralelo
-        const [patientResponse, appointmentsData, doctorsData, adminsData] = await Promise.all([
-          patientsService.getPatientById(patientId, clinicId),
-          appointmentsService.getAppointments(clinicId, { patientId }),
-          usersService.getUsers(clinicId, { role: 'doctor' }),
-          usersService.getUsers(clinicId, { role: 'admin' })
-        ]);
+      // Transformar datos del paciente
+      const patientDetails: PatientDetails = {
+        id: patientData.id,
+        nombres: patientData.nombres,
+        apellidos: patientData.apellidos,
+        tipoDocumento: patientData.tipoDocumento,
+        numeroDocumento: patientData.numeroDocumento,
+        fechaNacimiento: patientData.fechaNacimiento,
+        genero: patientData.genero,
+        telefono: patientData.telefono,
+        email: patientData.email || '',
+        direccion: patientData.direccion || {},
+        tipoSangre: patientData.tipoSangre || '',
+        contactoEmergencia: patientData.contactoEmergencia || {},
+        seguroMedico: patientData.seguroMedico,
+        alergias: patientData.alergias || [],
+        medicamentosActuales: patientData.medicamentosActuales || [],
+        antecedentesPersonales: patientData.antecedentesPersonales || [],
+        antecedentesFamiliares: patientData.antecedentesFamiliares || [],
+        estado: patientData.estado,
+        fechaRegistro: patientData.createdAt
+      };
 
-        if (!patientResponse?.data) {
-          router.push(buildPath('/secretary/patients'));
-          return;
-        }
+      setPatient(patientDetails);
 
-        const patientData = patientResponse.data;
+      // Combinar doctores y admin-doctores
+      const adminDoctors = adminsData.data.filter((user: User) => user.isDoctor === true);
+      const allDoctors = [...doctorsData.data, ...adminDoctors];
 
-        // Transformar datos del paciente
-        const patientDetails: PatientDetails = {
-          id: patientData.id,
-          nombres: patientData.nombres,
-          apellidos: patientData.apellidos,
-          tipoDocumento: patientData.tipoDocumento,
-          numeroDocumento: patientData.numeroDocumento,
-          fechaNacimiento: patientData.fechaNacimiento,
-          genero: patientData.genero,
-          telefono: patientData.telefono,
-          email: patientData.email || '',
-          direccion: patientData.direccion || {},
-          tipoSangre: patientData.tipoSangre || '',
-          contactoEmergencia: patientData.contactoEmergencia || {},
-          seguroMedico: patientData.seguroMedico,
-          alergias: patientData.alergias || [],
-          medicamentosActuales: patientData.medicamentosActuales || [],
-          antecedentesPersonales: patientData.antecedentesPersonales || [],
-          antecedentesFamiliares: patientData.antecedentesFamiliares || [],
-          estado: patientData.estado,
-          fechaRegistro: patientData.createdAt
-        };
+      // Cargar especialidades para mapear IDs a nombres
+      const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
+      const specialtiesMap = new Map<string, string>();
+      if (specialtiesRes.success && specialtiesRes.data) {
+        specialtiesRes.data.forEach((spec: { id: string; name?: string; nombre?: string }) => {
+          const name = spec.name || spec.nombre;
+          if (name) {
+            specialtiesMap.set(spec.id, name);
+          }
+        });
+      }
 
-        setPatient(patientDetails);
+      // Cargar consultorios para mapear IDs a nombres
+      const consultoriosRes = await clinicSettingsService.getConsultingRooms(clinicId);
+      const consultoriosMap = new Map<string, string>();
+      if (consultoriosRes.success && consultoriosRes.data) {
+        consultoriosRes.data.forEach((cons: { id: string; nombre?: string; name?: string }) => {
+          const nombre = cons.nombre || cons.name;
+          if (nombre) {
+            consultoriosMap.set(cons.id, nombre);
+          }
+        });
+      }
 
-        // Combinar doctores y admin-doctores
-        const adminDoctors = adminsData.data.filter((user: User) => user.isDoctor === true);
-        const allDoctors = [...doctorsData.data, ...adminDoctors];
+      // Fecha actual para comparar
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-        // Cargar especialidades para mapear IDs a nombres
-        const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
-        const specialtiesMap = new Map<string, string>();
-        if (specialtiesRes.success && specialtiesRes.data) {
-          specialtiesRes.data.forEach((spec: { id: string; name?: string; nombre?: string }) => {
-            const name = spec.name || spec.nombre;
-            if (name) {
-              specialtiesMap.set(spec.id, name);
-            }
-          });
-        }
+      // Transformar datos de citas con información de doctores
+      const patientAppts: PatientAppointment[] = appointmentsData.data
+        .map(apt => {
+          const doctor = allDoctors.find(d => d.id === apt.doctorId);
+          
+          // Obtener nombre de especialidad
+          const especialidadId = doctor?.especialidades?.[0];
+          let especialidadNombre = 'No especificada';
+          if (especialidadId) {
+            especialidadNombre = specialtiesMap.get(especialidadId) || especialidadId;
+          }
+          
+          // Obtener nombre de consultorio
+          const consultorioId = doctor?.consultorio;
+          let consultorioNombre = 'Sin asignar';
+          if (consultorioId) {
+            consultorioNombre = consultoriosMap.get(consultorioId) || consultorioId;
+          }
+          
+          // Verificar si la cita es pasada y cambiar estado a 'no_asistio' si está 'programada'
+          const appointmentDate = new Date(apt.fecha + 'T' + apt.horaInicio);
+          let estado = apt.estado;
+          if (appointmentDate < today && estado === 'programada') {
+            estado = 'no_asistio';
+          }
+          
+          return {
+            id: apt.id,
+            fecha: apt.fecha,
+            horaInicio: apt.horaInicio,
+            doctorId: apt.doctorId,
+            doctorName: doctor ? `${doctor.nombres} ${doctor.apellidos}` : 'Doctor no asignado',
+            especialidad: especialidadNombre,
+            motivo: apt.motivo || 'Sin motivo especificado',
+            estado: estado,
+            consultorio: consultorioNombre,
+            notas: apt.notas
+          };
+        })
+        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
-        // Cargar consultorios para mapear IDs a nombres
-        const consultoriosRes = await clinicSettingsService.getConsultingRooms(clinicId);
-        const consultoriosMap = new Map<string, string>();
-        if (consultoriosRes.success && consultoriosRes.data) {
-          consultoriosRes.data.forEach((cons: { id: string; nombre?: string; name?: string }) => {
-            const nombre = cons.nombre || cons.name;
-            if (nombre) {
-              consultoriosMap.set(cons.id, nombre);
-            }
-          });
-        }
+      setPatientAppointments(patientAppts);
+      setPatientBills([]);
 
-        // Fecha actual para comparar
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    } catch (error) {
+      console.error('Error loading patient data:', error);
+      router.push(buildPath('/secretary/patients'));
+    } finally {
+      setLoading(false);
+    }
+  }, [patientId, currentUser, router]);
 
-        // Transformar datos de citas con información de doctores
-        const patientAppts: PatientAppointment[] = appointmentsData.data
-          .map(apt => {
-            const doctor = allDoctors.find(d => d.id === apt.doctorId);
-            
-            // Obtener nombre de especialidad
-            const especialidadId = doctor?.especialidades?.[0];
-            let especialidadNombre = 'No especificada';
-            if (especialidadId) {
-              especialidadNombre = specialtiesMap.get(especialidadId) || especialidadId;
-            }
-            
-            // Obtener nombre de consultorio
-            const consultorioId = doctor?.consultorio;
-            let consultorioNombre = 'Sin asignar';
-            if (consultorioId) {
-              consultorioNombre = consultoriosMap.get(consultorioId) || consultorioId;
-            }
-            
-            // Verificar si la cita es pasada y cambiar estado a 'no_asistio' si está 'programada'
-            const appointmentDate = new Date(apt.fecha + 'T' + apt.horaInicio);
-            let estado = apt.estado;
-            if (appointmentDate < today && estado === 'programada') {
-              estado = 'no_asistio';
-            }
-            
-            return {
-              id: apt.id,
-              fecha: apt.fecha,
-              horaInicio: apt.horaInicio,
-              doctorId: apt.doctorId,
-              doctorName: doctor ? `${doctor.nombres} ${doctor.apellidos}` : 'Doctor no asignado',
-              especialidad: especialidadNombre,
-              motivo: apt.motivo || 'Sin motivo especificado',
-              estado: estado,
-              consultorio: consultorioNombre,
-              notas: apt.notas
-            };
-          })
-          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  useEffect(() => {
+    loadPatientData();
+  }, [patientId, currentUser, router]);
 
-        setPatientAppointments(patientAppts);
-        setPatientBills([]);
+  useEffect(() => {
+    let lastLoadTime = 0;
+    const RELOAD_COOLDOWN = 5000; // 5 segundos entre recargas
 
-      } catch (error) {
-        console.error('Error loading patient data:', error);
-        router.push(buildPath('/secretary/patients'));
-      } finally {
-        setLoading(false);
+    const handlePageFocus = () => {
+      const now = Date.now();
+      if (now - lastLoadTime < RELOAD_COOLDOWN) {
+        return;
+      }
+      
+      if (patientId && currentUser?.clinicId) {
+        lastLoadTime = now;
+        loadPatientData();
       }
     };
 
-    loadPatientData();
-  }, [patientId, currentUser, router]);
+    const handleVisibilityChange = () => {
+      const now = Date.now();
+      if (now - lastLoadTime < RELOAD_COOLDOWN) {
+        return;
+      }
+      
+      if (document.visibilityState === 'visible' && patientId && currentUser?.clinicId) {
+        lastLoadTime = now;
+        loadPatientData();
+      }
+    };
+
+    window.addEventListener('focus', handlePageFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('focus', handlePageFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [patientId, currentUser, loadPatientData]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -340,20 +379,12 @@ export default function SecretaryPatientDetailPage() {
                   {patient.nombres} {patient.apellidos}
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  {patient.tipoDocumento.toUpperCase()}: {patient.numeroDocumento} • {calculateAge(patient.fechaNacimiento)} años
+                  {formatDocument(patient.tipoDocumento, patient.numeroDocumento)} • {calculateAge(patient.fechaNacimiento)} años
                 </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <Link
-                href={`/secretary/appointments/new?patientId=${patient.id}`}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
-              >
-                <Calendar className="w-5 h-5" />
-                <span>Nuevo Turno</span>
-              </Link>
-              
               <Link
                 href={`/secretary/patients/${patient.id}/edit`}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors inline-flex items-center space-x-2"
@@ -433,7 +464,7 @@ export default function SecretaryPatientDetailPage() {
                   
                   <div>
                     <label className="text-sm font-medium text-gray-500">Documento</label>
-                    <p className="text-lg text-gray-900">{patient.tipoDocumento.toUpperCase()}: {patient.numeroDocumento}</p>
+                    <p className="text-lg text-gray-900">{formatDocument(patient.tipoDocumento, patient.numeroDocumento)}</p>
                   </div>
                   
                   <div>
@@ -943,7 +974,7 @@ export default function SecretaryPatientDetailPage() {
                 <h4 className="text-sm font-medium text-gray-500 mb-3">Paciente</h4>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-900">{patient.nombres} {patient.apellidos}</p>
-                  <p className="text-xs text-gray-600 mt-1">{patient.tipoDocumento.toUpperCase()}: {patient.numeroDocumento}</p>
+                  <p className="text-xs text-gray-600 mt-1">{formatDocument(patient.tipoDocumento, patient.numeroDocumento)}</p>
                 </div>
               </div>
 

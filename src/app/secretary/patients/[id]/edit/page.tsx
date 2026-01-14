@@ -185,6 +185,10 @@ export default function EditPatientPage() {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
     
+    // Debug para el campo género
+    if (name === 'genero') {
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value

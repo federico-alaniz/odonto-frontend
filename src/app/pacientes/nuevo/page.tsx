@@ -1,16 +1,38 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { UserPlus, Info, ArrowLeft } from 'lucide-react';
 import NewPatientForm from "./NewPatientForm";
+import { Suspense } from 'react';
 
 export default function NewPatientPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewPatientContent />
+    </Suspense>
+  );
+}
+
+function NewPatientContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { buildPath } = useTenant();
 
   const handleBack = () => {
-    router.push(buildPath('/pacientes'));
+    // Check if coming from appointments
+    const from = searchParams.get('from');
+    const doctorId = searchParams.get('doctorId');
+    const date = searchParams.get('date');
+    const time = searchParams.get('time');
+    
+    if (from === 'appointments' && doctorId && date && time) {
+      // Go back to the appointment booking page with the same parameters
+      router.push(buildPath(`/secretary/appointments?doctorId=${doctorId}&date=${date}&time=${time}`));
+    } else {
+      // Default behavior: go back to patients list
+      router.push(buildPath('/secretary/patients'));
+    }
   };
 
   return (
@@ -49,7 +71,7 @@ export default function NewPatientPage() {
               onClick={handleBack}
               className="text-blue-600 font-medium hover:text-blue-700 hover:underline transition-colors"
             >
-              Pacientes
+              {searchParams.get('from') === 'appointments' ? 'Reserva de Turnos' : 'Pacientes'}
             </button>
             <span>•</span>
             <span className="text-green-600 font-medium">Registro Nuevo</span>
