@@ -78,7 +78,7 @@ export default function HistoryDetailPage() {
   };
 
   const handleBack = () => {
-    router.push(buildPath('/historiales'));
+    router.back();
   };
 
   // Función para aplicar filtros
@@ -268,16 +268,6 @@ export default function HistoryDetailPage() {
           </div>
         </div>
         
-        {/* Breadcrumb visual */}
-        <div className="px-6 pb-4">
-          <div className="flex items-center text-sm text-gray-500 space-x-2">
-            <span>Gestión</span>
-            <span>•</span>
-            <span className="text-purple-600 font-medium">Historias Clínicas</span>
-            <span>•</span>
-            <span className="text-gray-700">{patient?.nombreCompleto || 'Paciente'}</span>
-          </div>
-        </div>
       </div>
 
       {/* Content Container */}
