@@ -80,9 +80,16 @@ export default function RegistroDetailPage() {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
                   setDoctorName(fullName || 'N/A');
-                  setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
+                  
+                  // Intentar diferentes campos para la matrícula
+                  const license = (doctorResponse.data as any).matriculaProfesional || 
+                                 (doctorResponse.data as any).matricula || 
+                                 (doctorResponse.data as any).license || 
+                                 (doctorResponse.data as any).numeroMatricula || '';
+                  setDoctorLicense(license);
                 } else {
                   setDoctorName('N/A');
+                  setDoctorLicense('');
                 }
               } else {
                 const doctorResponse = await usersService.getUserById(userIdToLoad, clinicId);
@@ -90,9 +97,16 @@ export default function RegistroDetailPage() {
                   const fullName = doctorResponse.data.name || 
                     `${doctorResponse.data.nombres} ${doctorResponse.data.apellidos}`.trim();
                   setDoctorName(fullName || 'N/A');
-                  setDoctorLicense((doctorResponse.data as any).matriculaProfesional || '');
+                  
+                  // Intentar diferentes campos para la matrícula
+                  const license = (doctorResponse.data as any).matriculaProfesional || 
+                                 (doctorResponse.data as any).matricula || 
+                                 (doctorResponse.data as any).license || 
+                                 (doctorResponse.data as any).numeroMatricula || '';
+                  setDoctorLicense(license);
                 } else {
                   setDoctorName('N/A');
+                  setDoctorLicense('');
                 }
               }
             } catch (error) {
@@ -102,6 +116,7 @@ export default function RegistroDetailPage() {
             }
           } else {
             setDoctorName('N/A');
+            setDoctorLicense('');
           }
         }
       } catch (error) {
@@ -175,7 +190,12 @@ export default function RegistroDetailPage() {
           const direccion = patient?.direccion 
             ? (`${patient.direccion.calle || ''} ${patient.direccion.numero || ''} `).trim()
             : 'N/A';
-          const ciudad = (`${patient.direccion.ciudad || ''}`).trim();
+          const ciudad = patient?.direccion?.ciudad 
+    ? patient.direccion.ciudad
+        .replace(/_/g, ' ')                    // Reemplazar guiones bajos con espacios
+        .replace(/\b\w/g, (l: string) => l.toUpperCase()) // Capitalizar primera letra de cada palabra
+        .trim()
+    : '';
           
           // Formatear fecha de nacimiento separada en día, mes y año
           let dia = '';
@@ -192,14 +212,13 @@ export default function RegistroDetailPage() {
           // Información del paciente con coordenadas ajustadas al SVG (viewBox: 0 0 595 453)
           // Solo los valores, sin etiquetas
           const patientInfo = [
-            { value: patient?.nombreCompleto || '', x: 180, y: 68 },  // Apellido y Nombre
-            { value: patient?.seguroMedico?.empresa || 'Sin O.S.', x: 450, y: 68 },  // Obra Social
+            { value: patient?.nombreCompleto || '', x: 150, y: 68 },  // Apellido y Nombre
+            { value: patient?.seguroMedico?.empresa || 'Sin O.S.', x: 430, y: 68 },  // Obra Social
             { value: direccion, x: 110, y: 105 },  // Domicilio
             { value: ciudad, x: 420, y: 105 },
             { value: dia, x: 470, y: 85 },   // Día
             { value: mes, x: 495, y: 85 },   // Mes
-            { value: anio, x: 520, y: 85 },   // Año
-            { value: doctorName || '', x: 150, y: 323 }  // Odontólogo
+            { value: anio, x: 520, y: 85 }   // Año
           ];
           
           // Agregar solo los valores al SVG
@@ -208,9 +227,9 @@ export default function RegistroDetailPage() {
             textElement.setAttribute('x', info.x.toString());
             textElement.setAttribute('y', info.y.toString());
             textElement.setAttribute('font-family', 'Arial, sans-serif');
-            textElement.setAttribute('font-size', '9');
+            textElement.setAttribute('font-size', '12');
             textElement.setAttribute('font-weight', 'bold');
-            textElement.setAttribute('fill', '#000000');
+            textElement.setAttribute('fill', '#150FA6');
             textElement.textContent = info.value;
             textGroup.appendChild(textElement);
           });
@@ -520,7 +539,40 @@ export default function RegistroDetailPage() {
           } else {
             edad = '00';
           }
+
+          //Numero de obra social del paciente
+          let obraSocial = '';
+          let obraSocialId = '';
           
+          // Debug: Ver todos los datos del paciente
+          
+          // Extraer obra social y número
+          if (patient?.seguroMedico) {
+            
+            const empresa = patient.seguroMedico.empresa || '';
+            const numeroPoliza = patient.seguroMedico.numeroPoliza || '';
+            
+            // Asignar siempre el número por separado
+            obraSocialId = numeroPoliza;
+            
+            if (empresa && obraSocialId) {
+              obraSocial = empresa;
+            } else {
+              obraSocial = 'Sin O.S.';
+              obraSocialId = '';
+            }
+            
+          } else {
+            obraSocial = 'Sin O.S.';
+            obraSocialId = '';
+          }
+          
+
+          
+          // Asegurarse de que doctorName y doctorLicense estén inicializadas
+          const currentDoctorName = doctorName || '';
+          const currentDoctorLicense = doctorLicense || '';
+
           // Información a agregar al SVG con coordenadas
           const consultaInfo = [
             { value: sexo, x: 211, y: 150 },                      // Sexo
@@ -529,7 +581,27 @@ export default function RegistroDetailPage() {
             { value: mesConsulta.charAt(0), x: 270, y: 102 },    // Mes - primer dígito
             { value: mesConsulta.charAt(1), x: 290, y: 102 },    // Mes - segundo dígito
             { value: anioConsulta.charAt(0), x: 365, y: 102 },   // Año - primer dígito
-            { value: anioConsulta.charAt(1), x: 385, y: 102 }    // Año - segundo dígito
+            { value: anioConsulta.charAt(1), x: 385, y: 102 },    // Año - segundo dígito
+            { value: currentDoctorName, x: 160, y: 180 },                // Doctor - Nombre
+            { value: obraSocial, x:405, y:50},
+            { value: obraSocialId.charAt(obraSocialId.length - 1), x:530, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 2), x:513, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 3), x:496, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 4), x:479, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 5), x:462, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 6), x:445, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 7), x:428, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 8), x:411, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 9), x:394, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 10), x:377, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 11), x:360, y:150},
+            { value: obraSocialId.charAt(obraSocialId.length - 12), x:343, y:150},
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 1), x: 530, y: 180 },          
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 2), x: 513, y: 180 },              
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 3), x: 496, y: 180 },              
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 4), x: 479, y: 180 },              
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 5), x: 462, y: 180 },              
+            { value: currentDoctorLicense.charAt(currentDoctorLicense.length - 6), x: 445, y: 180 }              
           ];
           
           // Agregar los valores al SVG
@@ -540,7 +612,7 @@ export default function RegistroDetailPage() {
             textElement.setAttribute('font-family', 'Arial, sans-serif');
             textElement.setAttribute('font-size', '12');
             textElement.setAttribute('font-weight', 'bold');
-            textElement.setAttribute('fill', '#000000');
+            textElement.setAttribute('fill', '#150FA6');
             textElement.setAttribute('text-anchor', 'middle');
             textElement.setAttribute('dominant-baseline', 'middle');
             textElement.textContent = info.value;
