@@ -882,14 +882,6 @@ export default function RegistroDetailPage() {
                 <p className="text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{registro.motivoConsulta}</p>
               </div>
             )}
-            
-            {/* Observaciones */}
-            {registro.observaciones && (
-              <div className="border-t border-gray-200 pt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{registro.observaciones}</p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -1003,40 +995,6 @@ export default function RegistroDetailPage() {
           </div>
         )}
 
-        {/* Prescripciones */}
-        {registro.prescripciones && registro.prescripciones.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <div className="flex items-center gap-2">
-                <Pill className="w-5 h-5 text-blue-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Prescripciones</h3>
-              </div>
-              <p className="text-sm text-gray-600 mt-1">Medicamentos prescritos y dosificación</p>
-            </div>
-            <div className="p-6">
-              <div className="grid gap-4">
-                {registro.prescripciones.map((prescripcion, index: number) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-900">{prescripcion.medicamento}</h4>
-                      <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded border">
-                        {prescripcion.dosis}
-                      </span>
-                    </div>
-                    {prescripcion.indicaciones && (
-                      <p className="text-gray-700 text-sm mb-2">{prescripcion.indicaciones}</p>
-                    )}
-                    <p className="text-gray-600 text-xs">
-                      <strong>Frecuencia:</strong> {prescripcion.frecuencia} | 
-                      <strong> Duración:</strong> {prescripcion.duracion}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Odontogramas con Tabs - Solo para especialidad odontología */}
         {registro.tipoConsulta === 'odontologia' && registro.odontogramas && (
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
@@ -1116,6 +1074,22 @@ export default function RegistroDetailPage() {
                     />
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Observaciones */}
+        {registro.tipoConsulta === 'odontologia' && registro.odontogramas && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h3 className="text-xl font-semibold text-gray-900">Observaciones</h3>
+            </div>
+            <div className="p-6">
+              {registro.observaciones?.trim() ? (
+                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-200">{registro.observaciones}</p>
+              ) : (
+                <p className="text-gray-600 italic">Sin observaciones.</p>
               )}
             </div>
           </div>
