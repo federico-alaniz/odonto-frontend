@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { getRoleConfig, getRolePermissions } from './utils/roleConfig';
 
-const PUBLIC_ROUTES = ['/login', '/platform', '/'];
+const PUBLIC_ROUTES = ['/login', '/platform', '/', '/reservar-turno'];
 
 const SHARED_ROUTE_RULES: Array<{ prefix: string; resource?: string; action?: 'create' | 'read' | 'update' | 'delete' }> = [
   { prefix: '/pacientes', resource: 'patients', action: 'read' },
@@ -28,7 +28,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Rutas públicas
-  const isPublic = pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/platform');
+  const isPublic = pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/platform') || pathname.startsWith('/reservar-turno');
   
   if (isPublic) {
     return NextResponse.next();

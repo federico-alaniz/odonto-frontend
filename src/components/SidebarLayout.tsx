@@ -49,7 +49,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const clinicLogo = clinicMeta?.logo;
 
   // Rutas públicas que no deben mostrar el sidebar
-  const publicRoutes = ['/login', '/platform', '/registro', '/recuperar-password', '/terminos', '/privacidad'];
+  const publicRoutes = ['/login', '/platform', '/registro', '/recuperar-password', '/terminos', '/privacidad', '/reservar-turno'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
 
   // Si es una ruta pública, solo renderizar el contenido sin sidebar

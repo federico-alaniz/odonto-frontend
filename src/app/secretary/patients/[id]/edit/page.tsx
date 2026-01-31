@@ -251,10 +251,10 @@ export default function EditPatientPage() {
       const updateData: UpdatePatientData = {
         nombres: formData.nombres,
         apellidos: formData.apellidos,
-        tipoDocumento: formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero' | undefined,
-        numeroDocumento: formData.numeroDocumento || undefined,
-        genero: formData.genero as 'masculino' | 'femenino' | 'otro' | undefined,
-        fechaNacimiento: formData.fechaNacimiento || undefined,
+        tipoDocumento: formData.tipoDocumento ? formData.tipoDocumento as 'dni' | 'le' | 'lc' | 'ci' | 'pasaporte' | 'extranjero' : undefined,
+        numeroDocumento: formData.numeroDocumento ? formData.numeroDocumento : undefined,
+        genero: formData.genero ? formData.genero as 'masculino' | 'femenino' | 'otro' : undefined,
+        fechaNacimiento: formData.fechaNacimiento ? formData.fechaNacimiento : undefined,
         telefono: formData.telefono,
         email: formData.email || undefined,
         direccion: {

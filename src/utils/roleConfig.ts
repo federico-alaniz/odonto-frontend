@@ -244,6 +244,22 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             }
           },
           {
+            label: 'Enlace de Reservas',
+            href: '/admin/enlace-reservas',
+            icon: 'Link',
+            description: 'Enlace público para reserva de turnos',
+            roles: ['admin'],
+            requiredPermission: { resource: 'settings', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
+            }
+          },
+          {
             label: 'Reportes',
             href: '/admin/reports',
             icon: 'TrendingUp',

@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { clinicSettingsService } from '@/services/api/clinic-settings.service';
 import { rolePermissionsService, RoleConfig, RolePermissions } from '@/services/api/role-permissions.service';
+import { emailConfigService, EmailConfig } from '@/services/api/email-config.service';
 import { useAuth } from '@/hooks/useAuth';
 
 type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'permissions' | 'billing' | 'integrations';
@@ -97,12 +98,35 @@ export default function AdminSettingsPage() {
   const [rolePermissions, setRolePermissions] = useState<Record<string, RolePermissions>>({});
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
+  // Estados para configuración de email
+  const [emailConfig, setEmailConfig] = useState<EmailConfig>({
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPassword: '',
+    fromEmail: '',
+    fromName: '',
+    enabled: false
+  });
+  const [isLoadingEmail, setIsLoadingEmail] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+
   // Cargar configuración al montar
   useEffect(() => {
     if (!clinicId) return;
     loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clinicId]);
+
+  // Cargar configuración de email cuando se accede a la pestaña de integraciones
+  useEffect(() => {
+    if (activeTab === 'integrations' && clinicId) {
+      loadEmailConfig();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, clinicId]);
 
   const loadSettings = async () => {
     try {
@@ -202,6 +226,63 @@ export default function AdminSettingsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  // Funciones para configuración de email
+  const loadEmailConfig = async () => {
+    if (!clinicId) return;
+    
+    try {
+      setIsLoadingEmail(true);
+      const response = await emailConfigService.getConfig(clinicId);
+      
+      if (response.success && response.data) {
+        setEmailConfig(response.data);
+      }
+    } catch (error: any) {
+      console.error('Error al cargar configuración de email:', error);
+    } finally {
+      setIsLoadingEmail(false);
+    }
+  };
+
+  const handleSaveEmailConfig = async () => {
+    if (!clinicId || !userId) {
+      showError('Error de autenticación');
+      return;
+    }
+
+    try {
+      setIsSavingEmail(true);
+      await emailConfigService.saveConfig(clinicId, userId, emailConfig);
+      showSuccessToast('Configuración de email guardada correctamente');
+    } catch (error: any) {
+      showError(error.message || 'Error al guardar configuración de email');
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleTestEmailConfig = async () => {
+    if (!clinicId) {
+      showError('Error de autenticación');
+      return;
+    }
+
+    if (!testEmail) {
+      showError('Por favor, ingresa un email de prueba');
+      return;
+    }
+
+    try {
+      setIsTestingEmail(true);
+      await emailConfigService.testConfig(clinicId, testEmail);
+      showSuccessToast(`Email de prueba enviado a ${testEmail}`);
+    } catch (error: any) {
+      showError(error.message || 'Error al enviar email de prueba');
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
 
   // Manejar cambio de permiso individual con guardado automático
   const handlePermissionChange = async (role: string, resource: keyof RolePermissions, action: string, value: boolean) => {
@@ -1421,23 +1502,218 @@ export default function AdminSettingsPage() {
                   <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200 px-6 py-5">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-100 rounded-lg">
-                        <Database className="w-5 h-5 text-purple-700" />
+                        <Mail className="w-5 h-5 text-purple-700" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Integraciones</h2>
-                        <p className="text-sm text-gray-600 mt-1">Conecta con servicios externos</p>
+                        <h2 className="text-xl font-semibold text-gray-900">Configuración de Email</h2>
+                        <p className="text-sm text-gray-600 mt-1">Configura el servidor SMTP para envío de emails</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="p-6">
-                    <div className="text-center py-12">
-                      <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium text-lg">Sección en desarrollo</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        Esta sección incluirá: integraciones con laboratorios, sistemas de pago, servicios de SMS/Email, almacenamiento en la nube
-                      </p>
-                    </div>
+                    {isLoadingEmail ? (
+                      <div className="flex justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                      </div>
+                    ) : (
+                      <div className="max-w-3xl space-y-6">
+                        {/* Estado del servicio */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div className="flex-1">
+                              <h3 className="font-medium text-blue-900">Configuración SMTP</h3>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Configura tu servidor SMTP para enviar emails de confirmación de turnos automáticamente.
+                                Soporta Gmail, Outlook y otros proveedores.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Toggle para habilitar/deshabilitar */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <h3 className="font-medium text-gray-900">Habilitar envío de emails</h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Activar el envío automático de emails de confirmación
+                            </p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={emailConfig.enabled}
+                              onChange={(e) => setEmailConfig({ ...emailConfig, enabled: e.target.checked })}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                          </label>
+                        </div>
+
+                        {/* Configuración SMTP */}
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                            <Database className="w-5 h-5 text-purple-600" />
+                            Servidor SMTP
+                          </h3>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Host SMTP <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={emailConfig.smtpHost}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, smtpHost: e.target.value })}
+                                placeholder="smtp.gmail.com"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Puerto SMTP <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={emailConfig.smtpPort}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, smtpPort: parseInt(e.target.value) || 587 })}
+                                placeholder="587"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Usuario SMTP <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={emailConfig.smtpUser}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, smtpUser: e.target.value })}
+                                placeholder="tu-email@gmail.com"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Contraseña SMTP <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="password"
+                                value={emailConfig.smtpPassword}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
+                                placeholder="••••••••••••••••"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Para Gmail, usa una contraseña de aplicación
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Email remitente <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="email"
+                                value={emailConfig.fromEmail}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, fromEmail: e.target.value })}
+                                placeholder="clinica@gmail.com"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nombre remitente <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={emailConfig.fromName}
+                                onChange={(e) => setEmailConfig({ ...emailConfig, fromName: e.target.value })}
+                                placeholder="Clínica Odontológica"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Probar configuración */}
+                        <div className="border-t border-gray-200 pt-6">
+                          <h3 className="font-medium text-gray-900 mb-4">Probar configuración</h3>
+                          <div className="flex gap-3">
+                            <input
+                              type="email"
+                              value={testEmail}
+                              onChange={(e) => setTestEmail(e.target.value)}
+                              placeholder="email@ejemplo.com"
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <button
+                              onClick={handleTestEmailConfig}
+                              disabled={isTestingEmail || !testEmail}
+                              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                            >
+                              {isTestingEmail ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <Mail className="w-4 h-4" />
+                                  Enviar Prueba
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-2">
+                            Enviaremos un email de prueba a la dirección indicada para verificar la configuración
+                          </p>
+                        </div>
+
+                        {/* Botón guardar */}
+                        <div className="flex justify-end pt-4 border-t border-gray-200">
+                          <button
+                            onClick={handleSaveEmailConfig}
+                            disabled={isSavingEmail}
+                            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                          >
+                            {isSavingEmail ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Guardando...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-5 h-5" />
+                                Guardar Configuración
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Ayuda */}
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-yellow-600 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-medium text-yellow-900">Configuración para Gmail</h4>
+                              <ol className="text-sm text-yellow-800 mt-2 space-y-1 list-decimal list-inside">
+                                <li>Habilita la verificación en 2 pasos en tu cuenta de Google</li>
+                                <li>Ve a Contraseñas de aplicaciones: myaccount.google.com/apppasswords</li>
+                                <li>Genera una contraseña para "Correo" y "Otro dispositivo"</li>
+                                <li>Usa esa contraseña de 16 caracteres en el campo "Contraseña SMTP"</li>
+                              </ol>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
