@@ -190,7 +190,6 @@ export default function AdminSettingsPage() {
       
       // Si no hay roles, inicializarlos automáticamente
       if (!rolesData || rolesData.length === 0) {
-        console.log('No roles found, initializing default roles...');
         await rolePermissionsService.initializeDefaultRoles(clinicId, userId);
         // Volver a cargar después de inicializar
         const newRolesData = await rolePermissionsService.getAllRoles(clinicId, userId);
@@ -420,14 +419,6 @@ export default function AdminSettingsPage() {
         operatingRooms
       };
       
-      console.log('📤 Guardando configuración:', {
-        specialtiesCount: specialties.length,
-        consultingRoomsCount: consultingRooms.length,
-        operatingRoomsCount: operatingRooms.length,
-        specialties: specialties,
-        consultingRooms: consultingRooms,
-        operatingRooms: operatingRooms
-      });
       
       // Guardar en el backend
       const response = await clinicSettingsService.updateSettings(

@@ -34,7 +34,6 @@ function ReservarTurnoContent() {
 
     if (!clinicId) return;
     
-    console.log('🔍 Buscando paciente con DNI:', patientData.numeroDocumento, 'en clínica:', clinicId);
     setIsLoading(true);
     try {
       const result = await publicAppointmentsService.checkPatient(
@@ -42,7 +41,6 @@ function ReservarTurnoContent() {
         clinicId
       );
 
-      console.log('📋 Resultado de búsqueda:', result);
 
       if (result.exists) {
         setExistingPatient(true);
@@ -504,12 +502,6 @@ function Step3SelectDateTime({
       const startDateStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      console.log('📅 Buscando slots para:', {
-        doctorId: doctor.id,
-        clinicId,
-        startDate: startDateStr,
-        endDate: endDateStr
-      });
 
       try {
         const result = await publicAppointmentsService.getAvailableSlots(
@@ -518,8 +510,6 @@ function Step3SelectDateTime({
           startDateStr,
           endDateStr
         );
-        console.log('📋 Slots recibidos:', result);
-        console.log('📊 Cantidad de fechas:', Object.keys(result.data).length);
         setAvailableSlots(result.data);
       } catch (error) {
         console.error('❌ Error al cargar slots:', error);

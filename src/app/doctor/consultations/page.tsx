@@ -285,10 +285,6 @@ export default function ConsultationsPage() {
     const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     const userId = (currentUser as any)?.id;
     
-    console.log(' [FRONTEND] handleNoShow called');
-    console.log(' [FRONTEND] Consultation ID:', consultation.id);
-    console.log(' [FRONTEND] Clinic ID:', clinicId);
-    console.log(' [FRONTEND] User ID:', userId);
     
     if (!clinicId || !userId) {
       showError('Error', 'No se pudo obtener la información del usuario');
@@ -297,9 +293,7 @@ export default function ConsultationsPage() {
 
     try {
       setCancellingConsultation(consultation.id);
-      
-      console.log(' [FRONTEND] Sending update request with estado: no_asistio');
-      
+            
       const response = await appointmentsService.updateAppointment(
         clinicId,
         userId,
@@ -307,10 +301,8 @@ export default function ConsultationsPage() {
         { estado: 'no_asistio' }
       );
 
-      console.log(' [FRONTEND] Response received:', response);
 
       if (response.success) {
-        console.log(' [FRONTEND] Update successful, new estado:', response.data?.estado);
         showSuccess('Consulta cerrada', 'La consulta se marcó como "No asistió"');
         
         setConsultations(prev => 

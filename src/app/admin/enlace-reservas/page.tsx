@@ -3,25 +3,27 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Share2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function EnlaceReservasPage() {
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [clinicId, setClinicId] = useState<string>('');
   const [bookingUrl, setBookingUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Obtener clinicId del contexto o headers
-    // Por ahora usamos un placeholder - esto debería venir del contexto de autenticación
-    const currentClinicId = localStorage.getItem('clinicId') || 'clinic_ic8t2ryf';
+    if (isAuthLoading || !currentUser?.clinicId) {
+      return;
+    }
+
+    const currentClinicId = currentUser.clinicId;
     setClinicId(currentClinicId);
     
     // Generar URL de reserva
     const frontendUrl = window.location.origin;
     const url = `${frontendUrl}/reservar-turno?clinicId=${currentClinicId}`;
     setBookingUrl(url);
-    setIsLoading(false);
-  }, []);
+  }, [currentUser?.clinicId, isAuthLoading]);
 
   const handleCopy = async () => {
     try {
@@ -54,10 +56,18 @@ export default function EnlaceReservasPage() {
     window.open(bookingUrl, '_blank');
   };
 
-  if (isLoading) {
+  if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-600">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!currentUser?.clinicId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-600">Error: No se encontró la clínica del usuario</div>
       </div>
     );
   }
