@@ -55,6 +55,10 @@ export interface Patient {
   // Seguro Médico
   seguroMedico?: SeguroMedico;
   
+  // Helper fields populated client-side for easier rendering/filtering
+  obraSocial?: string;
+  numeroAfiliado?: string;
+  
   // Doctor Asignado
   doctorAsignado?: string;
   

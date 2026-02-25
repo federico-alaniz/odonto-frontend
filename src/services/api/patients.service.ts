@@ -129,7 +129,17 @@ export const patientsService = {
         throw new Error(errorData.error || 'Error al obtener pacientes');
       }
       
-      return await response.json();
+      const responseData = await response.json();
+      // attach convenient helper properties so UI code can continue
+      // referencing `obraSocial`/`numeroAfiliado` as before
+      if (responseData.success && Array.isArray(responseData.data)) {
+        responseData.data.forEach((p: any) => {
+          p.obraSocial = p.seguroMedico?.empresa || '';
+          p.numeroAfiliado = p.seguroMedico?.numeroPoliza || '';
+        });
+      }
+      
+      return responseData;
     } catch (error: any) {
       console.error('Error fetching patients:', error);
       throw error;
@@ -155,6 +165,12 @@ export const patientsService = {
       });
       
       const responseData = await response.json();
+      
+      // map fields on success
+      if (responseData.success && responseData.data) {
+        responseData.data.obraSocial = responseData.data.seguroMedico?.empresa || '';
+        responseData.data.numeroAfiliado = responseData.data.seguroMedico?.numeroPoliza || '';
+      }
       
       if (!response.ok) {
         const errorMessage = responseData.errors?.[0] || 
@@ -201,7 +217,12 @@ export const patientsService = {
         throw new Error(errorMessage);
       }
       
-      return await response.json();
+      const result = await response.json();
+      if (result.success && result.data) {
+        result.data.obraSocial = result.data.seguroMedico?.empresa || '';
+        result.data.numeroAfiliado = result.data.seguroMedico?.numeroPoliza || '';
+      }
+      return result;
     } catch (error: any) {
       console.error('Error fetching patient:', error);
       throw error;
@@ -256,6 +277,11 @@ export const patientsService = {
       );
       
       const responseData = await response.json();
+      
+      if (responseData.success && responseData.data) {
+        responseData.data.obraSocial = responseData.data.seguroMedico?.empresa || '';
+        responseData.data.numeroAfiliado = responseData.data.seguroMedico?.numeroPoliza || '';
+      }
       
       if (!response.ok) {
         const errorMessage = responseData.errors?.[0] || 
