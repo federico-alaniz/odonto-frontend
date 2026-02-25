@@ -5,6 +5,7 @@ import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { UserCircle, ArrowLeft, Filter, Plus, Calendar, FileText } from 'lucide-react';
+import { dateHelper } from '@/utils/date-helper';
 import { patientsService } from '@/services/api/patients.service';
 import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
 import historiaClinicaService, { HistoriaClinica } from '@/services/historiaClinica';
@@ -166,35 +167,45 @@ export default function HistoryDetailPage() {
     );
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+    const parsed = dateHelper.parse(dateString);
+    if (!parsed) return 'N/A';
     return new Intl.DateTimeFormat('es-ES', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
-    }).format(date);
+    }).format(parsed);
   };
 
-  const formatDateTime = (dateString: string) => {
+  const formatDateTime = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-ES', {
+    const parsed = dateHelper.parse(dateString);
+    if (!parsed) return 'N/A';
+
+    // if time is exactly midnight, don't include hours/minutes
+    const hasTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
+    const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+      day: 'numeric'
+    };
+    if (hasTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+    }
+
+    return new Intl.DateTimeFormat('es-ES', options).format(parsed);
   };
 
-  const formatTime = (dateString: string) => {
+  const formatTime = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+    const parsed = dateHelper.parse(dateString);
+    if (!parsed) return 'N/A';
     return new Intl.DateTimeFormat('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
-    }).format(date);
+    }).format(parsed);
   };
 
   const getConsultaTypeLabel = (type: string) => {

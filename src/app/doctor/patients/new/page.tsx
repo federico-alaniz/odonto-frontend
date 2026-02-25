@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
+import { useAuth } from '@/hooks/useAuth';
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Heart, AlertCircle, Users as UsersIcon, Shield } from 'lucide-react';
 import { patientsService } from '@/services/api/patients.service';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -45,6 +46,7 @@ export default function NewPatientPage() {
   const router = useRouter();
   const { buildPath } = useTenant();
   const { showSuccess, showError, showWarning } = useToast();
+  const { currentUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<CreatePatientData>({
     nombres: '',
@@ -126,8 +128,15 @@ export default function NewPatientPage() {
       }
 
       setSaving(true);
-      const clinicId = localStorage.getItem('clinicId') || 'CLINIC_001';
-      const userId = localStorage.getItem('userId') || 'system';
+      // obtener clinicId y userId del usuario autenticado
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = (currentUser as any)?.id;
+
+      if (!clinicId || !userId) {
+        showError('Error de autenticación', 'No se pudo obtener la clínica o el usuario');
+        setSaving(false);
+        return;
+      }
 
       const response = await patientsService.createPatient(clinicId, userId, formData);
 

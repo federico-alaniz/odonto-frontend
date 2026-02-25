@@ -1,7 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const getHeaders = (clinicId: string, userId?: string) => {
-  const normalizedClinicId = (clinicId || 'clinic_001').toLowerCase();
+  if (!clinicId) {
+    throw new Error('clinicId es obligatorio en la llamada a medical-records');
+  }
+
+  const normalizedClinicId = clinicId.toLowerCase();
   const headers: any = {
     'Content-Type': 'application/json',
     'X-Clinic-Id': normalizedClinicId,

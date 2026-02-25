@@ -30,6 +30,7 @@ import {
 import Link from 'next/link';
 import { usersService } from '@/services/api/users.service';
 import { formatGender, formatCity } from '@/utils/format-helpers';
+import { dateHelper } from '@/utils/date-helper';
 import { formatDocument } from '@/utils/document-formatters';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
@@ -244,17 +245,20 @@ export default function AdminUsersPage() {
     return badges[status as keyof typeof badges] || badges.activo;
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-AR', {
+  const formatDate = (dateStr: string | null | undefined) => {
+    const parsed = dateHelper.parse(dateStr);
+    if (!parsed) return '';
+    return parsed.toLocaleDateString('es-AR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     });
   };
 
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString('es-AR', {
+  const formatDateTime = (dateStr: string | null | undefined) => {
+    const parsed = dateHelper.parse(dateStr);
+    if (!parsed) return '';
+    return parsed.toLocaleString('es-AR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

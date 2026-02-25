@@ -41,6 +41,48 @@ export const dateHelper = {
   },
 
   /**
+   * Parse a date string into a Date object while treating
+   * ISO date-only strings (YYYY-MM-DD) as local dates instead
+   * of midnight UTC. This avoids timezone shifts that move the
+   * day backwards for South American timezones.
+   */
+  parse(dateString: string | Date | null | undefined): Date | null {
+    if (!dateString) return null;
+    if (dateString instanceof Date) return dateString;
+    const str = dateString.toString();
+    // If the string is exactly a date with no time component,
+    // construct using local year/month/day values.
+    const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+    if (isoDateOnly.test(str)) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    // fallback to default parsing (which handles ISO with timezone)
+    return new Date(str);
+  },
+
+  /**
+   * Convenience formatter accepting either a Date or a string.
+   */
+  formatDateFromString(dateString: string | Date | null | undefined): string {
+    const date = this.parse(dateString);
+    if (!date || isNaN(date.getTime())) return 'N/A';
+    return this.formatDate(date);
+  },
+
+  formatTimeFromString(dateString: string | Date | null | undefined): string {
+    const date = this.parse(dateString);
+    if (!date || isNaN(date.getTime())) return 'N/A';
+    return this.formatTimeBuenosAires(date);
+  },
+
+  formatDateTimeFromString(dateString: string | Date | null | undefined): string {
+    const date = this.parse(dateString);
+    if (!date || isNaN(date.getTime())) return 'N/A';
+    return this.formatDateTimeBuenosAires(date);
+  },
+
+  /**
    * Formatea hora en zona horaria de Buenos Aires (HH:mm)
    */
   formatTimeBuenosAires(date: Date = new Date()): string {

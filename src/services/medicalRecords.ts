@@ -222,16 +222,20 @@ class MedicalRecordsService {
    * Get a specific medical record by ID
    */
   async getById(recordId: string, clinicId?: string) {
-    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic);
+    if (!clinicId) {
+      throw new Error('clinicId es obligatorio para obtener registros médios');
+    }
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinicId);
   }
 
   /**
    * Get all medical records for a specific patient
    */
   async getByPatient(patientId: string, page = 1, limit = 50, clinicId?: string) {
-    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
-    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}?page=${page}&limit=${limit}`, clinic);
+    if (!clinicId) {
+      throw new Error('clinicId es obligatorio para obtener registros por paciente');
+    }
+    return this.fetchWithHeaders(`${this.baseUrl}/patient/${patientId}?page=${page}&limit=${limit}`, clinicId);
   }
 
   /**
@@ -255,8 +259,10 @@ class MedicalRecordsService {
    * Update a medical record
    */
   async update(recordId: string, data: Partial<CreateMedicalRecordData>, clinicId?: string) {
-    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic, {
+    if (!clinicId) {
+      throw new Error('clinicId es obligatorio para actualizar registro médico');
+    }
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinicId, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -266,8 +272,10 @@ class MedicalRecordsService {
    * Delete a medical record (soft delete)
    */
   async delete(recordId: string, clinicId?: string) {
-    const clinic = clinicId || localStorage.getItem('clinicId') || 'CLINIC_001';
-    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinic, {
+    if (!clinicId) {
+      throw new Error('clinicId es obligatorio para eliminar registro médico');
+    }
+    return this.fetchWithHeaders(`${this.baseUrl}/${recordId}`, clinicId, {
       method: 'DELETE',
     });
   }

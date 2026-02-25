@@ -82,7 +82,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     if (!baseUser?.id) return;
 
-    const tenantId = ((session as any)?.tenantId ?? (sessionUser as any)?.tenantId ?? 'clinic_001') as string;
+    // tenantId debería venir en el token/session después del login; no
+    // debemos asumir un valor por defecto que provoque crear datos en la
+    // clínica equivocada.
+    const tenantId = ((session as any)?.tenantId ?? (sessionUser as any)?.tenantId) as string | undefined;
 
     void (async () => {
       try {

@@ -76,8 +76,16 @@ export interface PatientStatsResponse {
 }
 
 // Helper para obtener headers
+// clinicId es obligatorio en todos los llamados a la API. Si no se proporciona
+// el servicio fallará de manera evidente en lugar de usar el valor mágico
+// ``clinic_001`` que provocaba que las operaciones se ejecutaran con la
+// clínica equivocada.
 const getHeaders = (clinicId: string, userId?: string) => {
-  const normalizedClinicId = (clinicId || 'clinic_001').toLowerCase();
+  if (!clinicId) {
+    throw new Error('clinicId es obligatorio en la llamada al servicio');
+  }
+
+  const normalizedClinicId = clinicId.toLowerCase();
   const headers: any = {
     'Content-Type': 'application/json',
     'X-Clinic-Id': normalizedClinicId,
