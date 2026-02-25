@@ -245,11 +245,10 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
           },
           {
             label: 'Enlace de Reservas',
-            href: '/admin/enlace-reservas',
+            href: '/enlace-reservas',
             icon: 'Link',
             description: 'Enlace público para reserva de turnos',
-            roles: ['admin'],
-            requiredPermission: { resource: 'settings', action: 'read' },
+            roles: ['admin','doctor','secretary'],
             color: {
               bg: 'hover:bg-gray-700',
               text: 'text-gray-100 hover:text-white',
@@ -374,6 +373,21 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
               iconBg: 'bg-gray-700',
               iconText: 'text-gray-100 group-hover:text-white'
             }
+          },
+          {
+            label: 'Enlace de Reservas',
+            href: '/enlace-reservas',
+            icon: 'Link',
+            description: 'Enlace público para reserva de turnos',
+            roles: ['doctor'],
+            color: {
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
+            }
           }
         ]
       }
@@ -413,6 +427,21 @@ export const ROLE_CONFIGS: Record<UserRole, RoleConfig> = {
             description: 'Panel de control operativo',
             roles: ['secretary'],
             requiredPermission: { resource: 'appointments', action: 'read' },
+            color: {
+              bg: 'hover:bg-gray-700',
+              text: 'text-gray-100 hover:text-white',
+              hover: 'hover:text-white',
+              active: 'bg-blue-600 text-white border-l-blue-400',
+              iconBg: 'bg-gray-700',
+              iconText: 'text-gray-100 group-hover:text-white'
+            }
+          },
+          {
+            label: 'Enlace de Reservas',
+            href: '/enlace-reservas',
+            icon: 'Link',
+            description: 'Enlace público para reserva de turnos',
+            roles: ['secretary'],
             color: {
               bg: 'hover:bg-gray-700',
               text: 'text-gray-100 hover:text-white',

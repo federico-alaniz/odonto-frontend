@@ -1,28 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-// remaining imports kept commented as unused
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Check, Share2, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function EnlaceReservasPage() {
-  // redirect admin path to shared route
-  const router = useRouter();
-  const [bookingUrl, setBookingUrl] = useState<string>('');
-  const [copied, setCopied] = useState(false);
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const [clinicId, setClinicId] = useState<string>('');
-  
-  useEffect(() => {
-    router.replace('/enlace-reservas');
-  }, [router]);
-
-  return null;
-
-  /*
+  const [bookingUrl, setBookingUrl] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isAuthLoading || !currentUser?.clinicId) {
@@ -36,7 +23,7 @@ export default function EnlaceReservasPage() {
     const frontendUrl = window.location.origin;
     const url = `${frontendUrl}/reservar-turno?clinicId=${currentClinicId}`;
     setBookingUrl(url);
-  }, [currentUser?.clinicId, isAuthLoading]);*/
+  }, [currentUser?.clinicId, isAuthLoading]);
 
   const handleCopy = async () => {
     try {
