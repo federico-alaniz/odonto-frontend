@@ -19,13 +19,8 @@ import {
   FileText,
   User,
   Activity,
-  Eye,
-  Edit,
   Filter,
-  RefreshCw,
-  CheckCircle,
-  Play,
-  XCircle
+  RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Spinner } from '@/components/ui/Spinner';
@@ -41,6 +36,7 @@ interface Consultation {
   diagnosis: string;
   status: 'completed' | 'in-progress' | 'pending' | 'cancelled' | 'no-show';
   type: 'consultation' | 'follow-up' | 'emergency';
+  originalStatus: Appointment['estado']; // Estado original de la cita
 }
 
 export default function ConsultationsPage() {
@@ -58,6 +54,8 @@ export default function ConsultationsPage() {
   const [consultationsWithRecords, setConsultationsWithRecords] = useState<Set<string>>(new Set());
   const [startingConsultation, setStartingConsultation] = useState<string | null>(null);
   const [cancellingConsultation, setCancellingConsultation] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [consultationToStart, setConsultationToStart] = useState<Consultation | null>(null);
 
   useEffect(() => {
     const fetchConsultations = async () => {
@@ -132,6 +130,7 @@ export default function ConsultationsPage() {
               diagnosis: 'N/A',
               status: mapStatus(apt.estado),
               type: mapType(apt.tipo),
+              originalStatus: apt.estado,
             };
           })
           .sort((a, b) => {
@@ -217,6 +216,7 @@ export default function ConsultationsPage() {
                 diagnosis: 'N/A',
                 status: mapStatus(apt.estado),
                 type: mapType(apt.tipo),
+                originalStatus: apt.estado, // Estado original de la cita
               };
             })
             .sort((a, b) => {
@@ -242,6 +242,18 @@ export default function ConsultationsPage() {
   };
 
   const handleStartConsultation = async (consultation: Consultation) => {
+    // Si la consulta está programada (no confirmada), mostrar modal de confirmación
+    if (consultation.originalStatus === 'programada') {
+      setConsultationToStart(consultation);
+      setShowConfirmModal(true);
+      return;
+    }
+
+    // Si está confirmada o en otro estado, proceder normalmente
+    await startConsultation(consultation);
+  };
+
+  const startConsultation = async (consultation: Consultation) => {
     const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     const userId = (currentUser as any)?.id;
     
@@ -255,8 +267,8 @@ export default function ConsultationsPage() {
       
       const response = await appointmentsService.updateAppointment(
         clinicId,
-        userId,
         consultation.id,
+        userId,
         { estado: 'en_curso' }
       );
 
@@ -270,6 +282,9 @@ export default function ConsultationsPage() {
               : c
           )
         );
+
+        // Navegar al formulario de nuevo registro médico
+        router.push(buildPath(`/historiales/${consultation.patientId}/registro/new?appointmentId=${consultation.id}`));
       } else {
         throw new Error(response.message || 'Error al iniciar la consulta');
       }
@@ -279,6 +294,19 @@ export default function ConsultationsPage() {
     } finally {
       setStartingConsultation(null);
     }
+  };
+
+  const handleConfirmStartConsultation = async () => {
+    if (consultationToStart) {
+      setShowConfirmModal(false);
+      await startConsultation(consultationToStart);
+      setConsultationToStart(null);
+    }
+  };
+
+  const handleCancelStartConsultation = () => {
+    setShowConfirmModal(false);
+    setConsultationToStart(null);
   };
 
   const handleNoShow = async (consultation: Consultation) => {
@@ -296,8 +324,8 @@ export default function ConsultationsPage() {
             
       const response = await appointmentsService.updateAppointment(
         clinicId,
-        userId,
         consultation.id,
+        userId,
         { estado: 'no_asistio' }
       );
 
@@ -641,7 +669,7 @@ export default function ConsultationsPage() {
                                 <button
                                   onClick={() => handleStartConsultation(consultation)}
                                   disabled={startingConsultation === consultation.id || cancellingConsultation === consultation.id}
-                                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Iniciar consulta"
                                 >
                                   {startingConsultation === consultation.id ? (
@@ -650,16 +678,13 @@ export default function ConsultationsPage() {
                                       <span>Iniciando...</span>
                                     </>
                                   ) : (
-                                    <>
-                                      <Play className="w-4 h-4" />
-                                      <span>Iniciar Consulta</span>
-                                    </>
+                                    <span>Iniciar Consulta</span>
                                   )}
                                 </button>
                                 <button
                                   onClick={() => handleNoShow(consultation)}
                                   disabled={startingConsultation === consultation.id || cancellingConsultation === consultation.id}
-                                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Marcar como no asistió"
                                 >
                                   {cancellingConsultation === consultation.id ? (
@@ -668,10 +693,7 @@ export default function ConsultationsPage() {
                                       <span>Procesando...</span>
                                     </>
                                   ) : (
-                                    <>
-                                      <XCircle className="w-4 h-4" />
-                                      <span>No Asistió</span>
-                                    </>
+                                    <span>No Asistió</span>
                                   )}
                                 </button>
                               </>
@@ -680,9 +702,16 @@ export default function ConsultationsPage() {
                             {consultation.status === 'in-progress' && (
                               <>
                                 <button
+                                  onClick={() => router.push(buildPath(`/historiales/${consultation.patientId}/registro/new?appointmentId=${consultation.id}`))}
+                                  className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                                  title="Volver al formulario de consulta"
+                                >
+                                  <span>Volver a Consulta</span>
+                                </button>
+                                <button
                                   onClick={() => handleConsultationAction(consultation)}
                                   disabled={finishingConsultation === consultation.id || cancellingConsultation === consultation.id}
-                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  className="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Finalizar consulta o crear registro médico"
                                 >
                                   {finishingConsultation === consultation.id ? (
@@ -691,16 +720,13 @@ export default function ConsultationsPage() {
                                       <span>Procesando...</span>
                                     </>
                                   ) : (
-                                    <>
-                                      <CheckCircle className="w-4 h-4" />
-                                      <span>Finalizar Consulta</span>
-                                    </>
+                                    <span>Finalizar Consulta</span>
                                   )}
                                 </button>
                                 <button
                                   onClick={() => handleNoShow(consultation)}
                                   disabled={finishingConsultation === consultation.id || cancellingConsultation === consultation.id}
-                                  className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm font-medium"
+                                  className="px-2 py-1 text-xs bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Marcar como no asistió"
                                 >
                                   {cancellingConsultation === consultation.id ? (
@@ -709,10 +735,7 @@ export default function ConsultationsPage() {
                                       <span>Procesando...</span>
                                     </>
                                   ) : (
-                                    <>
-                                      <XCircle className="w-4 h-4" />
-                                      <span>No Asistió</span>
-                                    </>
+                                    <span>No Asistió</span>
                                   )}
                                 </button>
                               </>
@@ -721,10 +744,9 @@ export default function ConsultationsPage() {
                             {consultation.status === 'completed' && (
                               <button
                                 onClick={() => router.push(buildPath(`/doctor/consultations/${consultation.id}`))}
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+                                className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                                 title="Ver detalles de la consulta"
                               >
-                                <Eye className="w-4 h-4" />
                                 <span>Ver Detalles</span>
                               </button>
                             )}
@@ -750,6 +772,55 @@ export default function ConsultationsPage() {
         </div>
 
       </div>
+
+      {/* Modal de confirmación para iniciar consulta no confirmada */}
+      {showConfirmModal && consultationToStart && (
+        <div className="fixed inset-0 bg-neutral-950/10 backdrop-blur flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Consulta no confirmada
+                </h3>
+              </div>
+            </div>
+            <div className="mb-6">
+              <p className="text-gray-600">
+                La consulta aún no ha sido confirmada desde secretaría. ¿Desea iniciar la consulta de todas formas?
+              </p>
+              <div className="mt-3 p-3 bg-yellow-50 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  <strong>Paciente:</strong> {consultationToStart.patientName}
+                </p>
+                <p className="text-sm text-yellow-800 mt-1">
+                  <strong>Fecha:</strong> {consultationToStart.date} - {consultationToStart.time}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelStartConsultation}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmStartConsultation}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Iniciar Consulta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

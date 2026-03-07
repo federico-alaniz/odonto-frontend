@@ -39,6 +39,11 @@ export default function NewMedicalRecordPage() {
   const appointmentId = searchParams.get('appointmentId');
   const { showSuccess, showError } = useToast();
 
+  // Estado para prevenir navegación accidental
+  const [isDirty, setIsDirty] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
   // Estados del formulario
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -203,6 +208,7 @@ export default function NewMedicalRecordPage() {
             }
 
             showSuccess('Borrador cargado', 'Se ha cargado el registro médico borrador de esta consulta');
+            setIsDirty(false); // Form starts clean when loading draft
           } else if (appointmentData?.motivo) {
             // Si no hay borrador, pre-llenar el motivo de consulta con el motivo de la cita
             setFormData(prev => ({
@@ -308,16 +314,54 @@ export default function NewMedicalRecordPage() {
     }
   }, [patientId, clinicId]);
 
+  // Prevenir navegación accidental cuando el formulario tiene cambios
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    setIsDirty(true);
+  };
+
+  // Funciones para manejar navegación con confirmación
+  const handleNavigation = (navigationAction: () => void) => {
+    if (isDirty) {
+      setPendingNavigation(() => navigationAction);
+      setShowConfirmDialog(true);
+    } else {
+      navigationAction();
+    }
+  };
+
+  const confirmNavigation = () => {
+    if (pendingNavigation) {
+      pendingNavigation();
+    }
+    setShowConfirmDialog(false);
+    setPendingNavigation(null);
+  };
+
+  const cancelNavigation = () => {
+    setShowConfirmDialog(false);
+    setPendingNavigation(null);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setImages(prev => [...prev, ...files]);
+    setIsDirty(true);
     
     // Crear previews
     files.forEach(file => {
@@ -332,6 +376,13 @@ export default function NewMedicalRecordPage() {
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setIsDirty(true);
+  };
+
+  // Wrapper para actualizar odontograma y marcar como dirty
+  const handleOdontogramUpdate = (conditions: ToothCondition[]) => {
+    setCurrentOdontogram(conditions);
+    setIsDirty(true);
   };
 
   // Función para guardar como borrador
@@ -403,6 +454,7 @@ export default function NewMedicalRecordPage() {
       
       if (response.success) {
         showSuccess('Borrador guardado', 'El registro médico se guardó como borrador. Puedes continuar editándolo más tarde');
+        setIsDirty(false); // Reset dirty state after successful draft save
       } else {
         throw new Error(response.errors?.[0] || 'Error al guardar borrador');
       }
@@ -479,6 +531,21 @@ export default function NewMedicalRecordPage() {
       
       if (response.success) {
         showSuccess('Registro guardado', 'El registro médico se guardó exitosamente');
+        setIsDirty(false); // Reset dirty state after successful save
+        
+        // Si hay una cita asociada, marcarla como completada
+        if (appointmentId) {
+          try {
+            await appointmentsService.updateAppointment(clinicId, appointmentId, userId, {
+              estado: 'completada'
+            });
+            showSuccess('Consulta completada', 'La cita ha sido marcada como completada');
+          } catch (appointmentError) {
+            console.error('Error al actualizar estado de la cita:', appointmentError);
+            // No mostrar error al usuario ya que el registro se guardó correctamente
+          }
+        }
+        
         router.push(`/historiales/${patientId}`);
       } else {
         throw new Error(response.errors?.[0] || 'Error al guardar');
@@ -545,7 +612,7 @@ export default function NewMedicalRecordPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => router.back()}
+                onClick={() => handleNavigation(() => router.back())}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 disabled={saving}
               >
@@ -782,7 +849,7 @@ export default function NewMedicalRecordPage() {
                       <div className="w-full">
                         <Odontogram
                           initialConditions={currentOdontogram}
-                          onUpdate={setCurrentOdontogram}
+                          onUpdate={handleOdontogramUpdate}
                           readOnly={false}
                           showLegend={false}
                           interventionColor="blue"
@@ -980,7 +1047,7 @@ export default function NewMedicalRecordPage() {
           <div className="flex items-center justify-end pt-6 pb-8">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => router.back()}
+                onClick={() => handleNavigation(() => router.back())}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Cancelar
@@ -995,6 +1062,34 @@ export default function NewMedicalRecordPage() {
           </div>
         </div>
       </div>
+
+      {/* Diálogo de confirmación para navegación */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              ¿Estás seguro de que quieres salir?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Tienes cambios sin guardar en el registro médico. Si sales ahora, perderás toda la información que has ingresado.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelNavigation}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Continuar editando
+              </button>
+              <button
+                onClick={confirmNavigation}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Salir sin guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

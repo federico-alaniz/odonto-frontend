@@ -14,13 +14,11 @@ import {
   Bell,
   Eye,
   Edit,
-  ArrowRight,
   User,
   MapPin,
   Activity,
   Timer,
   XCircle,
-  RefreshCw,
   Search,
   Filter
 } from 'lucide-react';
@@ -86,6 +84,10 @@ export default function ReceptionPage() {
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dateHelper.now());
   const [showColon, setShowColon] = useState(true);
+  const [hasActions, setHasActions] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedAppointmentForPayment, setSelectedAppointmentForPayment] = useState<ReceptionAppointment | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
@@ -261,6 +263,7 @@ export default function ReceptionPage() {
     }
 
     setFilteredAppointments(filtered);
+    setHasActions(filtered.some(apt => ['programada', 'confirmada'].includes(apt.status)));
   }, [todayAppointments, selectedFilter, searchTerm]);
 
   const getSpecialtyName = (specialtyId: string): string => {
@@ -423,6 +426,43 @@ export default function ReceptionPage() {
     }
   };
 
+  const handleConfirmAppointment = (appointment: ReceptionAppointment) => {
+    setSelectedAppointmentForPayment(appointment);
+    setPaymentAmount('2500'); // Default amount
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentConfirmed = async () => {
+    if (!selectedAppointmentForPayment || !paymentAmount) return;
+
+    try {
+      // Aquí se integraría con el módulo de facturación
+      // Por ejemplo: await billingService.createInvoice(clinicId, {
+      //   appointmentId: selectedAppointmentForPayment.id,
+      //   patientId: selectedAppointmentForPayment.patientId,
+      //   amount: parseFloat(paymentAmount),
+      //   description: 'Consulta odontológica'
+      // });
+
+      console.log('💰 Procesando pago:', {
+        appointmentId: selectedAppointmentForPayment.id,
+        patientId: selectedAppointmentForPayment.patientId,
+        amount: paymentAmount,
+        description: 'Consulta odontológica'
+      });
+
+      // Cambiar estado de la cita
+      await handleStatusChange(selectedAppointmentForPayment.id, 'esperando');
+      
+      setShowPaymentModal(false);
+      setSelectedAppointmentForPayment(null);
+      setPaymentAmount('');
+    } catch (error) {
+      console.error('❌ Error al procesar el pago:', error);
+      alert('Error al procesar el pago. Intente nuevamente.');
+    }
+  };
+
   const handleNotifyDoctor = (appointment: ReceptionAppointment) => {
     // Aquí se enviaría notificación al doctor
   };
@@ -519,10 +559,10 @@ export default function ReceptionPage() {
               {/* Botón actualizar */}
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors inline-flex items-center gap-2"
+                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 title="Actualizar"
               >
-                <RefreshCw className="w-5 h-5" />
+                Actualizar
               </button>
 
               {/* Hora actual */}
@@ -630,7 +670,7 @@ export default function ReceptionPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultorio</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    {hasActions && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -670,30 +710,27 @@ export default function ReceptionPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{appointment.patientPhone}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end gap-2">
-                            {appointment.status === 'programada' && (
-                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="Confirmar Llegada">
-                                <Timer className="w-5 h-5" />
-                              </button>
-                            )}
-                            {appointment.status === 'confirmada' && (
-                              <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="p-1 text-yellow-600 hover:text-yellow-700 transition-colors" title="En Espera">
-                                <Timer className="w-5 h-5" />
-                              </button>
-                            )}
-                            {appointment.status === 'esperando' && (
-                              <button onClick={() => handleStatusChange(appointment.id, 'en-curso')} className="p-1 text-green-600 hover:text-green-700 transition-colors" title="Pasar a Consulta">
-                                <ArrowRight className="w-5 h-5" />
-                              </button>
-                            )}
-                            {appointment.status === 'programada' && (
-                              <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="p-1 text-red-600 hover:text-red-700 transition-colors" title="No Asistio">
-                                <XCircle className="w-5 h-5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                        {hasActions && (
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end gap-2">
+                              {appointment.status === 'programada' && (
+                                <button onClick={() => handleConfirmAppointment(appointment)} className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors" title="Confirmar Llegada">
+                                  Confirmar
+                                </button>
+                              )}
+                              {appointment.status === 'confirmada' && (
+                                <button onClick={() => handleStatusChange(appointment.id, 'esperando')} className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200 transition-colors" title="En Espera">
+                                  En Espera
+                                </button>
+                              )}
+                              {appointment.status === 'programada' && (
+                                <button onClick={() => handleStatusChange(appointment.id, 'no-show')} className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors" title="No Asistio">
+                                  No Asistió
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -716,7 +753,6 @@ export default function ReceptionPage() {
                 href={buildPath('/secretary/appointments/new')}
                 className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <Calendar className="w-5 h-5" />
                 Nuevo Turno
               </Link>
             </div>
@@ -724,6 +760,74 @@ export default function ReceptionPage() {
         </div>
 
       </div>
+
+      {/* Modal de Pago */}
+      {showPaymentModal && selectedAppointmentForPayment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirmar Pago de Consulta</h3>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Paciente:</p>
+              <p className="font-medium">{selectedAppointmentForPayment.patientName}</p>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Doctor:</p>
+              <p className="font-medium">{selectedAppointmentForPayment.doctorName}</p>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Especialidad:</p>
+              <p className="font-medium">{getSpecialtyName(selectedAppointmentForPayment.specialty)}</p>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Horario:</p>
+              <p className="font-medium">{selectedAppointmentForPayment.time}</p>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm text-gray-600 mb-2">Monto a pagar:</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Consulta odontológica general</p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedAppointmentForPayment(null);
+                  setPaymentAmount('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handlePaymentConfirmed}
+                disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                Confirmar Pago
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

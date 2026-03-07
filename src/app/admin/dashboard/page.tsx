@@ -530,33 +530,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Gráfico de Turnos por Día */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Turnos de los Últimos 7 Días</h2>
-            <BarChart3 className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="flex items-end justify-between gap-3 h-64">
-            {dailyAppointments.map((day, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                <div className="relative w-full flex flex-col items-center justify-end flex-1">
-                  <div 
-                    className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg transition-all duration-500 hover:from-blue-700 hover:to-blue-500 cursor-pointer group relative"
-                    style={{ height: `${(day.count / maxDailyCount) * 100}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                      {day.count} turnos
-                    </div>
-                  </div>
-                </div>
-                <div className="text-center">
-                  <span className="text-xs font-medium text-gray-600">{day.day}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Horarios Pico y Estadísticas por Médico */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Horarios Pico */}
