@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { DoctorPatientFilters } from './DoctorPatientsFilters';
 import { patientsService } from '@/services/api/patients.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { formatGender, formatCity } from '@/utils/format-helpers';
@@ -147,14 +148,41 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
           const today = new Date();
           
           // Procesar pacientes
-          const processedPatients = response.data.map((patient: any) => {
+          const processedPatients = await Promise.all(response.data.map(async (patient: any) => {
             // Calcular edad
             const birthDate = new Date(patient.fechaNacimiento);
             const age = today.getFullYear() - birthDate.getFullYear();
             
+            // Cargar registros médicos para obtener la última consulta
+            let ultimaConsultaFromRecords = patient.ultimaConsulta;
+            try {
+              const recordsResponse = await medicalRecordsService.getPatientRecords(
+                patient.id,
+                clinicId,
+                1,
+                100
+              );
+              
+              if (recordsResponse.success && recordsResponse.data && recordsResponse.data.length > 0) {
+                // Encontrar el registro más reciente que tenga una fecha
+                const sortedRecords = recordsResponse.data.sort((a: any, b: any) => {
+                  const dateA = new Date(a.fecha || a.createdAt || 0).getTime();
+                  const dateB = new Date(b.fecha || b.createdAt || 0).getTime();
+                  return dateB - dateA;
+                });
+                
+                if (sortedRecords[0].fecha) {
+                  ultimaConsultaFromRecords = sortedRecords[0].fecha;
+                }
+              }
+            } catch (error) {
+              console.error(`Error cargando registros médicos para paciente ${patient.id}:`, error);
+              // Mantener el valor original de ultimaConsulta
+            }
+            
             // Calcular días desde última consulta
-            const daysSinceLastVisit = patient.ultimaConsulta ? 
-              Math.floor((today.getTime() - new Date(patient.ultimaConsulta).getTime()) / (1000 * 3600 * 24)) : 999;
+            const daysSinceLastVisit = ultimaConsultaFromRecords ? 
+              Math.floor((today.getTime() - new Date(ultimaConsultaFromRecords).getTime()) / (1000 * 3600 * 24)) : 999;
             
             // Calcular factores de riesgo
             const riskFactors = (patient.alergias?.length || 0) + 
@@ -168,15 +196,16 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
 
             return {
               ...patient,
+              ultimaConsulta: ultimaConsultaFromRecords,
               genero: formatGender(patient.genero),
               age,
-              lastVisitType: 'N/A', // TODO: Obtener del historial médico
+              lastVisitType: 'N/A',
               urgency,
               riskFactors,
               daysSinceLastVisit,
               ciudad: formatCity(patient.direccion?.ciudad)
             } as DoctorPatient;
-          });
+          }));
 
           setDoctorPatients(processedPatients);
         } else {
@@ -185,6 +214,7 @@ export default function DoctorPatientsTable({ filters, showOnlyAssigned = false 
       } catch (err: any) {
         console.error('Error cargando pacientes:', err);
         setError(err.message || 'Error al cargar los pacientes');
+        setDoctorPatients([]);
       } finally {
         setLoading(false);
       }
