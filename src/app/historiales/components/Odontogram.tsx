@@ -11,9 +11,20 @@ interface OdontogramProps {
   readOnly?: boolean;
   showLegend?: boolean;
   interventionColor?: 'red' | 'blue';
+  showBorder?: boolean;
+  className?: string;
 }
 
-export default function Odontogram({ initialConditions = [], onUpdate, readOnly = false, showLegend = true, interventionColor = 'red' }: OdontogramProps) {
+export default function Odontogram({ 
+  initialConditions = [], 
+  onUpdate, 
+  readOnly = false, 
+  showLegend = true, 
+  interventionColor = 'red', 
+  showBorder = true,
+  className = ''
+}: OdontogramProps) {
+
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
     // Inicializar todos los dientes como sanos si no hay condiciones previas
     const defaultConditions: ToothCondition[] = [];
@@ -466,11 +477,11 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
   };
 
   return (
-    <div>
-      <div className="mb-6">
+    <div className={className}>
+      <div className={showLegend ? "mb-6" : "m-0"}>
         
         {/* Referencias de Simbología (Read-only) */}
-        {readOnly && (
+        {readOnly && showLegend && (
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-4">
             <h4 className="text-sm font-semibold text-gray-800 mb-3">Referencias</h4>
             <div className="flex flex-wrap gap-3">
@@ -607,8 +618,8 @@ export default function Odontogram({ initialConditions = [], onUpdate, readOnly 
       </div>
 
       {/* Odontograma SVG */}
-      <div className="flex justify-center mb-6">
-        <svg width="900" height="400" viewBox="0 0 900 400" className="border border-gray-300 rounded bg-white">
+      <div className={`flex justify-center ${showLegend ? 'mb-6' : 'm-0'}`}>
+        <svg viewBox="0 60 900 280" className={`w-full h-auto max-w-[900px] bg-white ${showBorder ? 'border border-gray-300 rounded' : 'm-0 p-0'}`}>
 
           {/* DIENTES PERMANENTES SUPERIORES */}
           {/* Fila superior izquierda (18-11) */}

@@ -15,7 +15,7 @@ import {
   CreditCard,
   Cake
 } from 'lucide-react';
-import { calculateAge } from '@/utils';
+import { calculateAge, formatArgentineAddress, findCiudad } from '@/utils';
 import MedicalModal from '@/components/ui/MedicalModal';
 
 interface Patient {
@@ -29,6 +29,8 @@ interface Patient {
   telefono: string;
   email: string;
   ciudad: string;
+  provincia?: string;
+  domicilio?: string;
   tipoSangre: string;
   ultimaConsulta?: string; // Opcional para compatibilidad
   estado: 'activo' | 'inactivo';
@@ -220,7 +222,15 @@ export default function ViewPatientModal({
                   <MapPin className="w-4 h-4 text-gray-500" />
                   <span className="font-medium text-gray-600">Ciudad:</span>
                 </div>
-                <span className="text-gray-900">{patient.ciudad}</span>
+                <span className="text-gray-900">
+                  {patient.provincia && patient.ciudad ? 
+                    (() => {
+                      const ciudadData = findCiudad(patient.provincia, patient.ciudad);
+                      return ciudadData ? ciudadData.label : patient.ciudad;
+                    })() 
+                    : patient.ciudad
+                  }
+                </span>
               </div>
             </div>
           </div>

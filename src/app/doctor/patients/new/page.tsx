@@ -40,6 +40,7 @@ interface CreatePatientData {
     numeroPoliza: string;
     vigencia: string;
   };
+  planObraSocial?: string;
 }
 
 export default function NewPatientPage() {
@@ -78,7 +79,8 @@ export default function NewPatientPage() {
       empresa: '',
       numeroPoliza: '',
       vigencia: ''
-    }
+    },
+    planObraSocial: ''
   });
 
   const [alergiaInput, setAlergiaInput] = useState('');
@@ -138,7 +140,13 @@ export default function NewPatientPage() {
         return;
       }
 
-      const response = await patientsService.createPatient(clinicId, userId, formData);
+      const payload = {
+        ...formData,
+        obraSocial: formData.seguroMedico?.empresa || undefined,
+        numeroAfiliado: formData.seguroMedico?.numeroPoliza || undefined,
+      };
+
+      const response = await patientsService.createPatient(clinicId, userId, payload);
 
       if (response.success) {
         showSuccess('Paciente creado', 'El paciente se creó exitosamente');
@@ -698,7 +706,7 @@ export default function NewPatientPage() {
               <h2 className="text-xl font-semibold text-gray-900">Seguro Médico / Obra Social</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Empresa / Obra Social
@@ -722,6 +730,19 @@ export default function NewPatientPage() {
                   onChange={(e) => handleNestedInputChange('seguroMedico', 'numeroPoliza', e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Ej: 123456789"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Plan (obra social)
+                </label>
+                <input
+                  type="text"
+                  value={formData.planObraSocial}
+                  onChange={(e) => handleInputChange('planObraSocial', e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Ej: 210 / Premium / no indicado"
                 />
               </div>
 

@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
+import html2canvas from 'html2canvas-pro';
+import jsPDF from 'jspdf';
+import { renderToString } from 'react-dom/server';
+import { OdontogramTemplate } from '@/components/pdf/OdontogramTemplate';
 import { 
   Users, 
   Clock, 
@@ -20,7 +24,8 @@ import {
   Timer,
   XCircle,
   Search,
-  Filter
+  Filter,
+  Printer
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
@@ -28,6 +33,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
 import { patientsService } from '@/services/api/patients.service';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
 import type { Appointment, Patient } from '@/types';
 import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
 import { User as UserType } from '@/types/roles';
@@ -45,6 +51,7 @@ interface ReceptionAppointment {
   endTime: string;
   consultorio: string;
   motivo: string;
+  fecha: string;
   status: 'programada' | 'confirmada' | 'esperando' | 'en-curso' | 'completada' | 'no-show' | 'cancelada';
   arrivalTime?: string;
   consultationStartTime?: string;
@@ -143,12 +150,9 @@ export default function ReceptionPage() {
           setSpecialties(specialtiesRes.data);
         }
 
-        // Obtener fecha de hoy (respeta modo debug)
-        const today = dateHelper.today();
-        
-        // Filtrar citas de hoy y procesarlas
-        const todayCitas = (appointmentsRes.data || [])
-          .filter(apt => apt.fecha === today)
+        // Filtrar citas que no tienen estado final y procesarlas
+        const nonFinalCitas = (appointmentsRes.data || [])
+          .filter(apt => !['completada', 'no-show', 'cancelada'].includes(apt.estado))
           .map(apt => {
             const patient = patientsRes.data.find(p => p.id === apt.patientId);
             const adminDoctors = adminsRes.data.filter((user: UserType) => user.isDoctor === true);
@@ -189,6 +193,7 @@ export default function ReceptionPage() {
               endTime,
               consultorio,
               motivo: apt.motivo || 'Consulta general',
+              fecha: apt.fecha,
               status: frontendStatus as any,
               arrivalTime: undefined,
               consultationStartTime: undefined,
@@ -201,40 +206,39 @@ export default function ReceptionPage() {
           .sort((a, b) => a.time.localeCompare(b.time));
 
         // Calcular estadísticas
-        // Calcular tiempo promedio de espera real (desde confirmación hasta inicio de consulta)
-        const citasConEsperaCompleta = todayCitas.filter(apt => 
-          apt.arrivalTime && apt.consultationStartTime && 
-          (apt.status === 'en-curso' || apt.status === 'completada')
+        // Calcular tiempo promedio de espera para citas confirmadas o en espera
+        const citasConEspera = nonFinalCitas.filter((apt: any) => 
+          (apt.status === 'confirmada' || apt.status === 'esperando') && apt.updatedAt
         );
         let promedioEspera = 0;
         
-        if (citasConEsperaCompleta.length > 0) {
-          const tiemposEspera = citasConEsperaCompleta.map(apt => {
-            if (!apt.arrivalTime || !apt.consultationStartTime) return 0;
+        if (citasConEspera.length > 0) {
+          const tiemposEspera = citasConEspera.map((apt: any) => {
+            if (!apt.updatedAt) return 0;
             try {
-              const [arrHours, arrMinutes] = apt.arrivalTime.split(':').map(Number);
-              const [startHours, startMinutes] = apt.consultationStartTime.split(':').map(Number);
-              const arrivalMinutes = arrHours * 60 + arrMinutes;
-              const consultationStartMinutes = startHours * 60 + startMinutes;
-              return Math.max(0, consultationStartMinutes - arrivalMinutes);
+              const updatedAt = new Date(apt.updatedAt);
+              const now = new Date();
+              const diffMs = now.getTime() - updatedAt.getTime();
+              const diffMinutes = Math.floor(diffMs / 60000);
+              return Math.max(0, diffMinutes);
             } catch {
               return 0;
             }
           });
           
-          const totalEspera = tiemposEspera.reduce((sum, time) => sum + time, 0);
-          promedioEspera = Math.round(totalEspera / citasConEsperaCompleta.length);
+          const totalEspera = tiemposEspera.reduce((sum: any, time: any) => sum + time, 0);
+          promedioEspera = Math.round(totalEspera / citasConEspera.length);
         }
 
         const newStats = {
-          esperando: todayCitas.filter(apt => apt.status === 'esperando' || apt.status === 'confirmada' || apt.status === 'programada').length,
-          enConsulta: todayCitas.filter(apt => apt.status === 'en-curso').length,
-          completadas: todayCitas.filter(apt => apt.status === 'completada').length,
-          noShow: todayCitas.filter(apt => apt.status === 'no-show').length,
+          esperando: nonFinalCitas.filter((apt: any) => apt.status === 'esperando' || apt.status === 'confirmada' || apt.status === 'programada').length,
+          enConsulta: nonFinalCitas.filter((apt: any) => apt.status === 'en-curso').length,
+          completadas: nonFinalCitas.filter((apt: any) => apt.status === 'completada').length,
+          noShow: nonFinalCitas.filter((apt: any) => apt.status === 'no-show').length,
           promedio: promedioEspera
         };
 
-        setTodayAppointments(todayCitas);
+        setTodayAppointments(nonFinalCitas);
         setStats(newStats);
       }
     } catch (error) {
@@ -467,6 +471,107 @@ export default function ReceptionPage() {
     // Aquí se enviaría notificación al doctor
   };
 
+  const handlePrintOdontogram = async (appointment: ReceptionAppointment) => {
+    if (!clinicId) {
+      alert('No se pudo obtener la clínica');
+      return;
+    }
+
+    try {
+      const doctor = doctors.find(d => d.id === appointment.doctorId);
+      const doctorFullName = doctor ? `${doctor.apellidos}, ${doctor.nombres}` : appointment.doctorName;
+      const doctorMatricula = doctor?.matricula || '';
+
+      // Obtener registros médicos del paciente
+      const recordsResponse = await medicalRecordsService.getPatientRecords(
+        appointment.patientId,
+        clinicId,
+        1,
+        1000
+      );
+
+      if (!recordsResponse.success || !recordsResponse.data || recordsResponse.data.length === 0) {
+        alert('No se encontraron registros médicos para este paciente');
+        return;
+      }
+
+      // Encontrar el último registro con odontograma
+      const lastRecordWithOdontogram = recordsResponse.data.find(
+        (record: any) => record.odontogramas?.actual && record.odontogramas.actual.length > 0
+      );
+
+      if (!lastRecordWithOdontogram) {
+        alert('No hay odontogramas disponibles en los registros médicos');
+        return;
+      }
+
+      // Crear un elemento temporal para renderizar el odontograma
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm';
+      tempDiv.style.height = '297mm';
+      tempDiv.style.padding = '20px';
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+
+      // Crear HTML del odontograma
+      const odontogramHTML = renderToString(
+        <OdontogramTemplate 
+          patientName={appointment.patientName}
+          patient={patients.find(p => p.id === appointment.patientId)}
+          consultationDate={appointment.fecha}
+          doctorName={doctorFullName}
+          doctorMatricula={doctorMatricula}
+          odontogramConditions={lastRecordWithOdontogram?.odontogramas?.actual || []}
+        />
+      );
+
+      tempDiv.innerHTML = odontogramHTML;
+      document.body.appendChild(tempDiv);
+
+      // Convertir a canvas y generar PDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 190; // A4 width - margins
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10;
+
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= 277; // A4 height - margins
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= 277;
+      }
+
+      // Abrir PDF en nueva ventana para ver
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
+
+      // Limpiar elemento temporal
+      document.body.removeChild(tempDiv);
+    } catch (error) {
+      console.error('Error generando PDF del odontograma:', error);
+      alert('Error al generar el PDF del odontograma');
+    }
+  };
+
   const getWaitingTime = (appointment: ReceptionAppointment) => {
     // Solo mostrar tiempo de espera para citas confirmadas o en espera
     if (appointment.status !== 'confirmada' && appointment.status !== 'esperando') {
@@ -519,7 +624,7 @@ export default function ReceptionPage() {
                 <h1 className="text-3xl font-bold text-gray-900">Recepción</h1>
                 <p className="text-gray-600 mt-1 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Control de llegadas y sala de espera
+                  Todas las citas con estado pendiente
                 </p>
               </div>
             </div>
@@ -728,6 +833,12 @@ export default function ReceptionPage() {
                                   No Asistió
                                 </button>
                               )}
+                              {appointment.status !== 'programada' && (
+                                <button onClick={() => handlePrintOdontogram(appointment)} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center gap-1" title="Imprimir Odontograma">
+                                  <Printer className="w-3 h-3" />
+                                  Odontograma
+                                </button>
+                              )}
                             </div>
                           </td>
                         )}
@@ -746,11 +857,11 @@ export default function ReceptionPage() {
               <p className="text-gray-600 mb-6">
                 {searchTerm || selectedFilter !== 'all' 
                   ? 'Intenta ajustar los filtros de búsqueda'
-                  : 'No hay citas programadas para hoy'
+                  : 'No hay citas con estado pendiente'
                 }
               </p>
               <Link 
-                href={buildPath('/secretary/appointments/new')}
+                href={buildPath('/secretary/appointments')}
                 className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Nuevo Turno

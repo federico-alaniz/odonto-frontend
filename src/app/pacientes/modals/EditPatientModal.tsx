@@ -34,6 +34,7 @@ interface Patient {
   tieneSeguro?: string;
   nombreSeguro?: string;
   numeroPoliza?: string;
+  planObraSocial?: string;
 }
 
 interface EditPatientModalProps {
@@ -72,7 +73,8 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
         contactoEmergenciaTelefono: patient.contactoEmergenciaTelefono || '',
         tieneSeguro: patient.tieneSeguro || 'no',
         nombreSeguro: patient.nombreSeguro || '',
-        numeroPoliza: patient.numeroPoliza || ''
+        numeroPoliza: patient.numeroPoliza || '',
+        planObraSocial: patient.planObraSocial || ''
       });
       setErrors({});
     }
@@ -154,11 +156,8 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
     setIsSaving(true);
     
     try {
-      // Simular API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Llamar al callback con los datos actualizados
-      onSave(formData);
+      // Guardar en backend (lo maneja el padre)
+      await Promise.resolve(onSave(formData));
       
       showSuccess(
         'Paciente actualizado exitosamente',
@@ -476,6 +475,12 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
                     value={formData.numeroPoliza || ''}
                     onChange={handleFormChange('numeroPoliza')}
                     placeholder="Número de afiliación o póliza"
+                  />
+                  <MedicalInput
+                    label="Plan (obra social)"
+                    value={formData.planObraSocial || ''}
+                    onChange={handleFormChange('planObraSocial')}
+                    placeholder="Ej: 210 / Premium / no indicado"
                   />
                 </>
               )}

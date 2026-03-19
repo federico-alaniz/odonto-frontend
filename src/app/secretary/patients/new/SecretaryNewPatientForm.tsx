@@ -58,6 +58,7 @@ interface SecretaryPatientFormData {
   tieneSeguro: string;
   nombreSeguro: string;
   numeroPoliza: string;
+  planObraSocial: string;
   
   // Campos específicos para secretaria
   motivoRegistro: string;
@@ -99,6 +100,7 @@ export default function SecretaryNewPatientForm() {
     tieneSeguro: 'no',
     nombreSeguro: '',
     numeroPoliza: '',
+    planObraSocial: '',
     motivoRegistro: '',
     prioridad: 'normal',
     observacionesIniciales: '',
@@ -290,6 +292,9 @@ export default function SecretaryNewPatientForm() {
           numeroPoliza: formData.numeroPoliza,
           vigencia: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
         } : undefined,
+        obraSocial: formData.tieneSeguro === 'si' ? formData.nombreSeguro : undefined,
+        numeroAfiliado: formData.tieneSeguro === 'si' ? formData.numeroPoliza : undefined,
+        planObraSocial: formData.tieneSeguro === 'si' ? (formData.planObraSocial || undefined) : undefined,
         alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()) : [],
         medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()) : [],
         antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()) : [],
@@ -327,6 +332,9 @@ export default function SecretaryNewPatientForm() {
         tipoSangre: newPatientData.tipoSangre || undefined,
         contactoEmergencia: newPatientData.contactoEmergencia,
         seguroMedico: newPatientData.seguroMedico,
+        obraSocial: newPatientData.obraSocial,
+        numeroAfiliado: newPatientData.numeroAfiliado,
+        planObraSocial: newPatientData.planObraSocial,
         alergias: newPatientData.alergias,
         medicamentosActuales: newPatientData.medicamentosActuales,
         antecedentesPersonales: newPatientData.antecedentesPersonales,
@@ -819,6 +827,19 @@ export default function SecretaryNewPatientForm() {
                           onChange={(e) => handleInputChange('numeroPoliza', e.target.value)}
                           className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:border-gray-400 transition-colors"
                           placeholder="Número de póliza"
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Plan (obra social)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.planObraSocial}
+                          onChange={(e) => handleInputChange('planObraSocial', e.target.value)}
+                          className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:border-gray-400 transition-colors"
+                          placeholder="Ej: 210 / Premium / no indicado"
                         />
                       </div>
                     </div>
