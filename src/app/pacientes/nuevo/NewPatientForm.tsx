@@ -54,6 +54,7 @@ interface PatientFormData {
   tieneSeguro: string;
   nombreSeguro: string;
   numeroPoliza: string;
+  planObraSocial: string;
 }
 
 interface FormErrors {
@@ -95,7 +96,8 @@ export default function NewPatientForm() {
     contactoEmergenciaTelefono: '',
     tieneSeguro: '',
     nombreSeguro: '',
-    numeroPoliza: ''
+    numeroPoliza: '',
+    planObraSocial: ''
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -262,8 +264,12 @@ export default function NewPatientForm() {
         seguroMedico: formData.tieneSeguro === 'si' && formData.nombreSeguro ? {
           empresa: formData.nombreSeguro,
           numeroPoliza: formData.numeroPoliza,
+          plan: formData.planObraSocial,
           vigencia: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 año desde hoy
         } : undefined,
+        obraSocial: formData.tieneSeguro === 'si' ? (formData.nombreSeguro || undefined) : undefined,
+        numeroAfiliado: formData.tieneSeguro === 'si' ? (formData.numeroPoliza || undefined) : undefined,
+        planObraSocial: formData.tieneSeguro === 'si' ? (formData.planObraSocial || undefined) : undefined,
         alergias: formData.alergias ? formData.alergias.split(',').map(a => a.trim()).filter(a => a) : undefined,
         medicamentosActuales: formData.medicamentos ? formData.medicamentos.split(',').map(m => m.trim()).filter(m => m) : undefined,
         antecedentesPersonales: formData.enfermedades ? formData.enfermedades.split(',').map(e => e.trim()).filter(e => e) : undefined,
@@ -553,7 +559,7 @@ export default function NewPatientForm() {
               >
                 <option value="">Seleccione la provincia</option>
                 {getProvincias().map(provincia => (
-                  <option key={provincia.value} value={provincia.value}>{provincia.label}</option>
+                  <option key={provincia.value} value={provincia.label}>{provincia.label}</option>
                 ))}
               </select>
               {errors.provincia && (
@@ -577,7 +583,7 @@ export default function NewPatientForm() {
                   {formData.provincia ? "Seleccione el departamento" : "Primero seleccione una provincia"}
                 </option>
                 {getDepartamentosPorProvincia(formData.provincia).map(depto => (
-                  <option key={depto.value} value={depto.value}>{depto.label}</option>
+                  <option key={depto.value} value={depto.label}>{depto.label}</option>
                 ))}
               </select>
               {errors.departamento && (
@@ -854,6 +860,19 @@ export default function NewPatientForm() {
                 {errors.numeroPoliza && (
                   <p className="text-sm text-red-600">{errors.numeroPoliza}</p>
                 )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Plan (obra social)
+                </label>
+                <input
+                  type="text"
+                  value={formData.planObraSocial}
+                  onChange={(e) => handleInputChange('planObraSocial', e.target.value)}
+                  className="w-full px-4 py-3 h-12 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                  placeholder="Ej: 210 / Premium / no indicado"
+                />
               </div>
             </div>
           )}

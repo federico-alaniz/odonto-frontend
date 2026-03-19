@@ -250,37 +250,6 @@ class AppointmentsService {
     }
   }
 
-  /**
-   * Actualizar una cita existente
-   */
-  async updateAppointment(
-    clinicId: string,
-    appointmentId: string,
-    userId: string,
-    data: Partial<UpdateAppointmentData>
-  ): Promise<AppointmentResponse> {
-    try {
-      const url = `${API_BASE_URL}/api/appointments/${appointmentId}`;
-      const headers = getHeaders(clinicId, userId);
-
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: headers,
-        body: JSON.stringify(data)
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Error al actualizar la cita');
-      }
-
-      return responseData;
-    } catch (error: any) {
-      console.error('❌ Error updating appointment:', error);
-      throw error;
-    }
-  }
 }
 
 export const appointmentsService = new AppointmentsService();

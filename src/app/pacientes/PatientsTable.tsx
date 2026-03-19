@@ -47,6 +47,12 @@ interface Patient {
   tipoSangre: string;
   ultimaConsulta?: string; // Opcional para compatibilidad
   estado: 'activo' | 'inactivo';
+
+  // Seguro/Obra Social (para edición desde modal)
+  tieneSeguro?: string;
+  nombreSeguro?: string;
+  numeroPoliza?: string;
+  planObraSocial?: string;
 }
 
 interface PatientsTableProps {
@@ -57,7 +63,11 @@ interface PatientsTableProps {
 const adaptPatientsForTable = (backendPatients: any[]): Patient[] => {
   return backendPatients.map(patient => ({
     ...patient,
-    ciudad: patient.direccion?.ciudad || ''
+    ciudad: patient.direccion?.ciudad || '',
+    tieneSeguro: patient.obraSocial || patient.numeroAfiliado || patient.planObraSocial ? 'si' : 'no',
+    nombreSeguro: patient.obraSocial || '',
+    numeroPoliza: patient.numeroAfiliado || '',
+    planObraSocial: patient.planObraSocial || ''
   }));
 };
 
@@ -133,10 +143,46 @@ export default function PatientsTable({ filters }: PatientsTableProps) {
     setPatientsData(prev => prev.filter(p => p.id !== patientId));
   };
 
-  const handleSaveEdit = (updatedPatient: Patient) => {
-    setPatientsData(prev => prev.map(p => 
-      p.id === updatedPatient.id ? updatedPatient : p
-    ));
+  const handleSaveEdit = async (updatedPatient: Patient) => {
+    if (!clinicId || !(currentUser as any)?.id) {
+      throw new Error('Error de autenticación');
+    }
+
+    const userId = (currentUser as any).id as string;
+    const hasInsurance = updatedPatient.tieneSeguro === 'si';
+
+    const updateData: any = {
+      nombres: updatedPatient.nombres,
+      apellidos: updatedPatient.apellidos,
+      tipoDocumento: updatedPatient.tipoDocumento,
+      numeroDocumento: updatedPatient.numeroDocumento,
+      fechaNacimiento: updatedPatient.fechaNacimiento,
+      genero: updatedPatient.genero,
+      telefono: updatedPatient.telefono,
+      email: updatedPatient.email || undefined,
+      obraSocial: hasInsurance ? (updatedPatient.nombreSeguro || undefined) : undefined,
+      numeroAfiliado: hasInsurance ? (updatedPatient.numeroPoliza || undefined) : undefined,
+      planObraSocial: hasInsurance ? (updatedPatient.planObraSocial || undefined) : undefined
+    };
+
+    const response = await patientsService.updatePatient(updatedPatient.id, clinicId, userId, updateData);
+    const saved = response.data as any;
+
+    setPatientsData(prev =>
+      prev.map(p =>
+        p.id === updatedPatient.id
+          ? {
+              ...p,
+              ...saved,
+              ciudad: saved.direccion?.ciudad || p.ciudad,
+              tieneSeguro: saved.obraSocial || saved.numeroAfiliado || saved.planObraSocial ? 'si' : 'no',
+              nombreSeguro: saved.obraSocial || '',
+              numeroPoliza: saved.numeroAfiliado || '',
+              planObraSocial: saved.planObraSocial || ''
+            }
+          : p
+      )
+    );
   };
 
   const handleViewHistoryFromModal = (patient: Patient) => {

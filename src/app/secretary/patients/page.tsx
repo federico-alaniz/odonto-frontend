@@ -118,7 +118,7 @@ export default function SecretaryPatientsPage() {
               </div>
               
               <Link
-                href={buildPath('/secretary/appointments/new')}
+                href={buildPath('/secretary/appointments')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
               >
                 <Calendar className="w-5 h-5" />

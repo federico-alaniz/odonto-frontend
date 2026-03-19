@@ -19,6 +19,7 @@ export interface ContactoEmergencia {
 export interface SeguroMedico {
   empresa: string;
   numeroPoliza: string;
+  plan?: string;
   vigencia: string;
 }
 
@@ -58,6 +59,7 @@ export interface Patient {
   // Helper fields populated client-side for easier rendering/filtering
   obraSocial?: string;
   numeroAfiliado?: string;
+  planObraSocial?: string;
   
   // Doctor Asignado
   doctorAsignado?: string;
@@ -95,6 +97,9 @@ export interface CreatePatientData {
   antecedentesFamiliares?: string[];
   contactoEmergencia?: ContactoEmergencia;
   seguroMedico?: SeguroMedico;
+  obraSocial?: string;
+  numeroAfiliado?: string;
+  planObraSocial?: string;
   doctorAsignado?: string;
 }
 
@@ -115,6 +120,9 @@ export interface UpdatePatientData {
   antecedentesFamiliares?: string[];
   contactoEmergencia?: ContactoEmergencia;
   seguroMedico?: SeguroMedico;
+  obraSocial?: string;
+  numeroAfiliado?: string;
+  planObraSocial?: string;
   doctorAsignado?: string;
   estado?: 'activo' | 'inactivo';
 }

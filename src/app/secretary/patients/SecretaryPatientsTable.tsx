@@ -402,13 +402,7 @@ export default function SecretaryPatientsTable({ filters, showOnlyAssigned = fal
                           <Eye className="w-4 h-4" />
                         </button>
                         
-                        <button
-                          onClick={() => handleNewAppointment(patient)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Nuevo turno"
-                        >
-                          <Calendar className="w-4 h-4" />
-                        </button>
+                        
                         
                         <button
                           onClick={() => handleEditPatient(patient)}

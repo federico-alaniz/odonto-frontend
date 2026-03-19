@@ -64,6 +64,7 @@ interface EditPatientFormData {
   seguroEmpresa: string;
   seguroNumeroPoliza: string;
   seguroVigencia: string;
+  planObraSocial: string;
 }
 
 interface FormErrors {
@@ -106,7 +107,8 @@ export default function EditPatientPage() {
     tieneSeguro: false,
     seguroEmpresa: '',
     seguroNumeroPoliza: '',
-    seguroVigencia: ''
+    seguroVigencia: '',
+    planObraSocial: ''
   });
   
   const [errors, setErrors] = useState<FormErrors>({});
@@ -166,7 +168,8 @@ export default function EditPatientPage() {
           tieneSeguro: !!patient.seguroMedico,
           seguroEmpresa: patient.seguroMedico?.empresa || '',
           seguroNumeroPoliza: patient.seguroMedico?.numeroPoliza || '',
-          seguroVigencia: patient.seguroMedico?.vigencia || ''
+          seguroVigencia: patient.seguroMedico?.vigencia || '',
+          planObraSocial: patient.planObraSocial || ''
         });
 
       } catch (error: any) {
@@ -277,8 +280,12 @@ export default function EditPatientPage() {
         seguroMedico: formData.tieneSeguro && formData.seguroEmpresa ? {
           empresa: formData.seguroEmpresa,
           numeroPoliza: formData.seguroNumeroPoliza,
+          plan: formData.planObraSocial,
           vigencia: formData.seguroVigencia
-        } : undefined
+        } : undefined,
+        obraSocial: formData.tieneSeguro ? (formData.seguroEmpresa || undefined) : undefined,
+        numeroAfiliado: formData.tieneSeguro ? (formData.seguroNumeroPoliza || undefined) : undefined,
+        planObraSocial: formData.tieneSeguro ? (formData.planObraSocial || undefined) : undefined
       };
 
       await patientsService.updatePatient(patientId, clinicId, userId, updateData);
@@ -856,6 +863,18 @@ export default function EditPatientPage() {
                           value={formData.seguroNumeroPoliza}
                           onChange={handleInputChange}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan (obra social)</label>
+                        <input
+                          type="text"
+                          name="planObraSocial"
+                          value={formData.planObraSocial}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Ej: 210 / Premium / no indicado"
                         />
                       </div>
 
