@@ -52,11 +52,16 @@ export default function Odontogram({
   });
 
   const [selectedTooth, setSelectedTooth] = useState<number | null>(null);
+  const [selectedSector, setSelectedSector] = useState<ToothSector['sector'] | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ToothCondition['status']>('healthy');
+  const [newProcedureDate, setNewProcedureDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [newProcedureText, setNewProcedureText] = useState<string>('');
+  const [newProcedureNotes, setNewProcedureNotes] = useState<string>('');
   const [sectorMode, setSectorMode] = useState<boolean>(false);
   const [crownMode, setCrownMode] = useState<boolean>(false);
   const [prosthesisMode, setProsthesisMode] = useState<boolean>(false);
   const [extractionMode, setExtractionMode] = useState<boolean>(false);
+  const [showViewModal, setShowViewModal] = useState<boolean>(false);
 
   // Colores basados en el tipo de odontograma
   const sectorColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
@@ -136,6 +141,7 @@ export default function Odontogram({
     if (sectorMode) return;
     
     setSelectedTooth(toothId);
+    setSelectedSector(null);
     const newConditions = toothConditions.map(tooth => 
       tooth.number === toothId 
         ? { ...tooth, status: selectedStatus }
@@ -154,30 +160,33 @@ export default function Odontogram({
     
     event.preventDefault();
     event.stopPropagation();
-    
+
+    // Toggle visual restoration marker
     const newConditions = toothConditions.map(tooth => {
       if (tooth.number === toothId) {
         const currentSectors = tooth.sectors || [];
         const existingSectorIndex = currentSectors.findIndex(s => s.sector === sector);
-        
+
         let newSectors: ToothSector[];
         if (existingSectorIndex >= 0) {
-          // Toggle existing sector
           newSectors = currentSectors.map((s, index) => 
             index === existingSectorIndex 
               ? { ...s, hasRestoration: !s.hasRestoration }
               : s
           );
         } else {
-          // Add new sector
           newSectors = [...currentSectors, { sector, hasRestoration: true }];
         }
-        
+
         return { ...tooth, sectors: newSectors };
       }
       return tooth;
     });
-    
+
+    // Select tooth and sector so the detail panel shows procedures for that sector
+    setSelectedTooth(toothId);
+    setSelectedSector(sector);
+
     setToothConditions(newConditions);
     onUpdate(newConditions);
   };
@@ -186,6 +195,59 @@ export default function Odontogram({
     const tooth = toothConditions.find(t => t.number === toothId);
     const sectorData = tooth?.sectors?.find(s => s.sector === sector);
     return sectorData?.hasRestoration || false;
+  };
+
+  // Mapear sectores SVG a nombres de caras dentales con abreviatura
+  const getFaceName = (toothNumber: number | null, sector: ToothSector['sector'] | null) => {
+    if (!toothNumber || !sector) return '';
+    const num = toothNumber;
+    const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
+    const lastDigit = num % 10;
+    const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
+
+    switch (sector) {
+      case 'left':
+        return 'Mesial (M)';
+      case 'right':
+        return 'Distal (D)';
+      case 'top':
+        return 'Vestibular (V)';
+      case 'bottom':
+        return isUpper ? 'Palatina (P)' : 'Lingual (L)';
+      case 'center':
+        return isAnterior ? 'Incisal (I)' : 'Oclusal (O)';
+      default:
+        return sector;
+    }
+  };
+
+  const getProceduresFor = (toothId: number | null, sector: ToothSector['sector'] | null) => {
+    if (!toothId) return [] as any[];
+    const tooth = toothConditions.find(t => t.number === toothId);
+    if (!tooth) return [] as any[];
+    const procs = (tooth.procedures || []) as any[];
+    return sector ? procs.filter(p => p.sector === sector) : procs;
+  };
+
+  const openViewFor = (toothId: number, sector: ToothSector['sector'] | null) => {
+    setSelectedTooth(toothId);
+    setSelectedSector(sector);
+    setShowViewModal(true);
+  };
+
+  // Add a procedure entry for a tooth (and optional sector)
+  const addProcedure = (toothId: number, sector: ToothSector['sector'] | null, date: string, procedure: string, notes?: string) => {
+    const newConditions = toothConditions.map(tooth => {
+      if (tooth.number === toothId) {
+        const procedures = tooth.procedures || [];
+        const newProc = { date, procedure, sector: sector || undefined, notes } as any;
+        return { ...tooth, procedures: [...procedures, newProc] };
+      }
+      return tooth;
+    });
+
+    setToothConditions(newConditions);
+    onUpdate(newConditions);
   };
 
   const handleCrownClick = (toothId: number, event: React.MouseEvent) => {
@@ -301,7 +363,9 @@ export default function Odontogram({
               fill={getSectorRestoration(number, 'top') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'top', e)}
-            />
+            >
+              <title>{getFaceName(number, 'top')}</title>
+            </polygon>
             
             {/* Sector inferior */}
             <polygon
@@ -309,7 +373,9 @@ export default function Odontogram({
               fill={getSectorRestoration(number, 'bottom') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'bottom', e)}
-            />
+            >
+              <title>{getFaceName(number, 'bottom')}</title>
+            </polygon>
             
             {/* Sector izquierdo */}
             <polygon
@@ -317,7 +383,9 @@ export default function Odontogram({
               fill={getSectorRestoration(number, 'left') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'left', e)}
-            />
+            >
+              <title>{getFaceName(number, 'left')}</title>
+            </polygon>
             
             {/* Sector derecho */}
             <polygon
@@ -325,7 +393,9 @@ export default function Odontogram({
               fill={getSectorRestoration(number, 'right') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'right', e)}
-            />
+            >
+              <title>{getFaceName(number, 'right')}</title>
+            </polygon>
             
             {/* Sector centro */}
             <rect
@@ -336,7 +406,9 @@ export default function Odontogram({
               fill={getSectorRestoration(number, 'center') ? sectorColor : 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'center', e)}
-            />
+            >
+              <title>{getFaceName(number, 'center')}</title>
+            </rect>
           </>
         )}
         
@@ -397,29 +469,41 @@ export default function Odontogram({
               <polygon
                 points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
                 fill={sectorColor}
-                className="pointer-events-none"
-              />
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'top')}
+              >
+                <title>{getFaceName(number, 'top')}</title>
+              </polygon>
             )}
             {getSectorRestoration(number, 'bottom') && (
               <polygon
                 points={`${position.x + 11},${position.y + 33} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44} ${position.x},${position.y + 44}`}
                 fill={sectorColor}
-                className="pointer-events-none"
-              />
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'bottom')}
+              >
+                <title>{getFaceName(number, 'bottom')}</title>
+              </polygon>
             )}
             {getSectorRestoration(number, 'left') && (
               <polygon
                 points={`${position.x},${position.y} ${position.x + 11},${position.y + 11} ${position.x + 11},${position.y + 33} ${position.x},${position.y + 44}`}
                 fill={sectorColor}
-                className="pointer-events-none"
-              />
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'left')}
+              >
+                <title>{getFaceName(number, 'left')}</title>
+              </polygon>
             )}
             {getSectorRestoration(number, 'right') && (
               <polygon
                 points={`${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44}`}
                 fill={sectorColor}
-                className="pointer-events-none"
-              />
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'right')}
+              >
+                <title>{getFaceName(number, 'right')}</title>
+              </polygon>
             )}
             {getSectorRestoration(number, 'center') && (
               <rect
@@ -428,8 +512,11 @@ export default function Odontogram({
                 width="22"
                 height="22"
                 fill={sectorColor}
-                className="pointer-events-none"
-              />
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'center')}
+              >
+                <title>{getFaceName(number, 'center')}</title>
+              </rect>
             )}
           </>
         )}
@@ -786,6 +873,38 @@ export default function Odontogram({
         </div>
       )}
 
+      {/* Modal de solo lectura: mostrar procedimientos al clicar una cara */}
+      {showViewModal && selectedTooth && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={() => { setShowViewModal(false); setSelectedTooth(null); setSelectedSector(null); }} />
+          <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full p-4 z-10">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">Detalles del Diente {selectedTooth}{selectedSector ? ` — ${getFaceName(selectedTooth, selectedSector)}` : ''}</h4>
+              <button onClick={() => setShowViewModal(false)} className="text-sm text-gray-600">Cerrar</button>
+            </div>
+
+            <div>
+              <h5 className="text-sm font-semibold text-gray-700 mb-2">Procedimientos</h5>
+              <div className="space-y-2 text-sm">
+                {(() => {
+                  const procs = getProceduresFor(selectedTooth, selectedSector);
+                  if (procs.length === 0) return <div className="text-gray-500">No hay procedimientos registrados.</div>;
+                  return procs.map((p, idx) => (
+                    <div key={idx} className="flex items-start justify-between bg-gray-50 border border-gray-100 rounded p-2">
+                      <div>
+                        <div className="text-sm font-medium text-gray-800">{p.procedure}</div>
+                        <div className="text-xs text-gray-500">{p.date}{p.performedBy ? ` · ${p.performedBy}` : ''}</div>
+                        {p.notes && <div className="text-xs text-gray-600 mt-1">{p.notes}</div>}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Resumen de condiciones */}
       {!readOnly && (
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -807,8 +926,68 @@ export default function Odontogram({
           </div>
         </div>
       )}
+      {/* Panel de detalles y procedimientos por diente/sector */}
+      {!readOnly && selectedTooth && (
+        <div className="mt-4 p-4 bg-white border border-gray-200 rounded-lg">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900">Detalles del Diente {selectedTooth}{selectedSector ? ` — ${getFaceName(selectedTooth, selectedSector)}` : ''}</h4>
+            <div className="text-sm text-gray-500">Seleccione sector en el odontograma para filtrar</div>
+          </div>
 
+          {/* Lista de procedimientos existentes */}
+          <div className="mb-4">
+            <h5 className="text-sm font-semibold text-gray-700 mb-2">Procedimientos</h5>
+            <div className="space-y-2 text-sm">
+              {(() => {
+                const tooth = toothConditions.find(t => t.number === selectedTooth);
+                const procs = (tooth?.procedures || []).filter(p => selectedSector ? p.sector === selectedSector : true);
+                if (procs.length === 0) return <div className="text-gray-500">No hay procedimientos registrados.</div>;
+                return procs.map((p, idx) => (
+                  <div key={idx} className="flex items-start justify-between bg-gray-50 border border-gray-100 rounded p-2">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">{p.procedure}</div>
+                      <div className="text-xs text-gray-500">{p.date}{p.performedBy ? ` · ${p.performedBy}` : ''}</div>
+                      {p.notes && <div className="text-xs text-gray-600 mt-1">{p.notes}</div>}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
 
+          {/* Formulario para agregar procedimiento */}
+          <div>
+            <h5 className="text-sm font-semibold text-gray-700 mb-2">Agregar Procedimiento</h5>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input type="date" value={newProcedureDate} onChange={(e) => setNewProcedureDate(e.target.value)} className="px-3 py-2 border rounded-md" />
+              <input type="text" placeholder="Descripción del procedimiento" value={newProcedureText} onChange={(e) => setNewProcedureText(e.target.value)} className="px-3 py-2 border rounded-md md:col-span-2" />
+              <input type="text" placeholder="Notas (opcional)" value={newProcedureNotes} onChange={(e) => setNewProcedureNotes(e.target.value)} className="px-3 py-2 border rounded-md md:col-span-3" />
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newProcedureText.trim()) return;
+                  addProcedure(selectedTooth, selectedSector, newProcedureDate, newProcedureText.trim(), newProcedureNotes.trim() || undefined);
+                  setNewProcedureText('');
+                  setNewProcedureNotes('');
+                  setNewProcedureDate(new Date().toISOString().split('T')[0]);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Agregar
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSelectedTooth(null); setSelectedSector(null); }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

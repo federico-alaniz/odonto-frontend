@@ -27,6 +27,14 @@ export interface ToothSector {
   hasRestoration: boolean;
 }
 
+export interface ToothProcedure {
+  date: string; // ISO date
+  procedure: string;
+  sector?: ToothSector['sector'];
+  performedBy?: string;
+  notes?: string;
+}
+
 export interface ToothCondition {
   number: number;
   status: 'healthy' | 'caries' | 'filling' | 'crown' | 'extraction' | 'root_canal' | 'implant' | 'missing';
@@ -34,6 +42,7 @@ export interface ToothCondition {
   hasCrown?: boolean;
   hasProsthesis?: boolean;
   notes?: string;
+  procedures?: ToothProcedure[];
 }
 
 export interface Odontogramas {
