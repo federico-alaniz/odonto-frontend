@@ -267,8 +267,8 @@ export default function ConsultationsPage() {
       
       const response = await appointmentsService.updateAppointment(
         clinicId,
-        consultation.id,
         userId,
+        consultation.id,
         { estado: 'en_curso' }
       );
 
@@ -312,8 +312,7 @@ export default function ConsultationsPage() {
   const handleNoShow = async (consultation: Consultation) => {
     const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
     const userId = (currentUser as any)?.id;
-    
-    
+
     if (!clinicId || !userId) {
       showError('Error', 'No se pudo obtener la información del usuario');
       return;
@@ -321,21 +320,18 @@ export default function ConsultationsPage() {
 
     try {
       setCancellingConsultation(consultation.id);
-            
       const response = await appointmentsService.updateAppointment(
         clinicId,
-        consultation.id,
         userId,
+        consultation.id,
         { estado: 'no_asistio' }
       );
 
-
       if (response.success) {
         showSuccess('Consulta cerrada', 'La consulta se marcó como "No asistió"');
-        
-        setConsultations(prev => 
-          prev.map(c => 
-            c.id === consultation.id 
+        setConsultations(prev =>
+          prev.map(c =>
+            c.id === consultation.id
               ? { ...c, status: 'no-show' as const }
               : c
           )
@@ -344,7 +340,7 @@ export default function ConsultationsPage() {
         throw new Error(response.message || 'Error al marcar como no asistió');
       }
     } catch (error: any) {
-      console.error(' [FRONTEND] Error al marcar no asistió:', error);
+      console.error('[FRONTEND] Error al marcar no asistió:', error);
       showError('Error', error.message || 'No se pudo completar la acción');
     } finally {
       setCancellingConsultation(null);

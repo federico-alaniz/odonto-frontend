@@ -12,6 +12,7 @@ export interface OdontogramTemplateProps {
   odontogramConditions?: ToothCondition[];
   observaciones?: string;
   odontogramScale?: number;
+  printMode?: boolean;
 }
 
 export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
@@ -23,6 +24,7 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
   odontogramConditions = [],
   observaciones = '',
   odontogramScale = 1.8
+  , printMode = false
 }) => {
   console.log('OdontogramTemplate - Consultation Data:', {
     patient,
@@ -293,7 +295,7 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
     <div className="mt-4 mb-0 p-0">
       <div className="flex justify-between items-start m-0 p-0">
         <div className="relative m-0 p-0" style={{ width: '500px', height: `${130 * (odontogramScale / 1.2)}px` }}>
-          <div className="absolute top-0 left-0 m-0 p-0" style={{ transform: `scale(${odontogramScale})`, transformOrigin: 'top left' }}>
+            <div className="absolute top-0 left-0 m-0 p-0" style={{ transform: `scale(${odontogramScale})`, transformOrigin: 'top left' }}>
             <Odontogram
               initialConditions={odontogramConditions}
               onUpdate={() => {}}
@@ -301,6 +303,7 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
               showLegend={false}
               showBorder={false}
               className="m-0 p-0"
+              printMode={printMode}
             />
           </div>
         </div>

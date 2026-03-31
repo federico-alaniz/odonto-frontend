@@ -699,9 +699,12 @@ export default function NewMedicalRecordPage() {
 
               <div className="space-y-1">
                 <p className="text-sm font-medium text-gray-700">Obra Social</p>
-                <p className="text-sm text-gray-900 font-semibold">{patient.seguroMedico?.empresa || 'Sin cobertura'}</p>
-                {patient.seguroMedico?.numeroPoliza && (
-                  <p className="text-xs text-gray-600">N° {patient.seguroMedico.numeroPoliza}</p>
+                <p className="text-sm text-gray-900 font-semibold">{patient.seguroMedico?.empresa || patient.obraSocial || 'Sin cobertura'}</p>
+                {(patient.numeroAfiliado || patient.seguroMedico?.numeroPoliza) && (
+                  <p className="text-xs text-gray-600">N° {patient.numeroAfiliado || patient.seguroMedico.numeroPoliza}</p>
+                )}
+                {(patient.planObraSocial || patient.seguroMedico?.plan || patient.seguroMedico?.planObraSocial) && (
+                  <p className="text-xs text-gray-600">Plan: {patient.planObraSocial || patient.seguroMedico?.plan || patient.seguroMedico?.planObraSocial}</p>
                 )}
               </div>
             </div>

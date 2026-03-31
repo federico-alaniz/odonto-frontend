@@ -524,6 +524,7 @@ export default function ReceptionPage() {
           doctorName={doctorFullName}
           doctorMatricula={doctorMatricula}
           odontogramConditions={lastRecordWithOdontogram?.odontogramas?.actual || []}
+          printMode={true}
         />
       );
 

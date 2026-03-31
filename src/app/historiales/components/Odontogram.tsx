@@ -13,6 +13,7 @@ interface OdontogramProps {
   interventionColor?: 'red' | 'blue';
   showBorder?: boolean;
   className?: string;
+  printMode?: boolean;
 }
 
 export default function Odontogram({ 
@@ -22,7 +23,8 @@ export default function Odontogram({
   showLegend = true, 
   interventionColor = 'red', 
   showBorder = true,
-  className = ''
+  className = '',
+  printMode = false
 }: OdontogramProps) {
 
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
@@ -63,6 +65,20 @@ export default function Odontogram({
   const extractionColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
 
   const getToothColor = (status: ToothCondition['status']) => {
+    if (printMode) {
+      const map: Record<string, { fill: string; stroke: string }> = {
+        'healthy': { fill: '#ffffff', stroke: '#1f2937' },
+        'caries': { fill: '#ef4444', stroke: '#1f2937' },
+        'filling': { fill: '#ef4444', stroke: '#1f2937' },
+        'crown': { fill: '#ef4444', stroke: '#1f2937' },
+        'extraction': { fill: '#ffffff', stroke: '#1f2937' },
+        'root_canal': { fill: '#ef4444', stroke: '#1f2937' },
+        'implant': { fill: '#ef4444', stroke: '#1f2937' },
+        'missing': { fill: '#d1d5db', stroke: '#4b5563' }
+      };
+      return map[status];
+    }
+
     const colors = {
       'healthy': 'fill-white stroke-gray-800',
       'caries': 'fill-red-500 stroke-gray-800',
@@ -240,18 +256,24 @@ export default function Odontogram({
   };
 
   // Componente de diente
-  const Tooth = ({ number, position }: { number: number, position: { x: number, y: number } }) => {
+  const Tooth = ({ number, position, labelPosition = 'top' }: { number: number, position: { x: number, y: number }, labelPosition?: 'top' | 'bottom' }) => {
     const condition = getToothCondition(number);
     const isSelected = selectedTooth === number;
     
+    // Calcular posición del texto basado en labelPosition
+    const textY = labelPosition === 'top' ? position.y - 5 : position.y + 44 + 15;
+    
+    const toothColor = getToothColor(condition as any);
+
     return (
       <g>
-        {/* Número del diente arriba */}
+        {/* Número del diente */}
         <text
           x={position.x + 22}
-          y={position.y - 5}
+          y={textY}
           textAnchor="middle"
-          className="text-sm font-medium pointer-events-none fill-blue-800"
+          fill={printMode ? '#1e3a8a' : undefined}
+          style={printMode ? { fontSize: '12px', fontWeight: 500, pointerEvents: 'none' } as any : undefined}
         >
           {number}
         </text>
@@ -262,9 +284,11 @@ export default function Odontogram({
           y={position.y}
           width="44"
           height="44"
-          className={`${getToothColor(condition)} ${
-            isSelected ? 'stroke-4 stroke-blue-600' : 'stroke-2'
-          } ${condition !== 'missing' ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-60'} transition-all`}
+          fill={printMode ? (toothColor as any).fill : undefined}
+          stroke={printMode ? (toothColor as any).stroke : undefined}
+          strokeWidth={isSelected ? 4 : 2}
+          style={printMode ? { cursor: condition !== 'missing' ? 'pointer' : 'not-allowed', opacity: condition === 'missing' ? 0.6 : 1 } as any : undefined}
+          className={!printMode ? `${getToothColor(condition as any)} ${isSelected ? 'stroke-4 stroke-blue-600' : 'stroke-2'} ${condition !== 'missing' ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-60'} transition-all` : undefined}
           onClick={(e) => condition !== 'missing' ? handleToothClick(number, e) : e.preventDefault()}
         />
         
@@ -628,6 +652,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 60 + (index * 50), y: 80 }}
+              labelPosition="top"
             />
           ))}
 
@@ -637,6 +662,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 480 + (index * 50), y: 80 }}
+              labelPosition="top"
             />
           ))}
 
@@ -647,6 +673,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 60 + (index * 50), y: 140 }}
+              labelPosition="bottom"
             />
           ))}
 
@@ -656,6 +683,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 480 + (index * 50), y: 140 }}
+              labelPosition="bottom"
             />
           ))}
 
@@ -666,6 +694,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 210 + (index * 50), y: 220 }}
+              labelPosition="top"
             />
           ))}
 
@@ -675,6 +704,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 480 + (index * 50), y: 220 }}
+              labelPosition="top"
             />
           ))}
 
@@ -685,6 +715,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 210 + (index * 50), y: 280 }}
+              labelPosition="bottom"
             />
           ))}
 
@@ -694,6 +725,7 @@ export default function Odontogram({
               key={tooth}
               number={tooth}
               position={{ x: 480 + (index * 50), y: 280 }}
+              labelPosition="bottom"
             />
           ))}
         </svg>
