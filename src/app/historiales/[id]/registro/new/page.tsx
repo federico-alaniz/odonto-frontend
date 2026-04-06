@@ -34,7 +34,7 @@ export default function NewMedicalRecordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { buildPath } = useTenant();
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading: authLoading } = useAuth();
   const patientId = params.id as string;
   const appointmentId = searchParams.get('appointmentId');
   const { showSuccess, showError } = useToast();
@@ -394,7 +394,9 @@ export default function NewMedicalRecordPage() {
       const userId = (currentUser as any)?.id;
 
       if (!clinicId || !userId) {
-        throw new Error('No se pudo obtener la información del usuario');
+        showError('No se pudo obtener la información del usuario', 'Por favor inicia sesión e inténtalo de nuevo');
+        setSavingDraft(false);
+        return;
       }
 
       // Preparar datos para enviar
@@ -475,7 +477,9 @@ export default function NewMedicalRecordPage() {
       const userId = (currentUser as any)?.id;
 
       if (!clinicId || !userId) {
-        throw new Error('No se pudo obtener la información del usuario');
+        showError('No se pudo obtener la información del usuario', 'Por favor inicia sesión e inténtalo de nuevo');
+        setSaving(false);
+        return;
       }
 
       // Preparar datos para enviar
@@ -536,7 +540,7 @@ export default function NewMedicalRecordPage() {
         // Si hay una cita asociada, marcarla como completada
         if (appointmentId) {
           try {
-            await appointmentsService.updateAppointment(clinicId, appointmentId, userId, {
+            await appointmentsService.updateAppointment(clinicId, userId, appointmentId, {
               estado: 'completada'
             });
             showSuccess('Consulta completada', 'La cita ha sido marcada como completada');
@@ -630,7 +634,7 @@ export default function NewMedicalRecordPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSaveDraft}
-                disabled={savingDraft || saving}
+                disabled={savingDraft || saving || authLoading || !currentUser}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingDraft ? (
@@ -647,7 +651,7 @@ export default function NewMedicalRecordPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || savingDraft}
+                disabled={saving || savingDraft || authLoading || !currentUser}
                 className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
