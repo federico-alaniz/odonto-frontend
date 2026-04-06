@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useRouter } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -110,6 +112,16 @@ export default function SecretaryNewPatientForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [fechaNacimientoDate, setFechaNacimientoDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (formData.fechaNacimiento) {
+      const d = new Date(formData.fechaNacimiento);
+      if (!isNaN(d.getTime())) setFechaNacimientoDate(d);
+    } else {
+      setFechaNacimientoDate(null);
+    }
+  }, [formData.fechaNacimiento]);
 
   const tiposDocumento = [
     { value: 'dni', label: 'DNI (Documento Nacional de Identidad)' },
@@ -531,14 +543,22 @@ export default function SecretaryNewPatientForm() {
                   <label className="block text-sm font-medium text-gray-700">
                     Fecha de Nacimiento *
                   </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.fechaNacimiento}
-                    onChange={(e) => handleInputChange('fechaNacimiento', e.target.value)}
+                  <DatePicker
+                    selected={fechaNacimientoDate}
+                    onChange={(date) => {
+                      const d = date as Date | null;
+                      setFechaNacimientoDate(d);
+                      handleInputChange('fechaNacimiento', d ? d.toISOString().split('T')[0] : '');
+                    }}
+                    dateFormat="dd/MM/yyyy"
                     className={`w-full px-4 py-3 h-12 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 hover:border-gray-400 transition-colors ${
                       errors.fechaNacimiento ? 'border-red-300' : 'border-gray-300'
                     }`}
+                    placeholderText="dd/mm/yyyy"
+                    maxDate={new Date()}
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
                   />
                   {errors.fechaNacimiento && (
                     <p className="text-sm text-red-600">{errors.fechaNacimiento}</p>

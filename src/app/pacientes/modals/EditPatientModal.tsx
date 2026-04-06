@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { User, Phone, MapPin, Heart, Shield, Save, X } from 'lucide-react';
 import MedicalModal from '@/components/ui/MedicalModal';
 import MedicalInput from '@/components/forms/MedicalInput';
@@ -53,6 +55,7 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
   const [formData, setFormData] = useState<Patient | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [fechaNacimientoDate, setFechaNacimientoDate] = useState<Date | null>(null);
 
   // Cargar datos del paciente cuando se abre el modal
   useEffect(() => {
@@ -79,6 +82,15 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
       setErrors({});
     }
   }, [patient, isOpen]);
+
+  useEffect(() => {
+    if (formData && formData.fechaNacimiento) {
+      const d = new Date(formData.fechaNacimiento);
+      if (!isNaN(d.getTime())) setFechaNacimientoDate(d);
+    } else {
+      setFechaNacimientoDate(null);
+    }
+  }, [formData]);
 
   const handleInputChange = (field: string, value: string) => {
     if (!formData) return;
@@ -237,14 +249,32 @@ export default function EditPatientModal({ isOpen, onClose, patient, onSave }: E
                 error={errors.numeroDocumento}
                 required
               />
-              <MedicalInput
-                label="Fecha de Nacimiento"
-                value={formData.fechaNacimiento}
-                onChange={handleFormChange('fechaNacimiento')}
-                type="date"
-                error={errors.fechaNacimiento}
-                required
-              />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Fecha de Nacimiento
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <DatePicker
+                  selected={fechaNacimientoDate}
+                  onChange={(date) => {
+                    const d = date as Date | null;
+                    setFechaNacimientoDate(d);
+                    handleInputChange('fechaNacimiento', d ? d.toISOString().split('T')[0] : '');
+                  }}
+                  dateFormat="dd/MM/yyyy"
+                  className={`w-full px-4 py-3 h-12 rounded-lg border ${errors.fechaNacimiento ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500`}
+                  placeholderText="dd/mm/yyyy"
+                  maxDate={new Date()}
+                  showMonthDropdown
+                  showYearDropdown
+                  dropdownMode="select"
+                />
+                {errors.fechaNacimiento && (
+                  <p className="text-sm text-red-600 flex items-center space-x-2">
+                    {errors.fechaNacimiento}
+                  </p>
+                )}
+              </div>
               <MedicalSelect
                 label="Género"
                 value={formData.genero || ''}
