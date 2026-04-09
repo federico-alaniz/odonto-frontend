@@ -25,7 +25,7 @@ export interface DatosOdontologicos {
 }
 
 export interface ToothSector {
-  sector: 'top' | 'bottom' | 'left' | 'right' | 'center';
+  sector: 'top' | 'topUpper' | 'topLower' | 'bottom' | 'left' | 'right' | 'center';
   hasRestoration: boolean;
 }
 
