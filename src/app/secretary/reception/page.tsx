@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 import { renderToString } from 'react-dom/server';
 import { OdontogramTemplate } from '@/components/pdf/OdontogramTemplate';
+import printOdontogram from '@/components/pdf/printOdontogram';
 import { 
   Users, 
   Clock, 
@@ -505,68 +506,15 @@ export default function ReceptionPage() {
         return;
       }
 
-      // Crear un elemento temporal para renderizar el odontograma
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.width = '210mm';
-      tempDiv.style.height = '297mm';
-      tempDiv.style.padding = '20px';
-      tempDiv.style.backgroundColor = 'white';
-      tempDiv.style.fontFamily = 'Arial, sans-serif';
-
-      // Crear HTML del odontograma
-      const odontogramHTML = renderToString(
-        <OdontogramTemplate 
-          patientName={appointment.patientName}
-          patient={patients.find(p => p.id === appointment.patientId)}
-          consultationDate={appointment.fecha}
-          doctorName={doctorFullName}
-          doctorMatricula={doctorMatricula}
-          odontogramConditions={lastRecordWithOdontogram?.odontogramas?.actual || []}
-          printMode={true}
-        />
-      );
-
-      tempDiv.innerHTML = odontogramHTML;
-      document.body.appendChild(tempDiv);
-
-      // Convertir a canvas y generar PDF
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
+      const patientObj = patients.find(p => p.id === appointment.patientId);
+      await printOdontogram({
+        patient: patientObj,
+        patientName: appointment.patientName,
+        consultationDate: appointment.fecha,
+        doctorName: doctorFullName,
+        doctorMatricula,
+        odontogramConditions: lastRecordWithOdontogram?.odontogramas?.actual || []
       });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgWidth = 190; // A4 width - margins
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 10;
-
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= 277; // A4 height - margins
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= 277;
-      }
-
-      // Abrir PDF en nueva ventana para ver
-      const pdfBlob = pdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
-
-      // Limpiar elemento temporal
-      document.body.removeChild(tempDiv);
     } catch (error) {
       console.error('Error generando PDF del odontograma:', error);
       alert('Error al generar el PDF del odontograma');

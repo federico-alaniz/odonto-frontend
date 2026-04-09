@@ -273,13 +273,11 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
           <th className="border border-black px-2 py-1 bg-gray-100 text-center align-middle font-bold w-[40px]">CARA</th>
           <th className="border border-black px-2 py-1 bg-gray-100 text-center align-middle font-bold">CODIGO</th>
           <th className="border border-black px-2 py-1 bg-gray-100 text-center align-middle font-bold">CONFORMIDAD</th>
-          <th className="border border-black px-2 py-1 bg-gray-100 text-center align-middle font-bold">VALOR</th>
         </tr>
       </thead>
       <tbody className="text-[10px]">
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <tr key={i}>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
             <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
             <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
             <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>

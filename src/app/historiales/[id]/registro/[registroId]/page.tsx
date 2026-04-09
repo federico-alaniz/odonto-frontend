@@ -12,10 +12,7 @@ import { usersService } from '@/services/api/users.service';
 import { useAuth } from '@/hooks/useAuth';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
-import { renderToString } from 'react-dom/server';
-import { OdontogramTemplate } from '@/components/pdf/OdontogramTemplate';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import printOdontogram from '@/components/pdf/printOdontogram';
 
 /**
  * Página de detalle de registro médico (Solo lectura)
@@ -146,7 +143,6 @@ export default function RegistroDetailPage() {
   };
 
   const handlePrintOdontogram = async () => {
-    // Reutilizar la misma lógica que en la recepción para mostrar el PDF en nueva pestaña
     if (!clinicId) {
       alert('No se pudo obtener la clínica');
       return;
@@ -161,153 +157,15 @@ export default function RegistroDetailPage() {
       const doctorFullName = doctorName || 'N/A';
       const doctorMatricula = doctorLicense || '';
 
-      // Crear un elemento temporal para renderizar el odontograma
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.width = '210mm';
-      tempDiv.style.height = '297mm';
-      tempDiv.style.padding = '20px';
-      tempDiv.style.backgroundColor = 'white';
-
-      const odontogramHTML = renderToString(
-        <OdontogramTemplate
-          patientName={patient?.nombreCompleto || ''}
-          patient={patient}
-          consultationDate={registro.fecha}
-          doctorName={doctorFullName}
-          doctorMatricula={doctorMatricula}
-          odontogramConditions={registro.odontogramas?.actual || []}
-          observaciones={registro.observaciones || ''}
-          printMode={true}
-        />
-      );
-
-      tempDiv.innerHTML = odontogramHTML;
-
-      // Insertar en el DOM oculto para poder computar estilos
-      document.body.appendChild(tempDiv);
-
-      // Inliner de estilos computados (preserva apariencia sin depender de hojas externas)
-      const inlineComputedStyles = (root: HTMLElement) => {
-        const elements = root.querySelectorAll('*');
-        elements.forEach((el) => {
-          try {
-            const cs = window.getComputedStyle(el as Element);
-            // Copiar propiedades relevantes
-            (el as HTMLElement).style.backgroundColor = cs.backgroundColor || '';
-            (el as HTMLElement).style.color = cs.color || '';
-            (el as HTMLElement).style.border = cs.border || '';
-            (el as HTMLElement).style.borderWidth = cs.borderWidth || '';
-            (el as HTMLElement).style.borderStyle = cs.borderStyle || '';
-            (el as HTMLElement).style.borderColor = cs.borderColor || '';
-            (el as HTMLElement).style.fontSize = cs.fontSize || '';
-            (el as HTMLElement).style.fontWeight = cs.fontWeight || '';
-            (el as HTMLElement).style.padding = cs.padding || '';
-            (el as HTMLElement).style.margin = cs.margin || '';
-            (el as HTMLElement).style.textAlign = cs.textAlign || '';
-            (el as HTMLElement).style.width = cs.width || '';
-            (el as HTMLElement).style.height = cs.height || '';
-          } catch (e) {
-            // ignorar elementos cross-origin u otros errores
-          }
-        });
-
-        // Para elementos SVG, fijar atributos `stroke` y `fill` desde estilos computados
-        const svgs = root.querySelectorAll('svg *');
-        svgs.forEach((svgEl) => {
-          try {
-            const cs = window.getComputedStyle(svgEl as Element);
-            const fill = cs.getPropertyValue('fill');
-            const stroke = cs.getPropertyValue('stroke');
-            if (fill && fill !== 'none') {
-              (svgEl as Element).setAttribute('fill', fill);
-            }
-            if (stroke && stroke !== 'none') {
-              (svgEl as Element).setAttribute('stroke', stroke);
-            }
-          } catch (e) {
-            // ignorar
-          }
-        });
-      };
-
-      // Aplicar inlining de estilos
-      inlineComputedStyles(tempDiv);
-
-      // Remover hojas de estilo y links que pueden contener funciones no soportadas (lab())
-      const styles = tempDiv.getElementsByTagName('style');
-      for (let i = styles.length - 1; i >= 0; i--) {
-        styles[i].parentNode?.removeChild(styles[i]);
-      }
-      const links = tempDiv.getElementsByTagName('link');
-      for (let i = links.length - 1; i >= 0; i--) {
-        links[i].parentNode?.removeChild(links[i]);
-      }
-
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          try {
-            // Eliminar hojas de estilo y enlaces en el documento clonado
-            const clonedStyles = clonedDoc.getElementsByTagName('style');
-            for (let i = clonedStyles.length - 1; i >= 0; i--) {
-              clonedStyles[i].parentNode?.removeChild(clonedStyles[i]);
-            }
-            const clonedLinks = clonedDoc.getElementsByTagName('link');
-            for (let i = clonedLinks.length - 1; i >= 0; i--) {
-              clonedLinks[i].parentNode?.removeChild(clonedLinks[i]);
-            }
-
-            // Eliminar atributos class y estilos que puedan contener lab() en los elementos clonados
-            const all = clonedDoc.getElementsByTagName('*');
-            for (let i = 0; i < all.length; i++) {
-              const el = all[i] as HTMLElement;
-              try {
-                el.removeAttribute('class');
-                const styleAttr = el.getAttribute('style');
-                if (styleAttr && styleAttr.includes('lab(')) {
-                  el.removeAttribute('style');
-                }
-              } catch (e) {
-                // ignorar
-              }
-            }
-          } catch (e) {
-            // ignorar
-          }
-        }
+      await printOdontogram({
+        patient,
+        patientName: patient?.nombreCompleto || '',
+        consultationDate: registro.fecha,
+        doctorName: doctorFullName,
+        doctorMatricula,
+        odontogramConditions: registro.odontogramas?.actual || [],
+        observaciones: registro.observaciones || ''
       });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgWidth = 190;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 10;
-
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= 277;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= 277;
-      }
-
-      const pdfBlob = pdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
-
-      document.body.removeChild(tempDiv);
     } catch (error) {
       console.error('❌ Error al imprimir odontograma:', error);
       alert('Error al generar la impresión. Intente nuevamente.');
