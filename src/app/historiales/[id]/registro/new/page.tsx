@@ -9,13 +9,13 @@ import { medicalRecordsService as medicalRecordsApiService } from '@/services/ap
 import { patientsService } from '@/services/api/patients.service';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  ArrowLeft, 
-  Save, 
-  FileText, 
-  Activity, 
-  Heart, 
-  Pill, 
+import {
+  ArrowLeft,
+  Save,
+  FileText,
+  Activity,
+  Heart,
+  Pill,
   TestTube,
   Calendar,
   User,
@@ -91,6 +91,48 @@ export default function NewMedicalRecordPage() {
   const [historicalOdontogram, setHistoricalOdontogram] = useState<ToothCondition[]>([]);
   const [currentOdontogram, setCurrentOdontogram] = useState<ToothCondition[]>([]);
   const [extractedTeeth, setExtractedTeeth] = useState<number[]>([]);
+  // Plan items created in Odontogram (diagnóstico / prestaciones planificadas)
+  const [planItems, setPlanItems] = useState<any[]>([]);
+
+  // Helper para obtener inicial de sector (usa número de diente para distinguir Palatina/Lingual e Incisal/Oclusal)
+  const getSectorInitial = (toothNumber: number | string | undefined, sector: string | undefined) => {
+    if (!toothNumber || !sector) return '';
+    const num = typeof toothNumber === 'string' ? Number(toothNumber) : toothNumber;
+    const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
+    const lastDigit = num % 10;
+    const isAnterior = [1,2,3].includes(lastDigit) || [61,62,63,71,72,73].includes(num);
+
+    switch (sector) {
+      case 'left': return 'M';
+      case 'right': return 'D';
+      case 'top': return 'V';
+      case 'bottom': return isUpper ? 'P' : 'L';
+      case 'center': return isAnterior ? 'I' : 'O';
+      default: return String(sector).toUpperCase();
+    }
+  };
+
+  const getPlanStatusLabel = (status?: string | null) => {
+    if (!status) return '-';
+    const s = String(status).toLowerCase();
+    if (s === 'planned' || s === 'plan' || s === 'pending') return 'En Plan';
+    if (s === 'executed' || s === 'done' || s === 'performed' || s === 'realizado') return 'Realizado';
+    // fallback: capitalize first letter
+    return String(status).charAt(0).toUpperCase() + String(status).slice(1);
+  };
+
+  const getPlanBadge = (status?: string | null) => {
+    const label = getPlanStatusLabel(status);
+    const s = String(status || '').toLowerCase();
+    const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+    if (s === 'planned' || s === 'plan' || s === 'pending') {
+      return <span className={`${base} bg-amber-100 text-amber-800`}>{label}</span>;
+    }
+    if (s === 'executed' || s === 'done' || s === 'performed' || s === 'realizado') {
+      return <span className={`${base} bg-emerald-100 text-emerald-800`}>{label}</span>;
+    }
+    return <span className={`${base} bg-gray-100 text-gray-800`}>{label}</span>;
+  };
   
   // Tipo de consulta - Por defecto odontología ya que es la única especialidad del sistema
   const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('odontologia');
@@ -101,6 +143,7 @@ export default function NewMedicalRecordPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [savingDiagnosis, setSavingDiagnosis] = useState(false);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isDraft, setIsDraft] = useState(false);
 
@@ -205,6 +248,10 @@ export default function NewMedicalRecordPage() {
             // El odontograma histórico se cargará desde el otro useEffect con todos los registros guardados
             if (draftRecord.odontogramas?.actual) {
               setCurrentOdontogram(draftRecord.odontogramas.actual);
+            }
+            // Cargar plan odontológico si existe en el borrador
+            if (draftRecord.odontogramas?.plan) {
+              setPlanItems(draftRecord.odontogramas.plan || []);
             }
 
             showSuccess('Borrador cargado', 'Se ha cargado el registro médico borrador de esta consulta');
@@ -385,6 +432,45 @@ export default function NewMedicalRecordPage() {
     setIsDirty(true);
   };
 
+  const handleSaveDiagnosis = async () => {
+    if (!planItems || planItems.length === 0) {
+      showError('No hay items', 'Agrega items al plan antes de guardar el diagnóstico');
+      return;
+    }
+
+    const container = document.querySelector('[data-medical-record-id]') as HTMLElement | null;
+    const MR_ID = existingRecordId || (container && container.dataset.medicalRecordId) || (window as any).__MEDICAL_RECORD_ID__;
+    if (!MR_ID) {
+      showError('Registro no guardado', 'Guarda el registro o el borrador antes de guardar el diagnóstico');
+      return;
+    }
+
+    setSavingDiagnosis(true);
+    try {
+      const res = await fetch(`/api/medical_records/${MR_ID}/odontogram/plan`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Clinic-Id': (window as any).__CLINIC_ID__ || '',
+          'X-Clinic-ID': (window as any).__CLINIC_ID__ || ''
+        },
+        body: JSON.stringify({ plan: planItems })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showSuccess('Diagnóstico guardado', 'El plan odontológico se guardó correctamente');
+      } else {
+        console.error('Error saving diagnosis', json);
+        showError('Error guardando diagnóstico', json?.errors?.[0] || 'Error al guardar el diagnóstico');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showError('Error guardando diagnóstico', e.message || 'Error inesperado');
+    } finally {
+      setSavingDiagnosis(false);
+    }
+  };
+
   // Función para guardar como borrador
   const handleSaveDraft = async () => {
     try {
@@ -428,6 +514,7 @@ export default function NewMedicalRecordPage() {
           odontogramas: {
             historico: historicalOdontogram,
             actual: currentOdontogram,
+            plan: planItems,
           },
         }),
         diagnostico: formData.diagnostico,
@@ -511,6 +598,7 @@ export default function NewMedicalRecordPage() {
           odontogramas: {
             historico: historicalOdontogram,
             actual: currentOdontogram,
+            plan: planItems,
           },
         }),
         diagnostico: formData.diagnostico,
@@ -857,6 +945,9 @@ export default function NewMedicalRecordPage() {
                         <Odontogram
                           initialConditions={currentOdontogram}
                           onUpdate={handleOdontogramUpdate}
+                          onPlanChange={setPlanItems}
+                          medicalRecordId={existingRecordId || undefined}
+                          initialPlan={planItems}
                           readOnly={false}
                           showLegend={false}
                           interventionColor="blue"
@@ -962,16 +1053,70 @@ export default function NewMedicalRecordPage() {
             <div className="px-6 py-6">
               {clinicalTab === 'diagnostico' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Diagnóstico
-                  </label>
-                  <textarea
-                    value={formData.diagnostico}
-                    onChange={(e) => handleInputChange('diagnostico', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    rows={6}
-                    placeholder="Diagnóstico presuntivo o definitivo..."
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Diagnóstico</label>
+                  {planItems && planItems.length > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan odontológico</label>
+                        <button
+                          onClick={handleSaveDiagnosis}
+                          disabled={savingDiagnosis}
+                          className="px-3 py-1.5 bg-amber-700 text-white rounded-md text-sm hover:bg-amber-800 disabled:opacity-60"
+                        >
+                          {savingDiagnosis ? 'Guardando...' : 'Guardar diagnóstico'}
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full table-auto border-collapse">
+                          <thead>
+                            <tr className="text-left text-xs text-gray-500">
+                              <th className="px-3 py-2">Pieza</th>
+                              <th className="px-3 py-2">Cara</th>
+                              <th className="px-3 py-2">Código</th>
+                              <th className="px-3 py-2">Procedimiento</th>
+                              <th className="px-3 py-2">Notas</th>
+                              <th className="px-3 py-2">Estado</th>
+                              <th className="px-3 py-2">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {planItems.map((p, idx) => (
+                              <tr key={p.id || idx} className="border-t border-gray-100">
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.tooth || p.pieza || '-'}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">{(() => {
+                                    const sectorRaw = p.surface || p.sector;
+                                    if (!sectorRaw) return '-';
+                                    if (typeof sectorRaw === 'string') {
+                                      // Normalize by removing spaces so we accept both "V-P-M" and "V - P - M"
+                                      const normalized = sectorRaw.replace(/\s+/g, '');
+                                      if (/^[A-Z](?:-[A-Z])*$/.test(normalized)) {
+                                        return normalized.split('-').join(' - ');
+                                      }
+                                      // If not initials string, try mapping known sector keys to initials
+                                      const mapped = getSectorInitial(p.tooth || p.pieza, sectorRaw as string);
+                                      return mapped || '-';
+                                    }
+                                    return '-';
+                                  })()}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.procedure_code || p.codigo || p.code || '-'}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.procedure_name || p.nombre || p.name || '-'}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.notes || p.notas || '-'}</td>
+                                <td className="px-3 py-2 text-sm">{getPlanBadge(p.status || p.estado)}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">
+                                  <button
+                                    
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    Realizar Prestación
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

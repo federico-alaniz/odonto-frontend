@@ -40,6 +40,8 @@ export type {
   ToothSector,
   ToothCondition,
   Odontogramas,
+  OdontogramPlanItem,
+  PerformedPractice,
   Prescripcion,
   ImagenDocumento,
   MedicalRecord,
@@ -49,4 +51,6 @@ export type {
   PatientSummary,
   MedicalRecordResponse,
   MedicalRecordsListResponse
+  ,
+  OdontogramMonthResponse
 } from './medical-record';
