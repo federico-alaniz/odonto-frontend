@@ -110,6 +110,180 @@ export default function Odontogram({
   const [savingPlan, setSavingPlan] = useState<boolean>(false);
   const [executingPlanId, setExecutingPlanId] = useState<string | null>(null);
 
+  const cloneToothConditions = (conditions: ToothCondition[]) =>
+    conditions.map((tooth) => ({
+      ...tooth,
+      sectors: tooth.sectors ? tooth.sectors.map((sector) => ({ ...sector })) : [],
+      procedures: tooth.procedures ? tooth.procedures.map((procedure) => ({ ...procedure })) : [],
+    }));
+
+  const normalizePlanStatus = (status?: string | null) => {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'realizado' || normalized === 'executed' || normalized === 'done' || normalized === 'performed') {
+      return 'realizado';
+    }
+    if (normalized === 'en_proceso' || normalized === 'en proceso' || normalized === 'in_progress') {
+      return 'en_proceso';
+    }
+    return 'planned';
+  };
+
+  const getPlanStatusPriority = (status?: string | null) => {
+    const normalized = normalizePlanStatus(status);
+    if (normalized === 'realizado') return 3;
+    if (normalized === 'en_proceso') return 2;
+    return 1;
+  };
+
+  const getPlanVisualColor = (status?: string | null) => {
+    const normalized = normalizePlanStatus(status);
+    if (normalized === 'realizado') return '#16a34a';
+    if (normalized === 'en_proceso') return '#2563eb';
+    return '#d97706';
+  };
+
+  const getProcedureKind = (item: any) => {
+    const procedureName = String(item?.procedure_name || item?.procedure || item?.nombre || item?.name || '').toLowerCase();
+    if (procedureName.includes('corona')) return 'crown';
+    if (procedureName.includes('prótesis') || procedureName.includes('protesis')) return 'prosthesis';
+    if (procedureName.includes('extracción') || procedureName.includes('extraccion')) return 'extraction';
+    return 'restoration';
+  };
+
+  const mapSurfaceTokenToSectors = (toothNumber: number, token: string): ToothSector['sector'][] => {
+    const cleaned = token.trim();
+    const upper = cleaned.toUpperCase();
+    const lower = cleaned.toLowerCase();
+
+    if (upper === 'V') return ['topUpper', 'topLower'];
+    if (upper === 'P' || upper === 'L') return ['bottom'];
+    if (upper === 'M') return ['left'];
+    if (upper === 'D') return ['right'];
+    if (upper === 'I' || upper === 'O') return ['centerMesial', 'centerDistal'];
+    if (upper === 'IM' || upper === 'OM') return ['centerMesial'];
+    if (upper === 'ID' || upper === 'OD') return ['centerDistal'];
+
+    if (lower === 'top') return ['topLower'];
+    if (lower === 'topupper') return ['topUpper'];
+    if (lower === 'toplower') return ['topLower'];
+    if (lower === 'bottom') return ['bottom'];
+    if (lower === 'left') return ['left'];
+    if (lower === 'right') return ['right'];
+    if (lower === 'center') return ['centerDistal'];
+    if (lower === 'centermesial') return ['centerMesial'];
+    if (lower === 'centerdistal') return ['centerDistal'];
+
+    const fallbackInitial = getSectorInitial(toothNumber, cleaned as ToothSector['sector']);
+    if (fallbackInitial) {
+      return mapSurfaceTokenToSectors(toothNumber, fallbackInitial);
+    }
+
+    return [];
+  };
+
+  const getPlanItemSectors = (item: any, toothNumber: number): ToothSector['sector'][] => {
+    const rawSurface = item?.surface || item?.sector;
+    if (!rawSurface) return [];
+
+    const tokens = String(rawSurface)
+      .split(/[-,;]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    return tokens.flatMap((token) => mapSurfaceTokenToSectors(toothNumber, token));
+  };
+
+  const buildPlannedToothConditions = (baseConditions: ToothCondition[], items: any[]) => {
+    const nextConditions = cloneToothConditions(baseConditions);
+
+    items.forEach((item) => {
+      const toothNumber = Number(item?.tooth || item?.pieza);
+      if (!toothNumber) return;
+
+      const tooth = nextConditions.find((entry) => entry.number === toothNumber);
+      if (!tooth) return;
+
+      const procedureKind = getProcedureKind(item);
+
+      if (procedureKind === 'crown') {
+        tooth.hasCrown = true;
+        tooth.hasProsthesis = false;
+        return;
+      }
+
+      if (procedureKind === 'prosthesis') {
+        tooth.hasProsthesis = true;
+        tooth.hasCrown = false;
+        return;
+      }
+
+      if (procedureKind === 'extraction') {
+        tooth.status = 'extraction';
+        tooth.hasCrown = false;
+        tooth.hasProsthesis = false;
+        tooth.sectors = [];
+        return;
+      }
+
+      const planSectors = getPlanItemSectors(item, toothNumber);
+      if (!tooth.sectors) tooth.sectors = [];
+
+      planSectors.forEach((sector) => {
+        const existingSector = tooth.sectors?.find((entry) => entry.sector === sector);
+        if (existingSector) {
+          existingSector.hasRestoration = true;
+        } else {
+          tooth.sectors?.push({ sector, hasRestoration: true });
+        }
+      });
+    });
+
+    return nextConditions;
+  };
+
+  const getBestMatchingPlanItem = (
+    toothNumber: number,
+    predicate: (item: any) => boolean
+  ) => {
+    const candidates = (planItems || []).filter((item) => {
+      const matchesTooth =
+        String(item?.tooth) === String(toothNumber) ||
+        String(item?.pieza) === String(toothNumber);
+      return matchesTooth && predicate(item);
+    });
+
+    if (candidates.length === 0) return null;
+
+    return candidates.sort((a, b) => getPlanStatusPriority(b?.status || b?.estado) - getPlanStatusPriority(a?.status || a?.estado))[0];
+  };
+
+  const getPlannedSectorColor = (toothNumber: number, sector: ToothSector['sector']) => {
+    if (!planMode) return null;
+
+    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => {
+      if (getProcedureKind(item) !== 'restoration') return false;
+      const sectors = getPlanItemSectors(item, toothNumber);
+      return sectors.includes(sector);
+    });
+
+    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
+  };
+
+  const getPlannedWholeToothColor = (toothNumber: number, kind: 'crown' | 'prosthesis' | 'extraction') => {
+    if (!planMode) return null;
+    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => getProcedureKind(item) === kind);
+    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
+  };
+
+  useEffect(() => {
+    setToothConditions((prev) => {
+      if (!initialConditions || initialConditions.length === 0) {
+        return prev;
+      }
+      return cloneToothConditions(initialConditions);
+    });
+  }, [initialConditions]);
+
   useEffect(() => {
     if (!initialPlan || !Array.isArray(initialPlan) || initialPlan.length === 0) return;
 
@@ -135,6 +309,10 @@ export default function Odontogram({
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPlan]);
+
+  useEffect(() => {
+    setPlannedToothConditions(buildPlannedToothConditions(toothConditions, planItems || []));
+  }, [planItems, toothConditions]);
 
   // If parent wants to register an external edit handler, provide a function
   useEffect(() => {
@@ -174,13 +352,17 @@ export default function Odontogram({
               const sectorInitials = String(proc.sector).replace(/\s+/g, '').split('-');
               const sectors: ToothSector[] = sectorInitials.map(initial => {
                 switch(initial) {
-                  case 'V': return { sector: 'top', hasRestoration: true };
+                  case 'V': return { sector: 'topLower', hasRestoration: true };
                   case 'P': 
                   case 'L': return { sector: 'bottom', hasRestoration: true };
                   case 'M': return { sector: 'left', hasRestoration: true };
                   case 'D': return { sector: 'right', hasRestoration: true };
+                  case 'IM':
+                  case 'OM': return { sector: 'centerMesial', hasRestoration: true };
+                  case 'ID':
+                  case 'OD': return { sector: 'centerDistal', hasRestoration: true };
                   case 'I': 
-                  case 'O': return { sector: 'center', hasRestoration: true };
+                  case 'O': return { sector: 'centerDistal', hasRestoration: true };
                   default: return undefined;
                 }
               }).filter((s): s is ToothSector => s !== undefined);
@@ -483,6 +665,30 @@ export default function Odontogram({
     return sectorData?.hasRestoration || false;
   };
 
+  const getDisplayedSectorColor = (toothId: number, sector: ToothSector['sector']) => {
+    const plannedColor = getPlannedSectorColor(toothId, sector);
+    if (plannedColor) return plannedColor;
+    return getSectorRestoration(toothId, sector) ? sectorColor : null;
+  };
+
+  const getDisplayedCrownColor = (toothId: number) => {
+    const plannedColor = getPlannedWholeToothColor(toothId, 'crown');
+    if (plannedColor) return plannedColor;
+    return getToothCrown(toothId) ? crownColor : null;
+  };
+
+  const getDisplayedProsthesisColor = (toothId: number) => {
+    const plannedColor = getPlannedWholeToothColor(toothId, 'prosthesis');
+    if (plannedColor) return plannedColor;
+    return getToothProsthesis(toothId) ? prosthesisColor : null;
+  };
+
+  const getDisplayedExtractionColor = (toothId: number) => {
+    const plannedColor = getPlannedWholeToothColor(toothId, 'extraction');
+    if (plannedColor) return plannedColor;
+    return getToothCondition(toothId) === 'extraction' ? extractionColor : null;
+  };
+
   // Mapear sectores SVG a nombres de caras dentales con abreviatura
   const getFaceName = (toothNumber: number | null, sector: ToothSector['sector'] | null) => {
     if (!toothNumber || !sector) return '';
@@ -527,9 +733,15 @@ export default function Odontogram({
       case 'right':
         return 'D'; // Distal
       case 'top':
+      case 'topUpper':
+      case 'topLower':
         return 'V'; // Vestibular
       case 'bottom':
         return isUpper ? 'P' : 'L'; // Palatina (P) en superior, Lingual (L) en inferior
+      case 'centerMesial':
+        return isAnterior ? 'IM' : 'OM';
+      case 'centerDistal':
+        return isAnterior ? 'ID' : 'OD';
       case 'center':
         return isAnterior ? 'I' : 'O'; // Incisal o Oclusal
       default:
@@ -544,11 +756,11 @@ export default function Odontogram({
     const tooth = active.find(t => t.number === toothNumber);
     if (!tooth || !tooth.sectors || tooth.sectors.length === 0) return '';
     // Orden predecible para mostrar: Vestibular, Palatina/Lingual, Mesial, Distal, Centro
-    const order: ToothSector['sector'][] = ['top', 'bottom', 'left', 'right', 'center'];
-    const initials = order
+    const order: ToothSector['sector'][] = ['topUpper', 'topLower', 'bottom', 'left', 'right', 'centerMesial', 'centerDistal', 'center'];
+    const initials = Array.from(new Set(order
       .filter(s => tooth.sectors!.some(ts => ts.sector === s && ts.hasRestoration))
       .map(s => getSectorInitial(toothNumber, s))
-      .filter(Boolean);
+      .filter(Boolean)));
     // Join with spaced hyphens for readability: "V - P - M"
     return initials.join(' - ');
   };
@@ -983,7 +1195,7 @@ export default function Odontogram({
             {/* topUpper: cerca del borde exterior */}
             <polygon
               points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y + 6} ${position.x},${position.y + 6}`}
-              fill={getSectorRestoration(number, 'topUpper') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'topUpper') || 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'topUpper', e)}
             >
@@ -993,9 +1205,9 @@ export default function Odontogram({
             {/* topLower: más cerca del centro (encima del cuadrado interior) */}
             <polygon
               points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
-              fill={getSectorRestoration(number, 'top') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'topLower') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
-              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'top', e); }}
+              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'topLower', e); }}
             >
               <title>{getFaceName(number, 'topLower')}</title>
             </polygon>
@@ -1003,7 +1215,7 @@ export default function Odontogram({
             {/* Sector inferior */}
             <polygon
               points={`${position.x + 11},${position.y + 33} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44} ${position.x},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'bottom') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'bottom') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
               onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'bottom', e); }}
             >
@@ -1013,7 +1225,7 @@ export default function Odontogram({
             {/* Sector izquierdo */}
             <polygon
               points={`${position.x},${position.y} ${position.x + 11},${position.y + 11} ${position.x + 11},${position.y + 33} ${position.x},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'left') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'left') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
               onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'left', e); }}
             >
@@ -1023,7 +1235,7 @@ export default function Odontogram({
             {/* Sector derecho */}
             <polygon
               points={`${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44}`}
-              fill={getSectorRestoration(number, 'right') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'right') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
               onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'right', e); }}
             >
@@ -1036,7 +1248,7 @@ export default function Odontogram({
               y={position.y + 11}
               width="11"
               height="22"
-              fill={getSectorRestoration(number, 'centerMesial') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'centerMesial') || 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'centerMesial', e)}
             >
@@ -1048,9 +1260,9 @@ export default function Odontogram({
               y={position.y + 11}
               width="11"
               height="22"
-              fill={getSectorRestoration(number, 'center') ? sectorColor : 'transparent'}
+              fill={getDisplayedSectorColor(number, 'centerDistal') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
-              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'center', e); }}
+              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'centerDistal', e); }}
             >
               <title>{getFaceName(number, 'centerDistal')}</title>
             </rect>
@@ -1110,76 +1322,76 @@ export default function Odontogram({
         {/* Mostrar sectores con restauraciones (modo solo lectura) */}
         {!sectorMode && (
           <>
-            {getSectorRestoration(number, 'topUpper') && (
+            {getDisplayedSectorColor(number, 'topUpper') && (
               <polygon
                 points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y + 6} ${position.x},${position.y + 6}`}
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'topUpper') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'topUpper')}
               >
                 <title>{getFaceName(number, 'topUpper')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'topLower') && (
+            {getDisplayedSectorColor(number, 'topLower') && (
               <polygon
                 points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'topLower') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'topLower')}
               >
                 <title>{getFaceName(number, 'topLower')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'bottom') && (
+            {getDisplayedSectorColor(number, 'bottom') && (
               <polygon
                 points={`${position.x + 11},${position.y + 33} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44} ${position.x},${position.y + 44}`}
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'bottom') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'bottom')}
               >
                 <title>{getFaceName(number, 'bottom')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'left') && (
+            {getDisplayedSectorColor(number, 'left') && (
               <polygon
                 points={`${position.x},${position.y} ${position.x + 11},${position.y + 11} ${position.x + 11},${position.y + 33} ${position.x},${position.y + 44}`}
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'left') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'left')}
               >
                 <title>{getFaceName(number, 'left')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'right') && (
+            {getDisplayedSectorColor(number, 'right') && (
               <polygon
                 points={`${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 33},${position.y + 33} ${position.x + 44},${position.y + 44}`}
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'right') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'right')}
               >
                 <title>{getFaceName(number, 'right')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'centerMesial') && (
+            {getDisplayedSectorColor(number, 'centerMesial') && (
               <rect
                 x={position.x + 11}
                 y={position.y + 11}
                 width="11"
                 height="22"
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'centerMesial') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'centerMesial')}
               >
                 <title>{getFaceName(number, 'centerMesial')}</title>
               </rect>
             )}
-            {getSectorRestoration(number, 'centerDistal') && (
+            {getDisplayedSectorColor(number, 'centerDistal') && (
               <rect
                 x={position.x + 22}
                 y={position.y + 11}
                 width="11"
                 height="22"
-                fill={sectorColor}
+                fill={getDisplayedSectorColor(number, 'centerDistal') || undefined}
                 className="cursor-pointer"
                 onClick={() => openViewFor(number, 'centerDistal')}
               >
@@ -1261,14 +1473,14 @@ export default function Odontogram({
         )} */}
         
         {/* X para dientes extraídos */}
-        {condition === 'extraction' && (
+        {getDisplayedExtractionColor(number) && (
           <>
             <line
               x1={position.x + 5}
               y1={position.y + 5}
               x2={position.x + 39}
               y2={position.y + 39}
-              stroke={extractionColor}
+              stroke={getDisplayedExtractionColor(number) || extractionColor}
               strokeWidth="3"
               className="pointer-events-none"
             />
@@ -1277,7 +1489,7 @@ export default function Odontogram({
               y1={position.y + 5}
               x2={position.x + 5}
               y2={position.y + 39}
-              stroke={extractionColor}
+              stroke={getDisplayedExtractionColor(number) || extractionColor}
               strokeWidth="3"
               className="pointer-events-none"
             />
@@ -1285,20 +1497,20 @@ export default function Odontogram({
         )}
         
         {/* Círculo para coronas - superpuesto y centrado al diente */}
-        {getToothCrown(number) && (
+        {getDisplayedCrownColor(number) && (
           <circle
             cx={position.x + 22}
             cy={position.y + 22}
             r="16"
             fill="none"
-            stroke={crownColor}
+            stroke={getDisplayedCrownColor(number) || crownColor}
             strokeWidth="3"
             className="pointer-events-none"
           />
         )}
 
         {/* Líneas paralelas para prótesis - superpuestas al diente */}
-        {getToothProsthesis(number) && (
+        {getDisplayedProsthesisColor(number) && (
           <>
             {/* Primera línea paralela */}
             <line
@@ -1306,7 +1518,7 @@ export default function Odontogram({
               y1={position.y + 18}
               x2={position.x + 36}
               y2={position.y + 18}
-              stroke={prosthesisColor}
+              stroke={getDisplayedProsthesisColor(number) || prosthesisColor}
               strokeWidth="3"
               className="pointer-events-none"
             />
@@ -1316,7 +1528,7 @@ export default function Odontogram({
               y1={position.y + 26}
               x2={position.x + 36}
               y2={position.y + 26}
-              stroke={prosthesisColor}
+              stroke={getDisplayedProsthesisColor(number) || prosthesisColor}
               strokeWidth="3"
               className="pointer-events-none"
             />

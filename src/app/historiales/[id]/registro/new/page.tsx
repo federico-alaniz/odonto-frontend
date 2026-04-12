@@ -154,9 +154,9 @@ export default function NewMedicalRecordPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
-  const [savingDiagnosis, setSavingDiagnosis] = useState(false);
   const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const [isDraft, setIsDraft] = useState(false);
+  const [prefilledFromRecord, setPrefilledFromRecord] = useState<{ id: string; fecha: string } | null>(null);
 
   const clinicId = useMemo(() => {
     return (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
@@ -165,6 +165,55 @@ export default function NewMedicalRecordPage() {
   const userId = useMemo(() => {
     return (currentUser as any)?.id;
   }, [currentUser?.id]);
+
+  const getMostRecentSavedRecord = (records: any[]) => {
+    return [...records]
+      .filter((record: any) => record.estado !== 'eliminado' && (!record.estadoRegistro || record.estadoRegistro === 'guardado'))
+      .sort((a: any, b: any) => {
+        const primaryA = new Date(a.fecha || a.updatedAt || a.createdAt || 0).getTime();
+        const primaryB = new Date(b.fecha || b.updatedAt || b.createdAt || 0).getTime();
+        if (primaryB !== primaryA) return primaryB - primaryA;
+
+        const secondaryA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const secondaryB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return secondaryB - secondaryA;
+      })[0] || null;
+  };
+
+  const applyPreviousClinicalBase = (record: any) => {
+    if (!record) return;
+
+    const previousPlan = Array.isArray(record.odontogramas?.plan) ? record.odontogramas.plan : [];
+    const previousOdontoData = record.datosOdontologicos || {};
+    const hasReusableData = Boolean(
+      (record.diagnostico && String(record.diagnostico).trim()) ||
+      (record.tratamiento && String(record.tratamiento).trim()) ||
+      (previousOdontoData.piezasDentales && String(previousOdontoData.piezasDentales).trim()) ||
+      (previousOdontoData.procedimiento && String(previousOdontoData.procedimiento).trim()) ||
+      (previousOdontoData.materiales && String(previousOdontoData.materiales).trim()) ||
+      previousPlan.length > 0
+    );
+
+    if (!hasReusableData) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      diagnostico: prev.diagnostico.trim() ? prev.diagnostico : (record.diagnostico || ''),
+      tratamiento: prev.tratamiento.trim() ? prev.tratamiento : (record.tratamiento || ''),
+      piezasDentales: prev.piezasDentales.trim() ? prev.piezasDentales : (previousOdontoData.piezasDentales || ''),
+      procedimiento: prev.procedimiento.trim() ? prev.procedimiento : (previousOdontoData.procedimiento || ''),
+      materiales: prev.materiales.trim() ? prev.materiales : (previousOdontoData.materiales || ''),
+    }));
+
+    if (previousPlan.length > 0) {
+      setPlanItems((prev) => (prev.length > 0 ? prev : previousPlan));
+    }
+
+    setPrefilledFromRecord({
+      id: record.id,
+      fecha: record.fecha,
+    });
+  };
 
   // Cargar datos del paciente y registro borrador si existe
   useEffect(() => {
@@ -266,6 +315,8 @@ export default function NewMedicalRecordPage() {
               setPlanItems(draftRecord.odontogramas.plan || []);
             }
 
+            setPrefilledFromRecord(null);
+
             showSuccess('Borrador cargado', 'Se ha cargado el registro médico borrador de esta consulta');
             setIsDirty(false); // Form starts clean when loading draft
           } else if (appointmentData?.motivo) {
@@ -274,6 +325,12 @@ export default function NewMedicalRecordPage() {
               ...prev,
               motivoConsulta: appointmentData.motivo
             }));
+
+            const latestSavedRecord = getMostRecentSavedRecord(recordsResponse.data);
+            applyPreviousClinicalBase(latestSavedRecord);
+          } else {
+            const latestSavedRecord = getMostRecentSavedRecord(recordsResponse.data);
+            applyPreviousClinicalBase(latestSavedRecord);
           }
         }
       } catch (error) {
@@ -285,6 +342,26 @@ export default function NewMedicalRecordPage() {
       loadAppointmentAndDraft();
     }
   }, [appointmentId, clinicId, userId, patientId]);
+
+  useEffect(() => {
+    const loadPreviousClinicalBase = async () => {
+      if (!clinicId || !patientId || appointmentId) {
+        return;
+      }
+
+      try {
+        const response = await medicalRecordsApiService.getPatientRecords(patientId, clinicId, 1, 1000);
+        if (response.success && response.data) {
+          const latestSavedRecord = getMostRecentSavedRecord(response.data);
+          applyPreviousClinicalBase(latestSavedRecord);
+        }
+      } catch (error) {
+        console.error('Error cargando base clínica previa:', error);
+      }
+    };
+
+    loadPreviousClinicalBase();
+  }, [appointmentId, clinicId, patientId]);
 
   // Inicializar odontograma actual con dientes extraídos como ausentes
   useEffect(() => {
@@ -523,45 +600,6 @@ export default function NewMedicalRecordPage() {
     // Update performedProcedures snapshot
     setPerformedProcedures(prev => prev.map(p => p.procId === procId ? { ...p, procedure: newName, notes: newNotes } : p));
     setIsDirty(true);
-  };
-
-  const handleSaveDiagnosis = async () => {
-    if (!planItems || planItems.length === 0) {
-      showError('No hay items', 'Agrega items al plan antes de guardar el diagnóstico');
-      return;
-    }
-
-    const container = document.querySelector('[data-medical-record-id]') as HTMLElement | null;
-    const MR_ID = existingRecordId || (container && container.dataset.medicalRecordId) || (window as any).__MEDICAL_RECORD_ID__;
-    if (!MR_ID) {
-      showError('Registro no guardado', 'Guarda el registro o el borrador antes de guardar el diagnóstico');
-      return;
-    }
-
-    setSavingDiagnosis(true);
-    try {
-      const res = await fetch(`/api/medical_records/${MR_ID}/odontogram/plan`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Clinic-Id': (window as any).__CLINIC_ID__ || '',
-          'X-Clinic-ID': (window as any).__CLINIC_ID__ || ''
-        },
-        body: JSON.stringify({ plan: planItems })
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        showSuccess('Diagnóstico guardado', 'El plan odontológico se guardó correctamente');
-      } else {
-        console.error('Error saving diagnosis', json);
-        showError('Error guardando diagnóstico', json?.errors?.[0] || 'Error al guardar el diagnóstico');
-      }
-    } catch (e: any) {
-      console.error(e);
-      showError('Error guardando diagnóstico', e.message || 'Error inesperado');
-    } finally {
-      setSavingDiagnosis(false);
-    }
   };
 
   // Función para guardar como borrador
@@ -895,6 +933,12 @@ export default function NewMedicalRecordPage() {
             </div>
           </div>
 
+          {prefilledFromRecord && !isDraft && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-900">
+              Se precargaron el diagnostico, el tratamiento y la tabla del plan desde la ultima consulta guardada del paciente del {new Date(prefilledFromRecord.fecha).toLocaleDateString('es-AR')}.
+            </div>
+          )}
+
           {/* 2. Información General */}
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <button
@@ -1150,16 +1194,7 @@ export default function NewMedicalRecordPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Diagnóstico</label>
                   {planItems && planItems.length > 0 && (
                     <div className="mt-4">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Plan odontológico</label>
-                        <button
-                          onClick={handleSaveDiagnosis}
-                          disabled={savingDiagnosis}
-                          className="px-3 py-1.5 bg-amber-700 text-white rounded-md text-sm hover:bg-amber-800 disabled:opacity-60"
-                        >
-                          {savingDiagnosis ? 'Guardando...' : 'Guardar diagnóstico'}
-                        </button>
-                      </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Plan odontológico</label>
                       <div className="overflow-x-auto">
                         <table className="min-w-full table-auto border-collapse">
                           <thead>
@@ -1313,6 +1348,16 @@ export default function NewMedicalRecordPage() {
                       </div>
                     </div>
                   )}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notas de diagnostico</label>
+                    <textarea
+                      value={formData.diagnostico}
+                      onChange={(e) => handleInputChange('diagnostico', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      rows={6}
+                      placeholder="Resumen clinico, impresion diagnostica y evolucion relevante..."
+                    />
+                  </div>
                 </div>
               )}
 
