@@ -38,9 +38,50 @@ export interface ToothCondition {
   notes?: string;
 }
 
+export interface OdontogramPlanItem {
+  id: string;
+  tooth: string;
+  surface: string;
+  procedure_code: string;
+  procedure_name: string;
+  quantity: number;
+  estimated_price?: number;
+  notes?: string;
+  planned_by: string;
+  planned_at: string; // ISO date
+  status: 'planned' | 'approved' | 'executed' | 'cancelled';
+  executed_reference?: string;
+}
+
+export interface PerformedPractice {
+  id: string;
+  appointment_id?: string;
+  date: string; // ISO
+  performed_by: string;
+  procedure_code: string;
+  procedure_name: string;
+  tooth: string;
+  surface: string;
+  quantity: number;
+  price?: number;
+  notes?: string;
+}
+
+export interface OdontogramMonthResponse {
+  patientId: string;
+  medicalRecordId: string;
+  year: number;
+  month: number;
+  odontogramConditions: ToothCondition[];
+  plan: OdontogramPlanItem[];
+  practices: PerformedPractice[];
+  aggregatedByTooth: Record<string, Record<string, PerformedPractice[]>>;
+}
+
 export interface Odontogramas {
   historico: ToothCondition[];
   actual: ToothCondition[];
+  plan?: OdontogramPlanItem[];
 }
 
 export interface Prescripcion {

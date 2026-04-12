@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/Spinner';
 import { useParams, useRouter } from 'next/navigation';
-import NextImage from 'next/image';
-import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, Pill, ClipboardList, FileText, Printer } from 'lucide-react';
+import { ArrowLeft, Info, User, Calendar, Stethoscope, Activity, ClipboardList, Printer } from 'lucide-react';
 import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords';
 import { dateHelper } from '@/utils/date-helper';
 import { patientsService } from '@/services/api/patients.service';
@@ -12,7 +11,10 @@ import { usersService } from '@/services/api/users.service';
 import { useAuth } from '@/hooks/useAuth';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
-import printOdontogram from '@/components/pdf/printOdontogram';
+import * as ReactDOM from 'react-dom/client';
+import { OdontogramTemplate } from '@/components/pdf/OdontogramTemplate';
+import html2canvas from 'html2canvas-pro';
+import jsPDF from 'jspdf';
 
 /**
  * Página de detalle de registro médico (Solo lectura)
@@ -142,33 +144,95 @@ export default function RegistroDetailPage() {
     setImageViewerOpen(true);
   };
 
+  const [isPrinting, setIsPrinting] = useState(false);
+
   const handlePrintOdontogram = async () => {
-    if (!clinicId) {
-      alert('No se pudo obtener la clínica');
+    if (!clinicId || !registro) {
+      alert('No hay registro médico disponible para imprimir.');
       return;
     }
+    if (isPrinting) return;
+    setIsPrinting(true);
+
+    const mountDiv = document.createElement('div');
+    mountDiv.style.cssText =
+      'position:fixed;top:0;left:-10000px;width:794px;' +
+      'background:#fff;z-index:-9999;overflow:visible;pointer-events:none;';
+    document.body.appendChild(mountDiv);
+    const reactRoot = ReactDOM.createRoot(mountDiv);
 
     try {
-      if (!registro) {
-        alert('No hay registro médico disponible para imprimir.');
-        return;
+      await new Promise<void>((resolve) => {
+        reactRoot.render(
+          <div style={{ width: '794px', background: '#ffffff' }}>
+            <OdontogramTemplate
+              patientName={patient?.nombreCompleto || ''}
+              patient={patient}
+              consultationDate={registro.fecha}
+              doctorName={doctorName || 'N/A'}
+              doctorMatricula={doctorLicense || ''}
+              odontogramConditions={registro.odontogramas?.actual || []}
+              observaciones={registro.observaciones || ''}
+              printMode={true}
+            />
+          </div>
+        );
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+      if ('fonts' in document) {
+        await (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
       }
 
-      const doctorFullName = doctorName || 'N/A';
-      const doctorMatricula = doctorLicense || '';
-
-      await printOdontogram({
-        patient,
-        patientName: patient?.nombreCompleto || '',
-        consultationDate: registro.fecha,
-        doctorName: doctorFullName,
-        doctorMatricula,
-        odontogramConditions: registro.odontogramas?.actual || [],
-        observaciones: registro.observaciones || ''
+      const canvas = await html2canvas(mountDiv, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
       });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const maxWidth = pageWidth - margin * 2;
+      const maxHeight = pageHeight - margin * 2;
+      const widthRatio = maxWidth / canvas.width;
+      const heightRatio = maxHeight / canvas.height;
+      const scale = Math.min(widthRatio, heightRatio);
+      const renderWidth = canvas.width * scale;
+      const renderHeight = canvas.height * scale;
+      const offsetX = (pageWidth - renderWidth) / 2;
+      const offsetY = (pageHeight - renderHeight) / 2;
+      const imageData = canvas.toDataURL('image/png');
+
+      pdf.addImage(imageData, 'PNG', offsetX, offsetY, renderWidth, renderHeight, undefined, 'FAST');
+
+      const safePatientName = (patient?.nombreCompleto || 'paciente')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .toLowerCase();
+
+      pdf.save(`odontograma_${safePatientName || 'paciente'}_${registroId}.pdf`);
+
     } catch (error) {
-      console.error('❌ Error al imprimir odontograma:', error);
-      alert('Error al generar la impresión. Intente nuevamente.');
+      console.error('❌ Error al generar PDF del odontograma:', error);
+      alert('Error al generar el PDF del odontograma. Intente nuevamente.');
+    } finally {
+      try {
+        reactRoot.unmount();
+        document.body.removeChild(mountDiv);
+      } catch {
+        // Ignorar errores de limpieza del DOM temporal.
+      }
+      setIsPrinting(false);
     }
   };
 
@@ -274,10 +338,20 @@ export default function RegistroDetailPage() {
             <div className="flex items-center space-x-3 w-full sm:w-auto">
               <button
                 onClick={handlePrintOdontogram}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+                disabled={isPrinting}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors shadow-sm"
               >
-                <Printer className="w-4 h-4" />
-                <span className="text-sm">Imprimir Odontograma</span>
+                {isPrinting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span className="text-sm">Generando PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Printer className="w-4 h-4" />
+                    <span className="text-sm">Imprimir Odontograma</span>
+                  </>
+                )}
               </button>
               <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <Info className="w-4 h-4 text-amber-600" />
