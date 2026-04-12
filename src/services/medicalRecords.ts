@@ -28,8 +28,12 @@ export interface ToothSector {
 }
 
 export interface ToothProcedure {
+  id?: string;
+  procId?: string;
   date: string; // ISO date
   procedure: string;
+  code?: string;
+  procedure_code?: string;
   sector?: ToothSector['sector'];
   performedBy?: string;
   notes?: string;

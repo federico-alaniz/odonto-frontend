@@ -93,6 +93,14 @@ export default function NewMedicalRecordPage() {
   const [extractedTeeth, setExtractedTeeth] = useState<number[]>([]);
   // Plan items created in Odontogram (diagnóstico / prestaciones planificadas)
   const [planItems, setPlanItems] = useState<any[]>([]);
+  // Procedimientos aplicados en 'Realizar prestaciones' (extraídos del odontograma actual)
+  const [performedProcedures, setPerformedProcedures] = useState<any[]>([]);
+  const [odontogramEditHandler, setOdontogramEditHandler] = useState<((proc: any) => void) | null>(null);
+
+  // Stable register handler to avoid recreating function each render
+  const registerEditHandler = useMemo(() => {
+    return (fn: (proc: any) => void) => setOdontogramEditHandler(() => fn);
+  }, []);
 
   // Helper para obtener inicial de sector (usa número de diente para distinguir Palatina/Lingual e Incisal/Oclusal)
   const getSectorInitial = (toothNumber: number | string | undefined, sector: string | undefined) => {
@@ -127,6 +135,9 @@ export default function NewMedicalRecordPage() {
     const base = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
     if (s === 'planned' || s === 'plan' || s === 'pending') {
       return <span className={`${base} bg-amber-100 text-amber-800`}>{label}</span>;
+    }
+    if (s === 'en_proceso' || s === 'en proceso') {
+      return <span className={`${base} bg-blue-100 text-blue-800`}>En Proceso</span>;
     }
     if (s === 'executed' || s === 'done' || s === 'performed' || s === 'realizado') {
       return <span className={`${base} bg-emerald-100 text-emerald-800`}>{label}</span>;
@@ -169,6 +180,7 @@ export default function NewMedicalRecordPage() {
           setPatient(response.data);
         } else {
           console.error('Paciente no encontrado');
+          console.log(performedProcedures)
           setPatient(null);
         }
       } catch (error: any) {
@@ -429,6 +441,87 @@ export default function NewMedicalRecordPage() {
   // Wrapper para actualizar odontograma y marcar como dirty
   const handleOdontogramUpdate = (conditions: ToothCondition[]) => {
     setCurrentOdontogram(conditions);
+    setIsDirty(true);
+    // Extraer procedimientos aplicados para la pestaña Tratamiento
+    const procs: any[] = [];
+    conditions.forEach((tooth) => {
+      (tooth.procedures || []).forEach((p: any, idx: number) => {
+        procs.push({
+          tooth: tooth.number,
+          sector: p.sector || null,
+          date: p.date || null,
+          procedure: p.procedure || p.name || '',
+          procedure_code: p.procedure_code || p.code || p.codigo || null,
+          notes: p.notes || p.notas || '',
+          procIndex: idx,
+          procId: p.id || p.procId || `noid_${tooth.number}_${idx}`
+        });
+      });
+    });
+    setPerformedProcedures(procs);
+  };
+
+  const handleEditPerformedProcedure = (procId: string) => {
+    // If Odontogram exposes an edit handler, prefer loading the procedure into its form for editing
+    if (odontogramEditHandler) {
+      const proc = performedProcedures.find(p => p.procId === procId);
+      if (!proc) return;
+
+      // Switch odontogram to 'realizar prestaciones' mode and pre-fill the form
+      odontogramEditHandler({
+        id: proc.procId,
+        procId: proc.procId,
+        tooth: proc.tooth,
+        sector: proc.sector,
+        date: proc.date,
+        procedure: proc.procedure,
+        notes: proc.notes,
+        mode: 'perform' // ensures odontogram switches to 'realizar prestaciones' tab
+      });
+
+      // Mark the matching plan item as 'en_proceso' in the diagnosis table
+      const toothNum = Number(proc.tooth);
+      const procName = (proc.procedure || '').toLowerCase();
+      setPlanItems(prev => prev.map(item => {
+        const itemTooth = Number(item.tooth || item.pieza);
+        const itemProc = (item.procedure_name || item.nombre || item.name || '').toLowerCase();
+        if (itemTooth === toothNum && itemProc === procName &&
+            (item.status === 'planned' || item.status === 'plan' || item.status === 'pending' || item.status === 'realizado')) {
+          return { ...item, status: 'en_proceso' };
+        }
+        return item;
+      }));
+
+      return;
+    }
+
+    // Fallback: inline prompt-based edit
+    let foundToothNumber: number | null = null;
+    let foundIndex: number | null = null;
+    let foundProc: any = null;
+    for (const tooth of currentOdontogram) {
+      const procs = tooth.procedures || [];
+      const idx = procs.findIndex((pp: any) => pp.id === procId || pp.procId === procId);
+      if (idx >= 0) {
+        foundToothNumber = tooth.number;
+        foundIndex = idx;
+        foundProc = procs[idx];
+        break;
+      }
+    }
+    if (!foundToothNumber || foundIndex === null || !foundProc) return;
+    const newName = window.prompt('Editar procedimiento', foundProc.procedure || foundProc.procedure_name || '');
+    if (newName === null) return; // cancel
+    const newNotes = window.prompt('Editar notas', foundProc.notes || foundProc.notas || '') || '';
+    // Update local odontogram state so save persists changes
+    setCurrentOdontogram(prev => prev.map(t => {
+      if (t.number !== foundToothNumber) return t;
+      const procs = (t.procedures || []).slice();
+      procs[foundIndex!] = { ...procs[foundIndex!], procedure: newName, notes: newNotes };
+      return { ...t, procedures: procs };
+    }));
+    // Update performedProcedures snapshot
+    setPerformedProcedures(prev => prev.map(p => p.procId === procId ? { ...p, procedure: newName, notes: newNotes } : p));
     setIsDirty(true);
   };
 
@@ -951,6 +1044,7 @@ export default function NewMedicalRecordPage() {
                           readOnly={false}
                           showLegend={false}
                           interventionColor="blue"
+                          registerEditHandler={registerEditHandler}
                         />
                       </div>
                     </div>
@@ -1086,29 +1180,131 @@ export default function NewMedicalRecordPage() {
                                 <td className="px-3 py-2 text-sm text-gray-700">{(() => {
                                     const sectorRaw = p.surface || p.sector;
                                     if (!sectorRaw) return '-';
-                                    if (typeof sectorRaw === 'string') {
-                                      // Normalize by removing spaces so we accept both "V-P-M" and "V - P - M"
-                                      const normalized = sectorRaw.replace(/\s+/g, '');
-                                      if (/^[A-Z](?:-[A-Z])*$/.test(normalized)) {
-                                        return normalized.split('-').join(' - ');
+                                    const toothNum = p.tooth || p.pieza;
+
+                                    const mapToInitials = (value: any): string[] | null => {
+                                      if (!value && value !== 0) return null;
+                                      // Already an initials string like "V - P - M" or "V-P-M"
+                                      if (typeof value === 'string') {
+                                        const trimmed = value.trim();
+                                        const normalized = trimmed.replace(/\s+/g, '');
+                                        if (/^[A-Z](?:-[A-Z])*$/.test(normalized)) {
+                                          return normalized.split('-');
+                                        }
+                                        // Single-letter initial
+                                        if (/^[A-Z]$/.test(trimmed)) return [trimmed];
+                                        // Comma or semicolon separated list (e.g. "top,left" or "V,P")
+                                        if (/[,;]/.test(trimmed)) {
+                                          const parts = trimmed.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+                                          const mapped = parts.map(pv => {
+                                            if (/^[A-Z]$/.test(pv)) return pv;
+                                            return getSectorInitial(toothNum, pv) || pv;
+                                          }).filter(Boolean);
+                                          return mapped.length ? mapped : null;
+                                        }
+                                        // Try mapping known sector key (e.g. 'top' -> 'V')
+                                        const single = getSectorInitial(toothNum, trimmed);
+                                        return single ? [single] : null;
                                       }
-                                      // If not initials string, try mapping known sector keys to initials
-                                      const mapped = getSectorInitial(p.tooth || p.pieza, sectorRaw as string);
-                                      return mapped || '-';
-                                    }
-                                    return '-';
+
+                                      if (Array.isArray(value)) {
+                                        const mapped = value.map((el: any) => {
+                                          if (!el && el !== 0) return null;
+                                          if (typeof el === 'string') {
+                                            const t = el.trim();
+                                            if (/^[A-Z]$/.test(t)) return t;
+                                            return getSectorInitial(toothNum, t) || t;
+                                          }
+                                          return String(el);
+                                        }).filter(Boolean) as string[];
+                                        return mapped.length ? mapped : null;
+                                      }
+
+                                      return null;
+                                    };
+
+                                    const initials = mapToInitials(sectorRaw);
+                                    if (!initials || initials.length === 0) return '-';
+                                    return initials.join(' - ');
                                   })()}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">{p.procedure_code || p.codigo || p.code || '-'}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">{p.procedure_name || p.nombre || p.name || '-'}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">{p.notes || p.notas || '-'}</td>
                                 <td className="px-3 py-2 text-sm">{getPlanBadge(p.status || p.estado)}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">
-                                  <button
+                                  <div className="flex gap-2">
+                                    {(p.status === 'planned' || p.status === 'pending' || p.status === 'plan') && (
+                                      <button
+                                        onClick={() => {
+                                          // Edit functionality - populate form with this item's data
+                                          const toothNum = Number(p.tooth || p.pieza);
+                                          if (toothNum && odontogramEditHandler) {
+                                            // Call the edit handler to populate the Odontogram form
+                                            odontogramEditHandler({
+                                              tooth: toothNum,
+                                              sector: p.surface || p.sector,
+                                              procedure: p.procedure_name || p.nombre || p.name,
+                                              procedure_code: p.procedure_code || p.codigo || p.code,
+                                              notes: p.notes || p.notas,
+                                              id: p.id || `${idx}`
+                                            });
+                                            // Remove the item from plan temporarily
+                                            setPlanItems(prev => prev.filter(item => (item.id || `${idx}`) !== (p.id || `${idx}`)));
+                                          }
+                                        }}
+                                        className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded text-sm"
+                                      >
+                                        Editar
+                                      </button>
+                                    )}
                                     
-                                    className="text-blue-600 hover:text-blue-800"
-                                  >
-                                    Realizar Prestación
-                                  </button>
+                                    {(p.status === 'planned' || p.status === 'pending' || p.status === 'plan') && (
+                                      <button
+                                        onClick={() => {
+                                          // Realizar Prestación functionality - transfer data to 'realizar prestaciones' mode
+                                          if (odontogramEditHandler) {
+                                            const toothNum = Number(p.tooth || p.pieza);
+                                            if (toothNum) {
+                                              // Call the edit handler to populate the Odontogram form in 'realizar prestaciones' mode
+                                              odontogramEditHandler({
+                                                tooth: toothNum,
+                                                sector: p.surface || p.sector,
+                                                procedure: p.procedure_name || p.nombre || p.name,
+                                                procedure_code: p.procedure_code || p.codigo || p.code,
+                                                notes: p.notes || p.notas,
+                                                id: p.id || `${idx}`,
+                                                mode: 'perform' // Indicate that we want to perform this procedure
+                                              });
+                                              // Update item status to 'En Proceso' instead of removing
+                                              console.log('🔄 Realizar Prestación: changing status to en_proceso', { 
+                                                itemId: p.id || `${idx}`, 
+                                                item: p 
+                                              });
+                                              setPlanItems(prev => {
+                                                console.log('🔄 Realizar Prestación: before update', prev);
+                                                const updated = prev.map(item => 
+                                                  (item.id || `${idx}`) === (p.id || `${idx}`)
+                                                    ? { ...item, status: 'en_proceso' }
+                                                    : item
+                                                );
+                                                console.log('🔄 Realizar Prestación: after update', updated);
+                                                return updated;
+                                              });
+                                            }
+                                          }
+                                        }}
+                                        className="bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded text-sm"
+                                      >
+                                        Realizar Prestación
+                                      </button>
+                                    )}
+                                    
+                                    {(p.status === 'en_proceso' || p.status === 'realizado') && (
+                                      <span className="text-gray-500 text-sm italic">
+                                        {p.status === 'en_proceso' ? 'En proceso' : 'Realizado'}
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -1122,9 +1318,61 @@ export default function NewMedicalRecordPage() {
 
               {clinicalTab === 'tratamiento' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tratamiento
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tratamiento</label>
+
+                  {/* Tabla de prestaciones realizadas en esta sesión (extraídas del odontograma) */}
+                  {performedProcedures && performedProcedures.length > 0 ? (
+                    <div className="overflow-x-auto mb-4">
+                      <table className="min-w-full table-auto border-collapse">
+                        <thead>
+                          <tr className="text-left text-xs text-gray-500">
+                            <th className="px-3 py-2">Fecha</th>
+                            <th className="px-3 py-2">Pieza</th>
+                            <th className="px-3 py-2">Cara</th>
+                            <th className="px-3 py-2">Código</th>
+                            <th className="px-3 py-2">Procedimiento</th>
+                            <th className="px-3 py-2">Notas</th>
+                            <th className="px-3 py-2">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {performedProcedures.map((p, idx) => (
+                            <tr key={p.procId || `${p.tooth}_${p.procIndex}_${idx}`} className="border-t border-gray-100">
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.date ? new Date(p.date).toLocaleDateString('es-AR') : '-'}</td>
+                                <td className="px-3 py-2 text-sm text-gray-700">{p.tooth || '-'}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{(() => {
+                                  const sectorRaw = p.sector;
+                                  if (!sectorRaw) return '-';
+                                  if (typeof sectorRaw === 'string') {
+                                    const normalized = sectorRaw.replace(/\s+/g, '');
+                                    if (/^[A-Z](?:-[A-Z])*$/.test(normalized)) return normalized.split('-').join(' - ');
+                                    const mapped = getSectorInitial(p.tooth, sectorRaw as string);
+                                    return mapped || '-';
+                                  }
+                                  return '-';
+                                })()}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{p.procedure_code || p.code || p.codigo || '-'}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{p.procedure || '-'}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">{p.notes || '-'}</td>
+                              <td className="px-3 py-2 text-sm text-gray-700">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditPerformedProcedure(p.procId)}
+                                  className="px-2 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                                >
+                                  Editar
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 mb-4">No hay prestaciones registradas en esta sesión.</div>
+                  )}
+
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notas de Tratamiento</label>
                   <textarea
                     value={formData.tratamiento}
                     onChange={(e) => handleInputChange('tratamiento', e.target.value)}
