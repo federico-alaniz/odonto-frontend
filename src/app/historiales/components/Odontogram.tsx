@@ -497,7 +497,13 @@ export default function Odontogram({
       case 'right':
         return 'Distal (D)';
       case 'top':
+      case 'topUpper':
+      case 'topLower':
         return 'Vestibular (V)';
+      case 'centerMesial':
+        return isAnterior ? 'Incisal mesial (IM)' : 'Oclusal mesial (OM)';
+      case 'centerDistal':
+        return isAnterior ? 'Incisal distal (ID)' : 'Oclusal distal (OD)';
       case 'bottom':
         return isUpper ? 'Palatina (P)' : 'Lingual (L)';
       case 'center':
@@ -973,14 +979,25 @@ export default function Odontogram({
         {/* Sectores clickeables para restauraciones */}
         {sectorMode && !readOnly && condition !== 'missing' && (
           <>
-            {/* Sector superior */}
+            {/* Sector superior dividido: topUpper (franja externa) y topLower (franja interna) */}
+            {/* topUpper: cerca del borde exterior */}
+            <polygon
+              points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y + 6} ${position.x},${position.y + 6}`}
+              fill={getSectorRestoration(number, 'topUpper') ? sectorColor : 'transparent'}
+              className="cursor-pointer hover:opacity-70 transition-all"
+              onClick={(e) => handleSectorClick(number, 'topUpper', e)}
+            >
+              <title>{getFaceName(number, 'topUpper')}</title>
+            </polygon>
+
+            {/* topLower: más cerca del centro (encima del cuadrado interior) */}
             <polygon
               points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
               fill={getSectorRestoration(number, 'top') ? sectorColor : 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
               onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'top', e); }}
             >
-              <title>{getFaceName(number, 'top')}</title>
+              <title>{getFaceName(number, 'topLower')}</title>
             </polygon>
             
             {/* Sector inferior */}
@@ -1013,17 +1030,29 @@ export default function Odontogram({
               <title>{getFaceName(number, 'right')}</title>
             </polygon>
             
-            {/* Sector centro */}
+            {/* Sector centro subdividido en Mesial (izquierda) y Distal (derecha) */}
             <rect
               x={position.x + 11}
               y={position.y + 11}
-              width="22"
+              width="11"
+              height="22"
+              fill={getSectorRestoration(number, 'centerMesial') ? sectorColor : 'transparent'}
+              className="cursor-pointer hover:opacity-70 transition-all"
+              onClick={(e) => handleSectorClick(number, 'centerMesial', e)}
+            >
+              <title>{getFaceName(number, 'centerMesial')}</title>
+            </rect>
+
+            <rect
+              x={position.x + 22}
+              y={position.y + 11}
+              width="11"
               height="22"
               fill={getSectorRestoration(number, 'center') ? sectorColor : 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
               onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'center', e); }}
             >
-              <title>{getFaceName(number, 'center')}</title>
+              <title>{getFaceName(number, 'centerDistal')}</title>
             </rect>
           </>
         )}
@@ -1081,14 +1110,24 @@ export default function Odontogram({
         {/* Mostrar sectores con restauraciones (modo solo lectura) */}
         {!sectorMode && (
           <>
-            {getSectorRestoration(number, 'top') && (
+            {getSectorRestoration(number, 'topUpper') && (
+              <polygon
+                points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y + 6} ${position.x},${position.y + 6}`}
+                fill={sectorColor}
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'topUpper')}
+              >
+                <title>{getFaceName(number, 'topUpper')}</title>
+              </polygon>
+            )}
+            {getSectorRestoration(number, 'topLower') && (
               <polygon
                 points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y} ${position.x},${position.y}`}
                 fill={sectorColor}
                 className="cursor-pointer"
-                onClick={() => openViewFor(number, 'top')}
+                onClick={() => openViewFor(number, 'topLower')}
               >
-                <title>{getFaceName(number, 'top')}</title>
+                <title>{getFaceName(number, 'topLower')}</title>
               </polygon>
             )}
             {getSectorRestoration(number, 'bottom') && (
@@ -1121,17 +1160,30 @@ export default function Odontogram({
                 <title>{getFaceName(number, 'right')}</title>
               </polygon>
             )}
-            {getSectorRestoration(number, 'center') && (
+            {getSectorRestoration(number, 'centerMesial') && (
               <rect
                 x={position.x + 11}
                 y={position.y + 11}
-                width="22"
+                width="11"
                 height="22"
                 fill={sectorColor}
                 className="cursor-pointer"
-                onClick={() => openViewFor(number, 'center')}
+                onClick={() => openViewFor(number, 'centerMesial')}
               >
-                <title>{getFaceName(number, 'center')}</title>
+                <title>{getFaceName(number, 'centerMesial')}</title>
+              </rect>
+            )}
+            {getSectorRestoration(number, 'centerDistal') && (
+              <rect
+                x={position.x + 22}
+                y={position.y + 11}
+                width="11"
+                height="22"
+                fill={sectorColor}
+                className="cursor-pointer"
+                onClick={() => openViewFor(number, 'centerDistal')}
+              >
+                <title>{getFaceName(number, 'centerDistal')}</title>
               </rect>
             )}
           </>
