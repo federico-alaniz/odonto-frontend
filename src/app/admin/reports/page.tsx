@@ -25,20 +25,23 @@ import {
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
-import { getSpecialtyName } from '@/utils';
 import { dateHelper } from '@/utils/date-helper';
 import { RoleGuard } from '@/components/guards/RoleGuards';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { medicalRecordsService } from '@/services/api/medical-records.service';
+import { printOdontogram } from '@/components/pdf/printOdontogram';
+import { formatDocumentNumber } from '@/utils/document-formatters';
 
 // Tipos de reportes
-type ReportType = 'appointments' | 'patients' | 'doctors' | 'treatments';
+type ReportType = 'appointments' | 'patients' | 'doctors' | 'treatments' | 'monthly_odontograms';
 
 interface ReportFilter {
-  startDate: string;
-  endDate: string;
+  month: number;
+  year: number;
   doctorId?: string;
   status?: string;
+  obraSocial?: string;
 }
 
 export default function ReportsPage() {
@@ -46,8 +49,8 @@ export default function ReportsPage() {
   const [activeReport, setActiveReport] = useState<ReportType>('appointments');
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ReportFilter>({
-    startDate: dateHelper.formatDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)),
-    endDate: dateHelper.today(),
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
   });
 
   const [data, setData] = useState<{
@@ -59,6 +62,10 @@ export default function ReportsPage() {
     patients: [],
     users: [],
   });
+
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const [patientSearchTerm, setPatientSearchTerm] = useState<string>('');
+  const [isGeneratingOdontogram, setIsGeneratingOdontogram] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -90,21 +97,38 @@ export default function ReportsPage() {
     }
   };
 
-  // Filtrar datos según fechas
+  // Obtener lista única de obras sociales de los pacientes
+  const insuranceList = useMemo(() => {
+    const insurances = data.patients
+      .map(p => p.obraSocial)
+      .filter((v, i, a) => v && a.indexOf(v) === i)
+      .sort();
+    return insurances;
+  }, [data.patients]);
+
+  // Filtrar datos según periodo seleccionado
   const filteredAppointments = useMemo(() => {
     return data.appointments.filter(apt => {
-      const date = apt.fecha;
-      const matchDate = date >= filters.startDate && date <= filters.endDate;
+      const date = new Date(apt.fecha);
+      const matchPeriod = date.getMonth() === filters.month && date.getFullYear() === filters.year;
       const matchDoctor = filters.doctorId ? apt.doctorId === filters.doctorId : true;
       const matchStatus = filters.status ? apt.estado === filters.status : true;
-      return matchDate && matchDoctor && matchStatus;
+      
+      // Si hay filtro de obra social, buscar el paciente para ver su obra social
+      let matchInsurance = true;
+      if (filters.obraSocial) {
+        const patient = data.patients.find(p => p.id === apt.pacienteId);
+        matchInsurance = patient?.obraSocial === filters.obraSocial;
+      }
+      
+      return matchPeriod && matchDoctor && matchStatus && matchInsurance;
     });
-  }, [data.appointments, filters]);
+  }, [data.appointments, filters, data.patients]);
 
   const filteredPatients = useMemo(() => {
     return data.patients.filter(p => {
-      const date = p.createdAt?.split('T')[0];
-      return date >= filters.startDate && date <= filters.endDate;
+      const date = new Date(p.createdAt);
+      return date.getMonth() === filters.month && date.getFullYear() === filters.year;
     });
   }, [data.patients, filters]);
 
@@ -164,6 +188,131 @@ export default function ReportsPage() {
       .slice(0, 10);
   }, [filteredAppointments]);
 
+  const handleGenerateMonthlyOdontogram = async (patientId: string) => {
+    const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+    if (!clinicId || !patientId) return;
+
+    try {
+      setIsGeneratingOdontogram(true);
+      setSelectedPatientId(patientId); // Asegurar que el spinner se muestre en el paciente correcto
+      
+      const recordsResponse = await medicalRecordsService.getPatientRecords(patientId, clinicId, 1, 1000);
+      if (!recordsResponse.success || !recordsResponse.data || recordsResponse.data.length === 0) {
+        alert('No se encontraron registros médicos para este paciente');
+        return;
+      }
+
+      // El mes del reporte viene de los filtros
+      const month = filters.month;
+      const year = filters.year;
+      const targetDate = new Date(year, month, 1);
+
+      // Encontrar el último registro con odontograma hasta esa fecha (inclusive) o cualquiera anterior
+      let lastRecord = recordsResponse.data
+        .filter((record: any) => {
+          const recordDate = new Date(record.fecha);
+          return recordDate.getFullYear() < year || (recordDate.getFullYear() === year && recordDate.getMonth() <= month);
+        })
+        .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())[0];
+
+      // Si no hay ninguno antes del mes, tomar el primer registro que exista del paciente (si existe alguno)
+      if (!lastRecord && recordsResponse.data.length > 0) {
+        lastRecord = recordsResponse.data.sort((a: any, b: any) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())[0];
+      }
+
+      const monthRecords = recordsResponse.data.filter((record: any) => {
+        let rYear, rMonth;
+        const dateStr = record.fecha || '';
+        if (dateStr.includes('-')) {
+          const parts = dateStr.split('T')[0].split('-');
+          rYear = parseInt(parts[0]);
+          rMonth = parseInt(parts[1]) - 1;
+        } else if (dateStr.includes('/')) {
+          const parts = dateStr.split('/');
+          rYear = parseInt(parts[2]);
+          rMonth = parseInt(parts[1]) - 1;
+        } else {
+          const d = new Date(dateStr);
+          rYear = d.getFullYear();
+          rMonth = d.getMonth();
+        }
+        return rYear === year && rMonth === month;
+      }).sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+      const targetRecord = monthRecords[0]; // El más reciente del mes
+
+      if (!targetRecord) {
+        alert(`No se encontraron registros para el mes ${month + 1}/${year}`);
+        return;
+      }
+
+      const monthlyProceduresList: any[] = [];
+      
+      // 1. Agregar la consulta principal del registro
+      monthlyProceduresList.push({
+        id: `consult-${targetRecord.id}`,
+        date: targetRecord.fecha,
+        procedure: targetRecord.motivoConsulta || 'Consulta Odontológica',
+        code: '01.01',
+        sector: 'center'
+      });
+
+      // 2. Extraer TODAS las prestaciones grabadas en el odontograma de ese registro
+      const currentOdontogramConditions = targetRecord.odontogramas?.actual || [];
+      currentOdontogramConditions.forEach((tooth: any) => {
+        if (tooth.procedures && Array.isArray(tooth.procedures)) {
+          tooth.procedures.forEach((proc: any) => {
+            // Incluimos todas las prestaciones que el profesional grabó en este registro
+            monthlyProceduresList.push({
+              ...proc,
+              toothNumber: tooth.number
+            });
+          });
+        }
+      });
+
+      const patient = data.patients.find(p => p.id === patientId);
+      const doctor = data.users.find(u => u.id === targetRecord.doctorId);
+
+      await printOdontogram({
+        patient,
+        patientName: patient ? `${patient.apellidos}, ${patient.nombres}` : 'Paciente',
+        consultationDate: targetDate,
+        doctorName: doctor ? `${doctor.apellidos}, ${doctor.nombres}` : 'Odontólogo',
+        doctorMatricula: doctor?.matricula || '',
+        odontogramConditions: currentOdontogramConditions,
+        monthlyProcedures: monthlyProceduresList,
+        observaciones: targetRecord.observaciones || '',
+        whiteMode: true
+      });
+
+    } catch (error) {
+      console.error('Error generating monthly odontogram:', error);
+      alert('Error al generar el odontograma mensual');
+    } finally {
+      setIsGeneratingOdontogram(false);
+    }
+  };
+
+  const filteredPatientsList = useMemo(() => {
+    let patients = data.patients;
+
+    // Filtro por búsqueda
+    if (patientSearchTerm) {
+      patients = patients.filter(p => 
+        `${p.nombres} ${p.apellidos}`.toLowerCase().includes(patientSearchTerm.toLowerCase()) ||
+        (p.numeroDocumento && p.numeroDocumento.includes(patientSearchTerm))
+      );
+    }
+
+    // Filtro por obra social (si estamos en el reporte de odontogramas)
+    if (activeReport === 'monthly_odontograms' && filters.obraSocial) {
+      patients = patients.filter(p => p.obraSocial === filters.obraSocial);
+    }
+
+    return patients.slice(0, 10);
+  }, [data.patients, patientSearchTerm, filters.obraSocial, activeReport]);
+
   // Exportar a CSV
   const exportCSV = () => {
     let exportData: any[] = [];
@@ -178,7 +327,7 @@ export default function ReportsPage() {
         Estado: a.estado,
         Motivo: a.motivo
       }));
-      filename = `reporte_turnos_${filters.startDate}_${filters.endDate}`;
+      filename = `reporte_turnos_${filters.month + 1}_${filters.year}`;
     } else if (activeReport === 'patients') {
       exportData = data.patients.map(p => ({
         Nombre: `${p.nombres} ${p.apellidos}`,
@@ -188,7 +337,7 @@ export default function ReportsPage() {
         Genero: p.genero,
         'Fecha Alta': p.createdAt?.split('T')[0]
       }));
-      filename = `reporte_pacientes_${dateHelper.today()}`;
+      filename = `reporte_pacientes_${filters.month + 1}_${filters.year}`;
     } else if (activeReport === 'doctors') {
       exportData = doctorStats.map(d => ({
         Doctor: d.name,
@@ -196,14 +345,14 @@ export default function ReportsPage() {
         Completados: d.completed,
         Cancelados: d.cancelled
       }));
-      filename = `reporte_desempeño_doctores_${filters.startDate}_${filters.endDate}`;
+      filename = `reporte_desempeño_doctores_${filters.month + 1}_${filters.year}`;
     } else if (activeReport === 'treatments') {
       exportData = treatmentStats.map(t => ({
         Tratamiento: t.name,
         Frecuencia: t.count,
         Porcentaje: `${t.percentage}%`
       }));
-      filename = `reporte_tratamientos_${filters.startDate}_${filters.endDate}`;
+      filename = `reporte_tratamientos_${filters.month + 1}_${filters.year}`;
     }
 
     if (exportData.length === 0) return;
@@ -317,7 +466,8 @@ export default function ReportsPage() {
                     { id: 'appointments', label: 'Turnos', icon: CalendarDays, color: 'text-blue-600', bg: 'bg-blue-50' },
                     { id: 'patients', label: 'Pacientes', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
                     { id: 'doctors', label: 'Doctores', icon: Stethoscope, color: 'text-purple-600', bg: 'bg-purple-50' },
-                    { id: 'treatments', label: 'Tratamientos', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-50' }
+                    { id: 'treatments', label: 'Tratamientos', icon: Activity, color: 'text-orange-600', bg: 'bg-orange-50' },
+                    { id: 'monthly_odontograms', label: 'Reportes Obras Sociales', icon: Printer, color: 'text-blue-700', bg: 'bg-blue-50' }
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -377,22 +527,31 @@ export default function ReportsPage() {
                   
                   <div className="flex items-center gap-3 flex-1">
                     <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Desde</label>
-                      <input 
-                        type="date" 
-                        value={filters.startDate}
-                        onChange={(e) => setFilters({...filters, startDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none"
-                      />
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Mes</label>
+                      <select 
+                        value={filters.month}
+                        onChange={(e) => setFilters({...filters, month: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none bg-white appearance-none"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={i}>
+                            {new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(2000, i, 1)).charAt(0).toUpperCase() + new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date(2000, i, 1)).slice(1)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Hasta</label>
-                      <input 
-                        type="date" 
-                        value={filters.endDate}
-                        onChange={(e) => setFilters({...filters, endDate: e.target.value})}
-                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none"
-                      />
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Año</label>
+                      <select 
+                        value={filters.year}
+                        onChange={(e) => setFilters({...filters, year: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none bg-white appearance-none"
+                      >
+                        {Array.from({ length: 5 }, (_, i) => {
+                          const year = new Date().getFullYear() - 2 + i;
+                          return <option key={year} value={year}>{year}</option>;
+                        })}
+                      </select>
                     </div>
                     {activeReport === 'appointments' && (
                       <div className="flex-1">
@@ -405,6 +564,21 @@ export default function ReportsPage() {
                           <option value="">Todos los doctores</option>
                           {data.users.filter(u => u.role === 'doctor' || u.isDoctor).map(d => (
                             <option key={d.id} value={d.id}>{d.nombres} {d.apellidos}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {activeReport === 'monthly_odontograms' && (
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 ml-1">Obra Social</label>
+                        <select 
+                          value={filters.obraSocial || ''}
+                          onChange={(e) => setFilters({...filters, obraSocial: e.target.value || undefined})}
+                          className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm outline-none appearance-none bg-white"
+                        >
+                          <option value="">Todas las obras sociales</option>
+                          {insuranceList.map(insurance => (
+                            <option key={insurance} value={insurance}>{insurance}</option>
                           ))}
                         </select>
                       </div>
@@ -433,9 +607,10 @@ export default function ReportsPage() {
                           {activeReport === 'patients' && 'Análisis de Pacientes'}
                           {activeReport === 'doctors' && 'Desempeño de Profesionales'}
                           {activeReport === 'treatments' && 'Estadísticas de Tratamientos'}
+                          {activeReport === 'monthly_odontograms' && 'Reportes Obras Sociales (Odontogramas Mensuales)'}
                         </h2>
                         <p className="text-gray-500 text-sm mt-1">
-                          Periodo: {dateHelper.formatDateBuenosAires(new Date(filters.startDate))} al {dateHelper.formatDateBuenosAires(new Date(filters.endDate))}
+                          Periodo: {new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(filters.year, filters.month))}
                         </p>
                       </div>
                       <div className="text-right">
@@ -503,6 +678,83 @@ export default function ReportsPage() {
                           {filteredAppointments.length > 20 && (
                             <div className="p-4 text-center border-t border-gray-100 bg-gray-50/30">
                               <p className="text-xs text-gray-500 font-medium">Mostrando los primeros 20 de {filteredAppointments.length} resultados. Descarga el CSV para ver el listado completo.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeReport === 'monthly_odontograms' && (
+                      <div className="space-y-8">
+                        <div className="bg-blue-50 border border-blue-100 p-6 rounded-3xl">
+                          <h3 className="text-xl font-bold text-blue-900 mb-2">Reportes para Obras Sociales</h3>
+                          <p className="text-blue-700 text-sm">
+                            Selecciona un paciente para generar su reporte mensual (Odontograma en blanco + Tabla de prestaciones).
+                            El reporte se basará en el periodo de <b>{new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(new Date(filters.year, filters.month))}</b>.
+                          </p>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <input
+                              type="text"
+                              placeholder="Buscar paciente por nombre o DNI..."
+                              value={patientSearchTerm}
+                              onChange={(e) => setPatientSearchTerm(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 outline-none"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {filteredPatientsList.map((p) => (
+                              <div 
+                                key={p.id} 
+                                className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
+                                  selectedPatientId === p.id 
+                                    ? 'border-blue-500 bg-blue-50/50 shadow-md' 
+                                    : 'border-gray-100 bg-white hover:border-blue-200 hover:shadow-sm'
+                                }`}
+                                onClick={() => setSelectedPatientId(p.id)}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                                    selectedPatientId === p.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                    {p.nombres.charAt(0)}{p.apellidos.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-gray-900">{p.apellidos}, {p.nombres}</h4>
+                                    <p className="text-xs text-gray-500">DNI: {p.numeroDocumento || '---'}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleGenerateMonthlyOdontogram(p.id);
+                                  }}
+                                  disabled={isGeneratingOdontogram}
+                                  className={`p-2 rounded-lg transition-all ${
+                                    isGeneratingOdontogram 
+                                      ? 'bg-gray-100 text-gray-400' 
+                                      : 'bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white'
+                                  }`}
+                                  title="Generar Odontograma PDF"
+                                >
+                                  {isGeneratingOdontogram && selectedPatientId === p.id ? (
+                                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                  ) : (
+                                    <Printer className="w-5 h-5" />
+                                  )}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          {filteredPatientsList.length === 0 && (
+                            <div className="text-center py-12 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                              <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                              <p className="text-gray-500">No se encontraron pacientes que coincidan con la búsqueda</p>
                             </div>
                           )}
                         </div>

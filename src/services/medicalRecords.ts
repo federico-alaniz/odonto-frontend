@@ -34,7 +34,7 @@ export interface ToothProcedure {
   procedure: string;
   code?: string;
   procedure_code?: string;
-  sector?: ToothSector['sector'];
+  sector?: string;
   performedBy?: string;
   notes?: string;
 }

@@ -506,6 +506,25 @@ export default function ReceptionPage() {
         return;
       }
 
+      // Filtrar prestaciones del mes de la consulta
+      const consultationDate = new Date(appointment.fecha);
+      const month = consultationDate.getMonth();
+      const year = consultationDate.getFullYear();
+      const monthlyProcedures: any[] = [];
+      
+      const odontogramConditions = lastRecordWithOdontogram?.odontogramas?.actual || [];
+      odontogramConditions.forEach((tooth: any) => {
+        if (tooth.procedures && Array.isArray(tooth.procedures)) {
+          tooth.procedures.forEach((proc: any) => {
+            const procDate = new Date(proc.date);
+            if (procDate.getMonth() === month && procDate.getFullYear() === year) {
+              monthlyProcedures.push(proc);
+            }
+          });
+        }
+      });
+      monthlyProcedures.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
       const patientObj = patients.find(p => p.id === appointment.patientId);
       await printOdontogram({
         patient: patientObj,
@@ -513,7 +532,8 @@ export default function ReceptionPage() {
         consultationDate: appointment.fecha,
         doctorName: doctorFullName,
         doctorMatricula,
-        odontogramConditions: lastRecordWithOdontogram?.odontogramas?.actual || []
+        odontogramConditions,
+        monthlyProcedures
       });
     } catch (error) {
       console.error('Error generando PDF del odontograma:', error);

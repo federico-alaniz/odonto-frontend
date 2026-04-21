@@ -1,5 +1,6 @@
 import React from 'react';
-import Odontogram, { ToothCondition } from '@/app/historiales/components/Odontogram';
+import Odontogram, { ToothCondition, ToothSector } from '@/app/historiales/components/Odontogram';
+import { ToothProcedure } from '@/services/medicalRecords';
 import { formatDocumentNumber } from '@/utils/document-formatters';
 
 export interface OdontogramTemplateProps {
@@ -10,9 +11,11 @@ export interface OdontogramTemplateProps {
   doctorName?: string;
   doctorMatricula?: string;
   odontogramConditions?: ToothCondition[];
+  monthlyProcedures?: (ToothProcedure & { toothNumber?: number })[];
   observaciones?: string;
   odontogramScale?: number;
   printMode?: boolean;
+  whiteMode?: boolean; // Nueva opción para modo blanco (Obra Social)
 }
 
 export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
@@ -22,9 +25,11 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
   doctorName = 'ODONTOLOGO',
   doctorMatricula = 'NRO DE MATRICULA PROFESIONAL',
   odontogramConditions = [],
+  monthlyProcedures = [],
   observaciones = '',
-  odontogramScale = 1.8
-  , printMode = false
+  odontogramScale = 1.8,
+  printMode = false,
+  whiteMode = false
 }) => {
   console.log('OdontogramTemplate - Consultation Data:', {
     patient,
@@ -276,15 +281,94 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
         </tr>
       </thead>
       <tbody className="text-[10px]">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <tr key={i}>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
-            <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
-          </tr>
-        ))}
+        {(() => {
+          const rows = [];
+          // Mostrar exactamente 6 filas
+          for (let i = 0; i < 6; i++) {
+            const proc = monthlyProcedures[i];
+            if (proc) {
+              const procDate = new Date(proc.date);
+              const day = !isNaN(procDate.getTime()) ? String(procDate.getDate()).padStart(2, '0') : '';
+              
+              // Usar el número de diente si viene en el objeto, sino buscarlo
+              const toothNum = proc.toothNumber || odontogramConditions.find(t => 
+                t.procedures?.some(p => p.id === proc.id || (p.date === proc.date && p.procedure === proc.procedure))
+              )?.number;
+              
+              let cara = '';
+              if (toothNum) {
+                // Mapear sector a inicial de cara
+                const toothWithSectors = odontogramConditions.find(t => t.number === toothNum);
+                if (toothWithSectors?.sectors && toothWithSectors.sectors.length > 0) {
+                  const hasR = (s: ToothSector['sector']) =>
+                    toothWithSectors.sectors!.some((ts) => ts.sector === s && ts.hasRestoration);
+                  const order: ToothSector['sector'][] = ['topUpper', 'topLower', 'bottom', 'left', 'right', 'center'];
+                  const initials = Array.from(new Set(order
+                    .filter((s) => {
+                      if (s === 'center') return hasR('center') || hasR('centerMesial') || hasR('centerDistal');
+                      return hasR(s);
+                    })
+                    .map((s) => {
+                      const num = toothNum;
+                      const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
+                      const lastDigit = num % 10;
+                      const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
+
+                      switch (s) {
+                        case 'left': return 'M';
+                        case 'right': return 'D';
+                        case 'top': case 'topUpper': case 'topLower': return 'V';
+                        case 'bottom': return isUpper ? 'P' : 'L';
+                        case 'center': return isAnterior ? 'I' : 'O';
+                        default: return '';
+                      }
+                    })
+                    .filter(Boolean)));
+                  cara = initials.join(' - ');
+                } else if (proc.sector) {
+                  const isUpper = (toothNum >= 11 && toothNum <= 28) || (toothNum >= 51 && toothNum <= 65);
+                  const lastDigit = toothNum % 10;
+                  const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(toothNum);
+
+                  switch (proc.sector) {
+                    case 'left': cara = 'M'; break;
+                    case 'right': cara = 'D'; break;
+                    case 'top': case 'topUpper': case 'topLower': cara = 'V'; break;
+                    case 'bottom': cara = isUpper ? 'P' : 'L'; break;
+                    case 'centerMesial':
+                    case 'centerDistal':
+                    case 'center':
+                      cara = isAnterior ? 'I' : 'O';
+                      break;
+                  }
+                }
+              }
+
+              rows.push(
+                <tr key={`proc-${i}`}>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]">{day}</td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px] font-bold">{toothNum || ''}</td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]">{cara}</td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px] font-bold text-[11px]">
+                    {proc.code || proc.procedure_code || proc.procedure || ''}
+                  </td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                </tr>
+              );
+            } else {
+              rows.push(
+                <tr key={`empty-${i}`}>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                  <td className="border border-black px-2 py-1 text-center align-middle h-[20px]"></td>
+                </tr>
+              );
+            }
+          }
+          return rows;
+        })()}
       </tbody>
     </table>
   );
@@ -295,7 +379,7 @@ export const OdontogramTemplate: React.FC<OdontogramTemplateProps> = ({
         <div className="relative m-0 p-0" style={{ width: '500px', height: `${130 * (odontogramScale / 1.2)}px` }}>
             <div className="absolute top-0 left-0 m-0 p-0" style={{ transform: `scale(${odontogramScale})`, transformOrigin: 'top left' }}>
             <Odontogram
-              initialConditions={odontogramConditions}
+              initialConditions={whiteMode ? [] : odontogramConditions}
               onUpdate={() => {}}
               readOnly={true}
               showLegend={false}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import Odontogram, { ToothCondition } from '../../../components/Odontogram';
@@ -28,6 +28,7 @@ import {
   Phone
 } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
+import { getOdontogramProcedureFaceInitials } from '@/utils/odontogram-face-initials';
 
 export default function NewMedicalRecordPage() {
   const params = useParams();
@@ -89,6 +90,7 @@ export default function NewMedicalRecordPage() {
   
   // Odontogramas
   const [historicalOdontogram, setHistoricalOdontogram] = useState<ToothCondition[]>([]);
+  const [historicalProcedureRows, setHistoricalProcedureRows] = useState<any[]>([]);
   const [currentOdontogram, setCurrentOdontogram] = useState<ToothCondition[]>([]);
   const [extractedTeeth, setExtractedTeeth] = useState<number[]>([]);
   // Plan items created in Odontogram (diagnóstico / prestaciones planificadas)
@@ -96,10 +98,16 @@ export default function NewMedicalRecordPage() {
   // Procedimientos aplicados en 'Realizar prestaciones' (extraídos del odontograma actual)
   const [performedProcedures, setPerformedProcedures] = useState<any[]>([]);
   const [odontogramEditHandler, setOdontogramEditHandler] = useState<((proc: any) => void) | null>(null);
+  const [planRowPendingEditId, setPlanRowPendingEditId] = useState<string | null>(null);
+  const [planEditCancelNonce, setPlanEditCancelNonce] = useState(0);
 
   // Stable register handler to avoid recreating function each render
-  const registerEditHandler = useMemo(() => {
-    return (fn: (proc: any) => void) => setOdontogramEditHandler(() => fn);
+  const registerEditHandler = useCallback((fn: (proc: any) => void) => {
+    setOdontogramEditHandler(() => fn);
+  }, []);
+
+  const handlePlanRowEditCommitted = useCallback(() => {
+    setPlanRowPendingEditId(null);
   }, []);
 
   // Helper para obtener inicial de sector (usa número de diente para distinguir Palatina/Lingual e Incisal/Oclusal)
@@ -387,11 +395,23 @@ export default function NewMedicalRecordPage() {
           // Acumular todas las intervenciones de registros previos guardados (no borradores)
           const toothMap = new Map<number, ToothCondition>();
 
+          const procedureAccumulator: any[] = [];
+
           response.data
             .filter((record: any) => !record.estadoRegistro || record.estadoRegistro === 'guardado')
             .forEach((record: any) => {
               if (record.odontogramas?.actual) {
                 record.odontogramas.actual.forEach((condition: any) => {
+                  if (condition.procedures?.length) {
+                    condition.procedures.forEach((proc: any) => {
+                      procedureAccumulator.push({
+                        ...proc,
+                        toothNumber: condition.number,
+                        sectors: condition.sectors || [],
+                      });
+                    });
+                  }
+
                   const existing = toothMap.get(condition.number);
                   
                   if (!existing) {
@@ -429,6 +449,14 @@ export default function NewMedicalRecordPage() {
                 });
               }
             });
+
+          procedureAccumulator.sort((a, b) => {
+            const ta = new Date(a.date || 0).getTime();
+            const tb = new Date(b.date || 0).getTime();
+            if (ta !== tb) return ta - tb;
+            return (a.toothNumber || 0) - (b.toothNumber || 0);
+          });
+          setHistoricalProcedureRows(procedureAccumulator);
 
           // Convertir el mapa a array
           const historicalConditions = Array.from(toothMap.values());
@@ -516,7 +544,7 @@ export default function NewMedicalRecordPage() {
   };
 
   // Wrapper para actualizar odontograma y marcar como dirty
-  const handleOdontogramUpdate = (conditions: ToothCondition[]) => {
+  const handleOdontogramUpdate = useCallback((conditions: ToothCondition[]) => {
     setCurrentOdontogram(conditions);
     setIsDirty(true);
     // Extraer procedimientos aplicados para la pestaña Tratamiento
@@ -536,7 +564,7 @@ export default function NewMedicalRecordPage() {
       });
     });
     setPerformedProcedures(procs);
-  };
+  }, []);
 
   const handleEditPerformedProcedure = (procId: string) => {
     // If Odontogram exposes an edit handler, prefer loading the procedure into its form for editing
@@ -1089,6 +1117,8 @@ export default function NewMedicalRecordPage() {
                           showLegend={false}
                           interventionColor="blue"
                           registerEditHandler={registerEditHandler}
+                          onPlanRowEditCommitted={handlePlanRowEditCommitted}
+                          planEditCancelNonce={planEditCancelNonce}
                         />
                       </div>
                     </div>
@@ -1110,6 +1140,59 @@ export default function NewMedicalRecordPage() {
                           showLegend={false}
                           interventionColor="red"
                         />
+                      </div>
+
+                      <div className="mt-8 border-t border-gray-100 pt-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <ClipboardList className="w-5 h-5 text-red-600" />
+                          <h3 className="text-lg font-semibold text-gray-900">Prestaciones del historial</h3>
+                        </div>
+                        {historicalProcedureRows.length > 0 ? (
+                          <div className="overflow-x-auto rounded-xl border border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pieza</th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cara</th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Procedimiento</th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notas</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {historicalProcedureRows.map((proc: any, idx: number) => {
+                                  const procDate = proc.date ? new Date(proc.date) : null;
+                                  const fecha =
+                                    procDate && !isNaN(procDate.getTime())
+                                      ? procDate.toLocaleDateString('es-AR')
+                                      : '—';
+                                  return (
+                                    <tr
+                                      key={`${proc.id || proc.procId || idx}_${proc.toothNumber}_${idx}`}
+                                      className="hover:bg-gray-50 transition-colors"
+                                    >
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{fecha}</td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{proc.toothNumber}</td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                        {getOdontogramProcedureFaceInitials(proc.toothNumber, proc.sector, proc.sectors)}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-red-600">
+                                        {proc.code || proc.procedure_code || '—'}
+                                      </td>
+                                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{proc.procedure}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">{proc.notes || '—'}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <p className="text-gray-500 italic text-sm">No hay prestaciones en el historial acumulado.</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1209,8 +1292,12 @@ export default function NewMedicalRecordPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {planItems.map((p, idx) => (
-                              <tr key={p.id || idx} className="border-t border-gray-100">
+                            {planItems.map((p, idx) => {
+                              const planRowKey = p.id ?? `plan_row_${idx}`;
+                              const isThisRowPlanEditing = planRowPendingEditId === planRowKey;
+                              const isPlanTableEditPending = planRowPendingEditId !== null;
+                              return (
+                              <tr key={planRowKey} className="border-t border-gray-100">
                                 <td className="px-3 py-2 text-sm text-gray-700">{p.tooth || p.pieza || '-'}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">{(() => {
                                     const sectorRaw = p.surface || p.sector;
@@ -1267,68 +1354,88 @@ export default function NewMedicalRecordPage() {
                                 <td className="px-3 py-2 text-sm text-gray-700">{p.notes || p.notas || '-'}</td>
                                 <td className="px-3 py-2 text-sm">{getPlanBadge(p.status || p.estado)}</td>
                                 <td className="px-3 py-2 text-sm text-gray-700">
-                                  <div className="flex gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     {(p.status === 'planned' || p.status === 'pending' || p.status === 'plan') && (
-                                      <button
-                                        onClick={() => {
-                                          // Edit functionality - populate form with this item's data
-                                          const toothNum = Number(p.tooth || p.pieza);
-                                          if (toothNum && odontogramEditHandler) {
-                                            // Call the edit handler to populate the Odontogram form
-                                            odontogramEditHandler({
-                                              tooth: toothNum,
-                                              sector: p.surface || p.sector,
-                                              procedure: p.procedure_name || p.nombre || p.name,
-                                              procedure_code: p.procedure_code || p.codigo || p.code,
-                                              notes: p.notes || p.notas,
-                                              id: p.id || `${idx}`
-                                            });
-                                            // Remove the item from plan temporarily
-                                            setPlanItems(prev => prev.filter(item => (item.id || `${idx}`) !== (p.id || `${idx}`)));
-                                          }
-                                        }}
-                                        className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded text-sm"
-                                      >
-                                        Editar
-                                      </button>
-                                    )}
-                                    
-                                    {(p.status === 'planned' || p.status === 'pending' || p.status === 'plan') && (
-                                      <button
-                                        onClick={() => {
-                                          // Realizar Prestación functionality - transfer data to 'realizar prestaciones' mode
-                                          if (odontogramEditHandler) {
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={isPlanTableEditPending}
+                                          onClick={() => {
                                             const toothNum = Number(p.tooth || p.pieza);
-                                            if (toothNum) {
-                                              // Call the edit handler to populate the Odontogram form in 'realizar prestaciones' mode
+                                            if (toothNum && odontogramEditHandler) {
+                                              setPlanRowPendingEditId(planRowKey);
                                               odontogramEditHandler({
                                                 tooth: toothNum,
                                                 sector: p.surface || p.sector,
                                                 procedure: p.procedure_name || p.nombre || p.name,
                                                 procedure_code: p.procedure_code || p.codigo || p.code,
                                                 notes: p.notes || p.notas,
-                                                id: p.id || `${idx}`,
-                                                mode: 'perform' // Indicate that we want to perform this procedure
+                                                id: planRowKey,
                                               });
-                                              // Update item status to 'En Proceso' instead of removing
-                                              console.log('🔄 Realizar Prestación: changing status to en_proceso', { 
-                                                itemId: p.id || `${idx}`, 
-                                                item: p 
+                                            }
+                                          }}
+                                          className={`px-2 py-1 rounded text-sm ${
+                                            isPlanTableEditPending
+                                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                          }`}
+                                        >
+                                          {isThisRowPlanEditing ? 'Editando...' : 'Editar'}
+                                        </button>
+                                        {isThisRowPlanEditing && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setPlanEditCancelNonce((n) => n + 1);
+                                              setPlanRowPendingEditId(null);
+                                            }}
+                                            className="text-xs text-gray-600 hover:text-gray-900 underline"
+                                          >
+                                            Cancelar
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                    
+                                    {(p.status === 'planned' || p.status === 'pending' || p.status === 'plan') && (
+                                      <button
+                                        type="button"
+                                        disabled={isPlanTableEditPending}
+                                        onClick={() => {
+                                          if (odontogramEditHandler) {
+                                            const toothNum = Number(p.tooth || p.pieza);
+                                            if (toothNum) {
+                                              console.log('Parent: Realizar Prestación clicked', {
+                                                tooth: toothNum,
+                                                sector: p.surface || p.sector,
+                                                procedure: p.procedure_name || p.nombre || p.name,
+                                                mode: 'perform'
                                               });
-                                              setPlanItems(prev => {
-                                                console.log('🔄 Realizar Prestación: before update', prev);
-                                                const updated = prev.map(item => 
-                                                  (item.id || `${idx}`) === (p.id || `${idx}`)
+                                              odontogramEditHandler({
+                                                tooth: toothNum,
+                                                sector: p.surface || p.sector,
+                                                procedure: p.procedure_name || p.nombre || p.name,
+                                                procedure_code: p.procedure_code || p.codigo || p.code,
+                                                notes: p.notes || p.notas,
+                                                id: planRowKey,
+                                                mode: 'perform'
+                                              });
+                                              setPlanItems((prev) =>
+                                                prev.map((item, itemIdx) => {
+                                                  const itemKey = item.id ?? `plan_row_${itemIdx}`;
+                                                  return itemKey === planRowKey
                                                     ? { ...item, status: 'en_proceso' }
-                                                    : item
-                                                );
-                                                console.log('🔄 Realizar Prestación: after update', updated);
-                                                return updated;
-                                              });
+                                                    : item;
+                                                })
+                                              );
                                             }
                                           }
                                         }}
-                                        className="bg-green-100 text-green-700 hover:bg-green-200 px-2 py-1 rounded text-sm"
+                                        className={`px-2 py-1 rounded text-sm ${
+                                          isPlanTableEditPending
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                                        }`}
                                       >
                                         Realizar Prestación
                                       </button>
@@ -1342,7 +1449,8 @@ export default function NewMedicalRecordPage() {
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                            );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -1393,6 +1501,10 @@ export default function NewMedicalRecordPage() {
                                     if (/^[A-Z](?:-[A-Z])*$/.test(normalized)) return normalized.split('-').join(' - ');
                                     const mapped = getSectorInitial(p.tooth, sectorRaw as string);
                                     return mapped || '-';
+                                  }
+                                  if (Array.isArray(sectorRaw)) {
+                                    const mapped = sectorRaw.map(s => getSectorInitial(p.tooth, s) || s).filter(Boolean);
+                                    return mapped.join(' - ');
                                   }
                                   return '-';
                                 })()}</td>
