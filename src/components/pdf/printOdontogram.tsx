@@ -11,7 +11,9 @@ export interface PrintOdontogramOptions {
   doctorName?: string;
   doctorMatricula?: string;
   odontogramConditions?: any[];
+  monthlyProcedures?: any[];
   observaciones?: string;
+  whiteMode?: boolean; // Nueva opción
 }
 
 export async function printOdontogram(opts: PrintOdontogramOptions) {
@@ -22,7 +24,9 @@ export async function printOdontogram(opts: PrintOdontogramOptions) {
     doctorName,
     doctorMatricula,
     odontogramConditions = [],
-    observaciones = ''
+    monthlyProcedures = [],
+    observaciones = '',
+    whiteMode = false
   } = opts;
 
   // Crear un elemento temporal para renderizar el odontograma
@@ -43,8 +47,10 @@ export async function printOdontogram(opts: PrintOdontogramOptions) {
       doctorName={doctorName}
       doctorMatricula={doctorMatricula}
       odontogramConditions={odontogramConditions}
+      monthlyProcedures={monthlyProcedures}
       observaciones={observaciones}
       printMode={true}
+      whiteMode={whiteMode}
     />
   );
 

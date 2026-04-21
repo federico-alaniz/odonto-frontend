@@ -1,9 +1,202 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ToothCondition, ToothSector } from '@/services/medicalRecords';
 
 export type { ToothCondition, ToothSector };
+
+// --- Helper Functions (Static) ---
+
+/** Clona condiciones dentales para evitar mutaciones directas. */
+const cloneToothConditions = (conditions: ToothCondition[]) =>
+  conditions.map((tooth) => ({
+    ...tooth,
+    sectors: tooth.sectors ? tooth.sectors.map((sector) => ({ ...sector })) : [],
+    procedures: tooth.procedures ? tooth.procedures.map((procedure) => ({ ...procedure })) : [],
+  }));
+
+/** Obtener inicial de un sector (según diente para diferenciar palatina/lingual y incisal/oclusal) */
+const getSectorInitial = (toothNumber: number | null, sector: string | null) => {
+  if (!toothNumber || !sector) return '';
+  const num = toothNumber;
+  const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
+  const lastDigit = num % 10;
+  const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
+
+  switch (sector) {
+    case 'left':
+      return 'M'; // Mesial
+    case 'right':
+      return 'D'; // Distal
+    case 'top':
+    case 'topUpper':
+    case 'topLower':
+      return 'V'; // Vestibular
+    case 'bottom':
+      return isUpper ? 'P' : 'L'; // Palatina (P) en superior, Lingual (L) en inferior
+    case 'centerMesial':
+      return isAnterior ? 'IM' : 'OM';
+    case 'centerDistal':
+      return isAnterior ? 'ID' : 'OD';
+    case 'center':
+      return isAnterior ? 'I' : 'O'; // Incisal o Oclusal
+    default:
+      return '';
+  }
+};
+
+/** Mapear sectores SVG a nombres de caras dentales con abreviatura */
+const getFaceName = (toothNumber: number | null, sector: string | null) => {
+  if (!toothNumber || !sector) return '';
+  const num = toothNumber;
+  const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
+  const lastDigit = num % 10;
+  const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
+
+  switch (sector) {
+    case 'left':
+      return 'Mesial (M)';
+    case 'right':
+      return 'Distal (D)';
+    case 'top':
+    case 'topUpper':
+    case 'topLower':
+      return 'Vestibular (V)';
+    case 'centerMesial':
+      return isAnterior ? 'Incisal mesial (IM)' : 'Oclusal mesial (OM)';
+    case 'centerDistal':
+      return isAnterior ? 'Incisal distal (ID)' : 'Oclusal distal (OD)';
+    case 'bottom':
+      return isUpper ? 'Palatina (P)' : 'Lingual (L)';
+    case 'center':
+      return isAnterior ? 'Incisal (I)' : 'Oclusal (O)';
+    default:
+      return sector;
+  }
+};
+
+const normalizePlanStatus = (status?: string | null) => {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'realizado' || normalized === 'executed' || normalized === 'done' || normalized === 'performed') {
+    return 'realizado';
+  }
+  if (normalized === 'en_proceso' || normalized === 'en proceso' || normalized === 'in_progress') {
+    return 'en_proceso';
+  }
+  return 'planned';
+};
+
+const getPlanStatusPriority = (status?: string | null) => {
+  const normalized = normalizePlanStatus(status);
+  if (normalized === 'realizado') return 3;
+  if (normalized === 'en_proceso') return 2;
+  return 1;
+};
+
+const getPlanVisualColor = (status?: string | null) => {
+  const normalized = normalizePlanStatus(status);
+  if (normalized === 'realizado') return '#16a34a';
+  if (normalized === 'en_proceso') return '#2563eb';
+  return '#d97706';
+};
+
+const getProcedureKind = (item: any) => {
+  const procedureName = String(item?.procedure_name || item?.procedure || item?.nombre || item?.name || '').toLowerCase();
+  if (procedureName.includes('corona')) return 'crown';
+  if (procedureName.includes('prótesis') || procedureName.includes('protesis')) return 'prosthesis';
+  if (procedureName.includes('extracción') || procedureName.includes('extraccion')) return 'extraction';
+  if (procedureName.includes('obturación') || procedureName.includes('obturacion') || procedureName.includes('restauración') || procedureName.includes('restauracion')) return 'restoration';
+  return 'restoration';
+};
+
+const mapSurfaceTokenToSectors = (toothNumber: number, token: string): ToothSector['sector'][] => {
+  const cleaned = token.trim();
+  const upper = cleaned.toUpperCase();
+  const lower = cleaned.toLowerCase();
+
+  if (upper === 'V') return ['topUpper', 'topLower'];
+  if (upper === 'P' || upper === 'L') return ['bottom'];
+  if (upper === 'M') return ['left'];
+  if (upper === 'D') return ['right'];
+  if (upper === 'I' || upper === 'O' || upper === 'IM' || upper === 'OM' || upper === 'ID' || upper === 'OD') return ['center'];
+
+  if (lower === 'top') return ['topLower'];
+  if (lower === 'topupper') return ['topUpper'];
+  if (lower === 'toplower') return ['topLower'];
+  if (lower === 'bottom') return ['bottom'];
+  if (lower === 'left') return ['left'];
+  if (lower === 'right') return ['right'];
+  if (lower === 'center' || lower === 'centermesial' || lower === 'centerdistal') return ['center'];
+
+  const fallbackInitial = getSectorInitial(toothNumber, cleaned as ToothSector['sector']);
+  if (fallbackInitial) {
+    return mapSurfaceTokenToSectors(toothNumber, fallbackInitial);
+  }
+
+  return [];
+};
+
+const getPlanItemSectors = (item: any, toothNumber: number): ToothSector['sector'][] => {
+  const rawSurface = item?.surface || item?.sector;
+  if (!rawSurface) return [];
+
+  const tokens = String(rawSurface)
+    .split(/[-,;]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return tokens.flatMap((token) => mapSurfaceTokenToSectors(toothNumber, token));
+};
+
+const buildPlannedToothConditions = (baseConditions: ToothCondition[], items: any[]) => {
+  const nextConditions = cloneToothConditions(baseConditions);
+
+  items.forEach((item) => {
+    const toothNumber = Number(item?.tooth || item?.pieza);
+    if (!toothNumber) return;
+
+    const tooth = nextConditions.find((entry) => entry.number === toothNumber);
+    if (!tooth) return;
+
+    const procedureKind = getProcedureKind(item);
+
+    if (procedureKind === 'crown') {
+      tooth.hasCrown = true;
+      tooth.hasProsthesis = false;
+      return;
+    }
+
+    if (procedureKind === 'prosthesis') {
+      tooth.hasProsthesis = true;
+      tooth.hasCrown = false;
+      return;
+    }
+
+    if (procedureKind === 'extraction') {
+      tooth.status = 'extraction';
+      tooth.hasCrown = false;
+      tooth.hasProsthesis = false;
+      tooth.sectors = [];
+      return;
+    }
+
+    const planSectors = getPlanItemSectors(item, toothNumber);
+    if (!tooth.sectors) tooth.sectors = [];
+
+    planSectors.forEach((sector) => {
+      const existingSector = tooth.sectors?.find((entry) => entry.sector === sector);
+      if (existingSector) {
+        existingSector.hasRestoration = true;
+      } else {
+        tooth.sectors?.push({ sector, hasRestoration: true });
+      }
+    });
+  });
+
+  return nextConditions;
+};
+
+// --- Component ---
 
 interface OdontogramProps {
   initialConditions?: ToothCondition[];
@@ -18,6 +211,10 @@ interface OdontogramProps {
   medicalRecordId?: string;
   initialPlan?: any[];
   registerEditHandler?: (fn: (proc: any) => void) => void;
+  /** Llamado cuando se confirma agregar/actualizar un ítem del plan (incluye guardar una edición). */
+  onPlanRowEditCommitted?: () => void;
+  /** Incrementar desde el padre para cancelar edición del plan y limpiar `editingProcId` en el odontograma. */
+  planEditCancelNonce?: number;
 }
 
 export default function Odontogram({ 
@@ -32,7 +229,9 @@ export default function Odontogram({
   printMode = false,
   medicalRecordId,
   initialPlan,
-  registerEditHandler
+  registerEditHandler,
+  onPlanRowEditCommitted,
+  planEditCancelNonce
 }: OdontogramProps) {
 
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
@@ -58,6 +257,9 @@ export default function Odontogram({
 
     return defaultConditions;
   });
+
+  const toothConditionsRef = useRef(toothConditions);
+  toothConditionsRef.current = toothConditions;
 
   // Estado separado para planificaciones visuales (no alteran el estado clínico)
   const [plannedToothConditions, setPlannedToothConditions] = useState<ToothCondition[]>(() => {
@@ -86,6 +288,14 @@ export default function Odontogram({
   const [planProcedureName, setPlanProcedureName] = useState<string>('');
   const [showProcedureDropdown, setShowProcedureDropdown] = useState<boolean>(false);
   const procedureDropdownRef = useRef<HTMLDivElement | null>(null);
+  const lastPlanEditCancelNonceRef = useRef(0);
+
+  useEffect(() => {
+    if (planEditCancelNonce == null || planEditCancelNonce <= 0) return;
+    if (planEditCancelNonce === lastPlanEditCancelNonceRef.current) return;
+    lastPlanEditCancelNonceRef.current = planEditCancelNonce;
+    setEditingProcId(null);
+  }, [planEditCancelNonce]);
 
   // Close dropdown on outside click or Escape
   useEffect(() => {
@@ -110,219 +320,31 @@ export default function Odontogram({
   const [savingPlan, setSavingPlan] = useState<boolean>(false);
   const [executingPlanId, setExecutingPlanId] = useState<string | null>(null);
 
-  const cloneToothConditions = (conditions: ToothCondition[]) =>
-    conditions.map((tooth) => ({
-      ...tooth,
-      sectors: tooth.sectors ? tooth.sectors.map((sector) => ({ ...sector })) : [],
-      procedures: tooth.procedures ? tooth.procedures.map((procedure) => ({ ...procedure })) : [],
-    }));
-
-  const normalizePlanStatus = (status?: string | null) => {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'realizado' || normalized === 'executed' || normalized === 'done' || normalized === 'performed') {
-      return 'realizado';
-    }
-    if (normalized === 'en_proceso' || normalized === 'en proceso' || normalized === 'in_progress') {
-      return 'en_proceso';
-    }
-    return 'planned';
-  };
-
-  const getPlanStatusPriority = (status?: string | null) => {
-    const normalized = normalizePlanStatus(status);
-    if (normalized === 'realizado') return 3;
-    if (normalized === 'en_proceso') return 2;
-    return 1;
-  };
-
-  const getPlanVisualColor = (status?: string | null) => {
-    const normalized = normalizePlanStatus(status);
-    if (normalized === 'realizado') return '#16a34a';
-    if (normalized === 'en_proceso') return '#2563eb';
-    return '#d97706';
-  };
-
-  const getProcedureKind = (item: any) => {
-    const procedureName = String(item?.procedure_name || item?.procedure || item?.nombre || item?.name || '').toLowerCase();
-    if (procedureName.includes('corona')) return 'crown';
-    if (procedureName.includes('prótesis') || procedureName.includes('protesis')) return 'prosthesis';
-    if (procedureName.includes('extracción') || procedureName.includes('extraccion')) return 'extraction';
-    return 'restoration';
-  };
-
-  const mapSurfaceTokenToSectors = (toothNumber: number, token: string): ToothSector['sector'][] => {
-    const cleaned = token.trim();
-    const upper = cleaned.toUpperCase();
-    const lower = cleaned.toLowerCase();
-
-    if (upper === 'V') return ['topUpper', 'topLower'];
-    if (upper === 'P' || upper === 'L') return ['bottom'];
-    if (upper === 'M') return ['left'];
-    if (upper === 'D') return ['right'];
-    if (upper === 'I' || upper === 'O') return ['centerMesial', 'centerDistal'];
-    if (upper === 'IM' || upper === 'OM') return ['centerMesial'];
-    if (upper === 'ID' || upper === 'OD') return ['centerDistal'];
-
-    if (lower === 'top') return ['topLower'];
-    if (lower === 'topupper') return ['topUpper'];
-    if (lower === 'toplower') return ['topLower'];
-    if (lower === 'bottom') return ['bottom'];
-    if (lower === 'left') return ['left'];
-    if (lower === 'right') return ['right'];
-    if (lower === 'center') return ['centerDistal'];
-    if (lower === 'centermesial') return ['centerMesial'];
-    if (lower === 'centerdistal') return ['centerDistal'];
-
-    const fallbackInitial = getSectorInitial(toothNumber, cleaned as ToothSector['sector']);
-    if (fallbackInitial) {
-      return mapSurfaceTokenToSectors(toothNumber, fallbackInitial);
-    }
-
-    return [];
-  };
-
-  const getPlanItemSectors = (item: any, toothNumber: number): ToothSector['sector'][] => {
-    const rawSurface = item?.surface || item?.sector;
-    if (!rawSurface) return [];
-
-    const tokens = String(rawSurface)
-      .split(/[-,;]/)
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-    return tokens.flatMap((token) => mapSurfaceTokenToSectors(toothNumber, token));
-  };
-
-  const buildPlannedToothConditions = (baseConditions: ToothCondition[], items: any[]) => {
-    const nextConditions = cloneToothConditions(baseConditions);
-
-    items.forEach((item) => {
-      const toothNumber = Number(item?.tooth || item?.pieza);
-      if (!toothNumber) return;
-
-      const tooth = nextConditions.find((entry) => entry.number === toothNumber);
-      if (!tooth) return;
-
-      const procedureKind = getProcedureKind(item);
-
-      if (procedureKind === 'crown') {
-        tooth.hasCrown = true;
-        tooth.hasProsthesis = false;
-        return;
-      }
-
-      if (procedureKind === 'prosthesis') {
-        tooth.hasProsthesis = true;
-        tooth.hasCrown = false;
-        return;
-      }
-
-      if (procedureKind === 'extraction') {
-        tooth.status = 'extraction';
-        tooth.hasCrown = false;
-        tooth.hasProsthesis = false;
-        tooth.sectors = [];
-        return;
-      }
-
-      const planSectors = getPlanItemSectors(item, toothNumber);
-      if (!tooth.sectors) tooth.sectors = [];
-
-      planSectors.forEach((sector) => {
-        const existingSector = tooth.sectors?.find((entry) => entry.sector === sector);
-        if (existingSector) {
-          existingSector.hasRestoration = true;
-        } else {
-          tooth.sectors?.push({ sector, hasRestoration: true });
-        }
-      });
-    });
-
-    return nextConditions;
-  };
-
-  const getBestMatchingPlanItem = (
-    toothNumber: number,
-    predicate: (item: any) => boolean
-  ) => {
-    const candidates = (planItems || []).filter((item) => {
-      const matchesTooth =
-        String(item?.tooth) === String(toothNumber) ||
-        String(item?.pieza) === String(toothNumber);
-      return matchesTooth && predicate(item);
-    });
-
-    if (candidates.length === 0) return null;
-
-    return candidates.sort((a, b) => getPlanStatusPriority(b?.status || b?.estado) - getPlanStatusPriority(a?.status || a?.estado))[0];
-  };
-
-  const getPlannedSectorColor = (toothNumber: number, sector: ToothSector['sector']) => {
-    if (!planMode) return null;
-
-    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => {
-      if (getProcedureKind(item) !== 'restoration') return false;
-      const sectors = getPlanItemSectors(item, toothNumber);
-      return sectors.includes(sector);
-    });
-
-    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
-  };
-
-  const getPlannedWholeToothColor = (toothNumber: number, kind: 'crown' | 'prosthesis' | 'extraction') => {
-    if (!planMode) return null;
-    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => getProcedureKind(item) === kind);
-    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
-  };
-
+  // Use a ref for onUpdate to avoid re-registering the edit handler every time it changes
+  // although it should be stable if the parent uses useCallback.
+  const onUpdateRef = useRef(onUpdate);
   useEffect(() => {
-    setToothConditions((prev) => {
-      if (!initialConditions || initialConditions.length === 0) {
-        return prev;
-      }
-      return cloneToothConditions(initialConditions);
-    });
-  }, [initialConditions]);
-
-  useEffect(() => {
-    if (!initialPlan || !Array.isArray(initialPlan) || initialPlan.length === 0) return;
-
-    setPlanItems(prev => {
-      // Case 1: local plan is empty — initialize from parent.
-      if (prev.length === 0) return initialPlan;
-
-      // Case 2: sync status changes from parent for existing items
-      // (e.g. parent sets 'en_proceso' after user clicks "Realizar Prestación").
-      const hasStatusChange = initialPlan.some(extItem => {
-        const loc = prev.find(li => li.id && li.id === extItem.id);
-        return loc && loc.status !== extItem.status;
-      });
-      if (!hasStatusChange) return prev; // nothing to do — avoid unnecessary re-render
-
-      return prev.map(localItem => {
-        const extItem = initialPlan.find((ei: any) => ei.id && ei.id === localItem.id);
-        if (extItem && extItem.status !== localItem.status) {
-          return { ...localItem, status: extItem.status };
-        }
-        return localItem;
-      });
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPlan]);
-
-  useEffect(() => {
-    setPlannedToothConditions(buildPlannedToothConditions(toothConditions, planItems || []));
-  }, [planItems, toothConditions]);
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
 
   // If parent wants to register an external edit handler, provide a function
   useEffect(() => {
     if (typeof registerEditHandler === 'function') {
-      registerEditHandler((proc: any) => {
+      // Create a stable callback that uses the latest onUpdate via ref
+      const editHandlerCallback = (proc: any) => {
+        console.log('Odontogram: editHandlerCallback received', proc);
         if (!proc) return;
         // proc should contain tooth, sector, date, procedure, notes, id
         const toothNum = proc.tooth || (proc.tooth && Number(proc.tooth)) || null;
         setSelectedTooth(toothNum);
-        setSelectedSector(proc.sector || null);
+        
+        // Handle potential array or string with hyphens for sector
+        let sectorValue = proc.sector || null;
+        if (Array.isArray(sectorValue)) {
+          sectorValue = sectorValue.join(' - ');
+        }
+        setSelectedSector(sectorValue);
+
         setNewProcedureDate(proc.date ? new Date(proc.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
         setNewProcedureText(proc.procedure || proc.procedure_name || '');
         setNewProcedureNotes(proc.notes || proc.notas || '');
@@ -334,7 +356,7 @@ export default function Odontogram({
         
         // Update odontogram visual state based on procedure type
         if (toothNum) {
-          const procedureName = (proc.procedure || proc.procedure_name || '').toLowerCase();
+          const procedureKind = getProcedureKind(proc);
           
           if (proc.mode === 'perform') {
             // Switch to 'realizar prestaciones' mode
@@ -342,105 +364,127 @@ export default function Odontogram({
           }
           
           // Set the appropriate mode flags and update tooth conditions
-          if (procedureName.includes('restauración') || procedureName.includes('restauracion')) {
+          if (procedureKind === 'restoration') {
+            console.log('Odontogram: Restoration-kind procedure detected', { toothNum, sector: proc.sector });
             setSectorMode(true);
             setCrownMode(false);
             setProsthesisMode(false);
             setExtractionMode(false);
+
             // Update tooth conditions to show restoration sectors
             if (proc.sector) {
-              const sectorInitials = String(proc.sector).replace(/\s+/g, '').split('-');
-              const sectors: ToothSector[] = sectorInitials.map(initial => {
-                switch(initial) {
-                  case 'V': return { sector: 'topLower', hasRestoration: true };
-                  case 'P': 
-                  case 'L': return { sector: 'bottom', hasRestoration: true };
-                  case 'M': return { sector: 'left', hasRestoration: true };
-                  case 'D': return { sector: 'right', hasRestoration: true };
-                  case 'IM':
-                  case 'OM': return { sector: 'centerMesial', hasRestoration: true };
-                  case 'ID':
-                  case 'OD': return { sector: 'centerDistal', hasRestoration: true };
-                  case 'I': 
-                  case 'O': return { sector: 'centerDistal', hasRestoration: true };
-                  default: return undefined;
-                }
-              }).filter((s): s is ToothSector => s !== undefined);
+              const sectorStr = Array.isArray(proc.sector) ? proc.sector.join(' - ') : String(proc.sector);
+              // split by any non-alphanumeric character to be flexible
+              const sectorInitials = sectorStr.split(/[^a-zA-Z]+/).filter(Boolean);
+              console.log('Odontogram: Sector initials parsed', sectorInitials);
+              const sectors: ToothSector[] = [];
               
-              if (proc.mode === 'perform') {
-                // For 'realizar prestaciones', update actual tooth conditions
-                const newConditions = toothConditions.map(t => 
-                  t.number === toothNum 
-                    ? { ...t, sectors: sectors || [] }
-                    : t
+              sectorInitials.forEach((initial: string) => {
+                const mappedSectors = mapSurfaceTokenToSectors(toothNum, initial);
+                console.log(`Odontogram: Mapping initial "${initial}" to`, mappedSectors);
+                mappedSectors.forEach((s: ToothSector['sector']) => {
+                  if (!sectors.some(existing => existing.sector === s)) {
+                    sectors.push({ sector: s, hasRestoration: true });
+                  }
+                });
+              });
+              
+              if (sectors.length > 0) {
+                console.log('Odontogram: Final mapped sectors', sectors);
+                const latest = toothConditionsRef.current;
+                const newConditions = latest.map(t =>
+                  t.number === toothNum ? { ...t, sectors: sectors, status: (t.status === 'healthy' ? 'filling' : t.status) as ToothCondition['status'] } : t
                 );
+                
+                // Update local states immediately
+                console.log('Odontogram: Setting toothConditions and plannedToothConditions with new sectors', sectors);
                 setToothConditions(newConditions);
-                onUpdate(newConditions);
-              } else {
-                // For 'ficha catastral', update planned tooth conditions
-                setPlannedToothConditions(prev => prev.map(t => 
-                  t.number === toothNum 
-                    ? { ...t, sectors: sectors || [] }
-                    : t
+                setPlannedToothConditions(prev => prev.map(t =>
+                  t.number === toothNum ? { ...t, sectors: sectors, status: (t.status === 'healthy' ? 'filling' : t.status) as ToothCondition['status'] } : t
                 ));
+                
+                // Also explicitly set selectedSector so the form knows something is selected
+                setSelectedSector(sectorStr as ToothSector['sector']);
+
+                // Notify parent using the ref to avoid dependency loop
+                console.log('Odontogram: Notifying parent with new conditions');
+                onUpdateRef.current(newConditions);
               }
             }
-          } else if (procedureName.includes('corona')) {
+          } else if (procedureKind === 'crown') {
             setSectorMode(false);
             setCrownMode(true);
             setProsthesisMode(false);
             setExtractionMode(false);
             // Update tooth conditions to show crown
             if (proc.mode === 'perform') {
-              const newConditions = toothConditions.map(t => 
-                t.number === toothNum 
-                  ? { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status }
+              const latest = toothConditionsRef.current;
+              const newConditions = latest.map(t =>
+                t.number === toothNum
+                  ? { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: 'crown' as const }
                   : t
               );
               setToothConditions(newConditions);
-              onUpdate(newConditions);
+              setPlannedToothConditions(prev => prev.map(t =>
+                t.number === toothNum
+                  ? { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: 'crown' as const }
+                  : t
+              ));
+              onUpdateRef.current(newConditions);
             } else {
               setPlannedToothConditions(prev => prev.map(t => 
                 t.number === toothNum 
-                  ? { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status }
+                  ? { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: 'crown' as const }
                   : t
               ));
             }
-          } else if (procedureName.includes('prótesis') || procedureName.includes('protesis')) {
+          } else if (procedureKind === 'prosthesis') {
             setSectorMode(false);
             setCrownMode(false);
             setProsthesisMode(true);
             setExtractionMode(false);
             // Update tooth conditions to show prosthesis
             if (proc.mode === 'perform') {
-              const newConditions = toothConditions.map(t => 
-                t.number === toothNum 
-                  ? { ...t, hasCrown: false, hasProsthesis: true, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status }
+              const latest = toothConditionsRef.current;
+              const newConditions = latest.map(t =>
+                t.number === toothNum
+                  ? { ...t, hasCrown: false, hasProsthesis: true, sectors: [], status: 'healthy' as const }
                   : t
               );
               setToothConditions(newConditions);
-              onUpdate(newConditions);
+              setPlannedToothConditions(prev => prev.map(t =>
+                t.number === toothNum
+                  ? { ...t, hasCrown: false, hasProsthesis: true, sectors: [], status: 'healthy' as const }
+                  : t
+              ));
+              onUpdateRef.current(newConditions);
             } else {
               setPlannedToothConditions(prev => prev.map(t => 
                 t.number === toothNum 
-                  ? { ...t, hasCrown: false, hasProsthesis: true, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status }
+                  ? { ...t, hasCrown: false, hasProsthesis: true, sectors: [], status: 'healthy' as const }
                   : t
               ));
             }
-          } else if (procedureName.includes('extracción') || procedureName.includes('extraccion')) {
+          } else if (procedureKind === 'extraction') {
             setSectorMode(false);
             setCrownMode(false);
             setProsthesisMode(false);
             setExtractionMode(true);
             // Update tooth conditions to show extraction
             if (proc.mode === 'perform') {
-              const newConditions = toothConditions.map(t => 
-                t.number === toothNum 
+              const latest = toothConditionsRef.current;
+              const newConditions = latest.map(t =>
+                t.number === toothNum
                   ? { ...t, hasCrown: false, hasProsthesis: false, sectors: [], status: 'extraction' as const }
                   : t
               );
               setToothConditions(newConditions);
-              onUpdate(newConditions);
+              setPlannedToothConditions(prev => prev.map(t =>
+                t.number === toothNum
+                  ? { ...t, hasCrown: false, hasProsthesis: false, sectors: [], status: 'extraction' as const }
+                  : t
+              ));
+              onUpdateRef.current(newConditions);
             } else {
               setPlannedToothConditions(prev => prev.map(t => 
                 t.number === toothNum 
@@ -450,7 +494,9 @@ export default function Odontogram({
             }
           }
         }
-      });
+      };
+
+      registerEditHandler(editHandlerCallback);
     }
   }, [registerEditHandler]);
 
@@ -485,10 +531,10 @@ export default function Odontogram({
   const getActiveConditions = () => (planMode ? plannedToothConditions : toothConditions);
 
 
-  // Notify parent when local planItems change (avoid calling setState on parent during render)
   useEffect(() => {
     if (typeof onPlanChange === 'function') {
       try {
+        console.log('Odontogram: Calling onPlanChange with', planItems);
         onPlanChange(planItems);
       } catch (e) {
         // swallow to avoid render-time exceptions
@@ -496,6 +542,115 @@ export default function Odontogram({
       }
     }
   }, [planItems, onPlanChange]);
+
+  const getBestMatchingPlanItem = (
+    toothNumber: number,
+    predicate: (item: any) => boolean
+  ) => {
+    const candidates = (planItems || []).filter((item) => {
+      const matchesTooth =
+        String(item?.tooth) === String(toothNumber) ||
+        String(item?.pieza) === String(toothNumber);
+      return matchesTooth && predicate(item);
+    });
+
+    if (candidates.length === 0) return null;
+
+    return candidates.sort((a, b) => getPlanStatusPriority(b?.status || b?.estado) - getPlanStatusPriority(a?.status || a?.estado))[0];
+  };
+
+  const getPlannedSectorColor = (toothNumber: number, sector: ToothSector['sector']) => {
+    if (!planMode) return null;
+
+    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => {
+      if (getProcedureKind(item) !== 'restoration') return false;
+      const planSecs = getPlanItemSectors(item, toothNumber);
+      if (planSecs.includes(sector)) return true;
+      if (sector === 'center') {
+        return planSecs.some((s) => s === 'centerMesial' || s === 'centerDistal');
+      }
+      if (sector === 'centerMesial' || sector === 'centerDistal') {
+        return planSecs.includes('center');
+      }
+      return false;
+    });
+
+    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
+  };
+
+  const getPlannedWholeToothColor = (toothNumber: number, kind: 'crown' | 'prosthesis' | 'extraction') => {
+    if (!planMode) return null;
+    const matchedItem = getBestMatchingPlanItem(toothNumber, (item) => getProcedureKind(item) === kind);
+    return matchedItem ? getPlanVisualColor(matchedItem.status || matchedItem.estado) : null;
+  };
+
+  useEffect(() => {
+    console.log('Odontogram: initialConditions changed', initialConditions);
+    if (!initialConditions || initialConditions.length === 0) return;
+
+    setToothConditions((prev) => {
+      // Create a map of existing teeth for faster merging
+      const prevMap = new Map(prev.map(t => [t.number, t]));
+      let hasChanges = false;
+
+      // Merge initialConditions into our full set of teeth
+      initialConditions.forEach(newTooth => {
+        const existing = prevMap.get(newTooth.number);
+        // Compare only if existing tooth is different to avoid unnecessary updates
+        if (!existing || JSON.stringify(existing) !== JSON.stringify(newTooth)) {
+          prevMap.set(newTooth.number, { ...newTooth });
+          hasChanges = true;
+        }
+      });
+
+      if (!hasChanges) {
+        return prev;
+      }
+
+      console.log('Odontogram: Merging initialConditions into toothConditions');
+      // Always maintain the full set of teeth in the correct order (reconstructing from the map)
+      // but ensure we return a new array to trigger re-render
+      return Array.from(prevMap.values()).sort((a, b) => a.number - b.number);
+    });
+  }, [initialConditions]);
+
+  useEffect(() => {
+    console.log('Odontogram: initialPlan changed', initialPlan);
+    if (!initialPlan || !Array.isArray(initialPlan) || initialPlan.length === 0) return;
+
+    setPlanItems(prev => {
+      // Check if data is actually different to avoid unnecessary re-renders and loops
+      if (JSON.stringify(prev) === JSON.stringify(initialPlan)) {
+        return prev;
+      }
+
+      console.log('Odontogram: Updating planItems from initialPlan');
+      // Case 1: local plan is empty — initialize from parent.
+      if (prev.length === 0) return initialPlan;
+
+      // Case 2: sync status changes from parent for existing items
+      // (e.g. parent sets 'en_proceso' after user clicks "Realizar Prestación").
+      const hasStatusChange = initialPlan.some(extItem => {
+        const loc = prev.find(li => li.id && li.id === extItem.id);
+        return loc && loc.status !== extItem.status;
+      });
+      if (!hasStatusChange) return prev; // nothing to do — avoid unnecessary re-render
+
+      return prev.map(localItem => {
+        const extItem = initialPlan.find((ei: any) => ei.id && ei.id === localItem.id);
+        if (extItem && extItem.status !== localItem.status) {
+          return { ...localItem, status: extItem.status };
+        }
+        return localItem;
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPlan]);
+
+  useEffect(() => {
+    console.log('Odontogram: Recalculating plannedToothConditions', { toothConditionsLength: toothConditions.length, planItemsLength: planItems.length });
+    setPlannedToothConditions(buildPlannedToothConditions(toothConditions, planItems || []));
+  }, [planItems, toothConditions]);
 
   // Colores basados en el tipo de odontograma
   const sectorColor = interventionColor === 'blue' ? '#2563eb' : '#ef4444';
@@ -553,27 +708,40 @@ export default function Odontogram({
       event.stopPropagation();
     }
 
-    // Permitir que modos especiales actúen incluso si estamos en modo 'plan'
-    // Si estamos en modo corona, manejar corona
-    if (crownMode) {
+    const switchingPerformTooth =
+      !planMode && selectedTooth !== null && selectedTooth !== toothId;
+
+    // Al pasar a otra pieza en "realizar prestaciones", desactivar herramientas del procedimiento anterior
+    // (el estado de React aún no refleja setState; por eso usamos switchingPerformTooth en los guards)
+    if (switchingPerformTooth) {
+      setSectorMode(false);
+      setCrownMode(false);
+      setProsthesisMode(false);
+      setExtractionMode(false);
+      setPlanProcedureName('');
+      setPlanProcedureCode('');
+      setPlanNotes('');
+      setEditingProcId(null);
+      setShowProcedureDropdown(false);
+    }
+
+    // Modos de aplicación directa al diente (no aplican si solo estamos cambiando de pieza seleccionada)
+    if (!switchingPerformTooth && crownMode) {
       handleCrownClick(toothId, event!);
       return;
     }
 
-    // Si estamos en modo prótesis, manejar prótesis
-    if (prosthesisMode) {
+    if (!switchingPerformTooth && prosthesisMode) {
       handleProsthesisClick(toothId, event!);
       return;
     }
 
-    // Si estamos en modo extracción, manejar extracción
-    if (extractionMode) {
+    if (!switchingPerformTooth && extractionMode) {
       handleExtractionClick(toothId, event!);
       return;
     }
 
-    // Si estamos en modo sector, no hacer nada (los sectores se manejan por separado)
-    if (sectorMode) return;
+    if (!switchingPerformTooth && sectorMode) return;
 
     // Si estamos en modo Plan, seleccionar diente para agregar al plan (panel derecho)
     if (planMode) {
@@ -595,7 +763,7 @@ export default function Odontogram({
       setPlanProcedureName(lastProc.procedure || '');
       setPlanNotes(lastProc.notes || '');
       setPlanProcedureCode(lastProc?.procedure_code ?? lastProc?.code ?? '');
-      setSelectedSector(lastProc?.sector ?? null);
+      setSelectedSector(lastProc?.sector as any ?? null);
       setEditingProcId(lastProc?.id ? String(lastProc.id) : (lastProc?.procId ? String(lastProc.procId) : null));
     } else {
       const newConditions = toothConditions.map(tooth => 
@@ -606,6 +774,18 @@ export default function Odontogram({
       setToothConditions(newConditions);
       onUpdate(newConditions);
     }
+  };
+
+  const CENTER_SECTOR_GROUP: ToothSector['sector'][] = ['center', 'centerMesial', 'centerDistal'];
+
+  /** Colapsa centro oclusal/incisal a un solo sector `center` en datos guardados. */
+  const normalizeToothCenterSectors = (sectors: ToothSector[] | undefined): ToothSector[] => {
+    const list = sectors ? [...sectors] : [];
+    const others = list.filter((s) => !CENTER_SECTOR_GROUP.includes(s.sector));
+    const group = list.filter((s) => CENTER_SECTOR_GROUP.includes(s.sector));
+    const anyOn = group.some((s) => s.hasRestoration);
+    if (!anyOn) return others;
+    return [...others, { sector: 'center', hasRestoration: true }];
   };
 
   const handleSectorClick = (toothId: number, sector: ToothSector['sector'], event: React.MouseEvent) => {
@@ -630,6 +810,7 @@ export default function Odontogram({
           } else {
             newSectors = [...currentSectors, { sector, hasRestoration: true }];
           }
+          newSectors = normalizeToothCenterSectors(newSectors);
           return { ...tooth, sectors: newSectors };
         }
         return tooth;
@@ -647,6 +828,7 @@ export default function Odontogram({
           } else {
             newSectors = [...currentSectors, { sector, hasRestoration: true }];
           }
+          newSectors = normalizeToothCenterSectors(newSectors);
           return { ...tooth, sectors: newSectors };
         }
         return tooth;
@@ -661,8 +843,22 @@ export default function Odontogram({
   const getSectorRestoration = (toothId: number, sector: ToothSector['sector']): boolean => {
     const active = getActiveConditions();
     const tooth = active.find(t => t.number === toothId);
-    const sectorData = tooth?.sectors?.find(s => s.sector === sector);
-    return sectorData?.hasRestoration || false;
+    if (!tooth?.sectors?.length) return false;
+    const has = (s: ToothSector['sector']) => tooth.sectors!.some((x) => x.sector === s && x.hasRestoration);
+    
+    let result = false;
+    if (sector === 'center') {
+      result = has('center') || has('centerMesial') || has('centerDistal');
+    } else if (sector === 'centerMesial' || sector === 'centerDistal') {
+      result = has(sector) || has('center');
+    } else {
+      result = has(sector);
+    }
+
+    if (result) {
+      console.log(`Odontogram: getSectorRestoration(${toothId}, ${sector}) = true`, { toothSectors: tooth.sectors });
+    }
+    return result;
   };
 
   const getDisplayedSectorColor = (toothId: number, sector: ToothSector['sector']) => {
@@ -689,77 +885,26 @@ export default function Odontogram({
     return getToothCondition(toothId) === 'extraction' ? extractionColor : null;
   };
 
-  // Mapear sectores SVG a nombres de caras dentales con abreviatura
-  const getFaceName = (toothNumber: number | null, sector: ToothSector['sector'] | null) => {
-    if (!toothNumber || !sector) return '';
-    const num = toothNumber;
-    const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
-    const lastDigit = num % 10;
-    const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
-
-    switch (sector) {
-      case 'left':
-        return 'Mesial (M)';
-      case 'right':
-        return 'Distal (D)';
-      case 'top':
-      case 'topUpper':
-      case 'topLower':
-        return 'Vestibular (V)';
-      case 'centerMesial':
-        return isAnterior ? 'Incisal mesial (IM)' : 'Oclusal mesial (OM)';
-      case 'centerDistal':
-        return isAnterior ? 'Incisal distal (ID)' : 'Oclusal distal (OD)';
-      case 'bottom':
-        return isUpper ? 'Palatina (P)' : 'Lingual (L)';
-      case 'center':
-        return isAnterior ? 'Incisal (I)' : 'Oclusal (O)';
-      default:
-        return sector;
-    }
-  };
-
-  // Obtener inicial de un sector (según diente para diferenciar palatina/lingual y incisal/oclusal)
-  const getSectorInitial = (toothNumber: number | null, sector: ToothSector['sector'] | null) => {
-    if (!toothNumber || !sector) return '';
-    const num = toothNumber;
-    const isUpper = (num >= 11 && num <= 28) || (num >= 51 && num <= 65);
-    const lastDigit = num % 10;
-    const isAnterior = [1, 2, 3].includes(lastDigit) || [61, 62, 63, 71, 72, 73].includes(num);
-
-    switch (sector) {
-      case 'left':
-        return 'M'; // Mesial
-      case 'right':
-        return 'D'; // Distal
-      case 'top':
-      case 'topUpper':
-      case 'topLower':
-        return 'V'; // Vestibular
-      case 'bottom':
-        return isUpper ? 'P' : 'L'; // Palatina (P) en superior, Lingual (L) en inferior
-      case 'centerMesial':
-        return isAnterior ? 'IM' : 'OM';
-      case 'centerDistal':
-        return isAnterior ? 'ID' : 'OD';
-      case 'center':
-        return isAnterior ? 'I' : 'O'; // Incisal o Oclusal
-      default:
-        return '';
-    }
-  };
-
   // Obtener las iniciales de las caras seleccionadas en un diente, unidas por guiones
   const getSelectedSectorsInitials = (toothNumber: number | null) => {
     if (!toothNumber) return '';
-    const active = getActiveConditions();
+    // always use the current toothConditions for this to reflect the actual edit mode state,
+    // because when switching to "realizar prestaciones", the local state is what the user is editing.
+    // However, if we're in planMode, we should show planned conditions.
+    const active = planMode ? plannedToothConditions : toothConditions;
     const tooth = active.find(t => t.number === toothNumber);
     if (!tooth || !tooth.sectors || tooth.sectors.length === 0) return '';
     // Orden predecible para mostrar: Vestibular, Palatina/Lingual, Mesial, Distal, Centro
-    const order: ToothSector['sector'][] = ['topUpper', 'topLower', 'bottom', 'left', 'right', 'centerMesial', 'centerDistal', 'center'];
+    const hasR = (s: ToothSector['sector']) => tooth.sectors!.some((ts) => ts.sector === s && ts.hasRestoration);
+    const order: ToothSector['sector'][] = ['topUpper', 'topLower', 'bottom', 'left', 'right', 'center'];
     const initials = Array.from(new Set(order
-      .filter(s => tooth.sectors!.some(ts => ts.sector === s && ts.hasRestoration))
-      .map(s => getSectorInitial(toothNumber, s))
+      .filter((s) => {
+        if (s === 'center') {
+          return hasR('center') || hasR('centerMesial') || hasR('centerDistal');
+        }
+        return hasR(s);
+      })
+      .map((s) => getSectorInitial(toothNumber, s))
       .filter(Boolean)));
     // Join with spaced hyphens for readability: "V - P - M"
     return initials.join(' - ');
@@ -780,11 +925,24 @@ export default function Odontogram({
     const tooth = toothConditions.find(t => t.number === toothId);
     if (!tooth) return [] as any[];
     const procs = (tooth.procedures || []) as any[];
-    return sector ? procs.filter(p => p.sector === sector) : procs;
+    if (!sector) return procs;
+    
+    const initial = getSectorInitial(toothId, sector);
+    return procs.filter(p => {
+      if (!p.sector) return false;
+      if (p.sector === sector || p.sector === initial) return true;
+      // Handle multi-face restorations (e.g. "V - M - D")
+      if (initial && p.sector.includes(' - ')) {
+        const parts = p.sector.split(' - ');
+        return parts.includes(initial);
+      }
+      return false;
+    });
   };
 
   // Plan helpers
   const addPlanItem = (toothId: number | null, sector: ToothSector['sector'] | null) => {
+    const wasEditingPlanRow = Boolean(editingProcId);
     console.log('addPlanItem called', { toothId, sector, planProcedureName, planMode });
     if (!toothId) return;
     if (!planProcedureName.trim()) return;
@@ -818,8 +976,7 @@ export default function Odontogram({
       surfaceValue = getSectorInitial(toothId, sector);
     }
 
-    const item = {
-      id,
+    const newItemBase = {
       tooth: String(toothId),
       surface: surfaceValue,
       procedure_code: planProcedureCode || undefined,
@@ -830,371 +987,188 @@ export default function Odontogram({
       planned_at: new Date().toISOString(),
       status: 'planned'
     };
-    console.log('🔴 CREATING NEW PLAN ITEM - addPlanItem called!', { 
-      caller: new Error().stack, 
-      item, 
-      planMode, 
-      selectedTooth, 
-      planProcedureName 
-    });
-    setPlanItems(prev => {
-      console.log('Before adding plan item:', prev);
-      const updated = [...prev, item];
-      console.log('After adding plan item:', updated);
-      return updated;
-    });
-    setPlanProcedureCode('');
-    setPlanProcedureName('');
-    setPlanNotes('');
-    // After adding an item, clear selection so other teeth become selectable
-    setSelectedTooth(null);
-    setSelectedSector(null);
+
+    if (wasEditingPlanRow) {
+      setPlanItems((prev) =>
+        prev.map((item, idx) => {
+          const itemKey = item.id ?? `plan_row_${idx}`;
+          return itemKey === editingProcId ? { ...item, ...newItemBase, id: editingProcId } : item;
+        })
+      );
+      if (typeof onPlanRowEditCommitted === 'function') onPlanRowEditCommitted();
+    } else {
+      setPlanItems((prev) => [...prev, { ...newItemBase, id }]);
+    }
   };
 
-    // When adding from the inline panel we call addPlanItem directly
-
-  const savePlanToServer = async () => {
-    if (!planItems || !planItems.length) return;
-    const container = document.querySelector('[data-medical-record-id]') as HTMLElement | null;
-    const MR_ID = medicalRecordId || (container && container.dataset.medicalRecordId) || (window as any).__MEDICAL_RECORD_ID__;
-    if (!MR_ID) {
-      alert('medicalRecordId no definido. Pase `medicalRecordId` como prop al componente para guardar el plan.');
-      return;
+  const addProcedure = (
+    toothId: number,
+    sector: ToothSector['sector'] | null,
+    date: string,
+    procedure: string,
+    notes?: string
+  ) => {
+    if (!procedure.trim()) return false;
+    
+    // Determine the sector string (could be joined initials for multiple faces)
+    let sectorString: string | undefined = undefined;
+    const tooth = toothConditions.find(t => t.number === toothId);
+    if (tooth?.sectors && tooth.sectors.length > 0) {
+       sectorString = getSelectedSectorsInitials(toothId);
+    } else if (sector) {
+       sectorString = getSectorInitial(toothId, sector);
     }
 
-    setSavingPlan(true);
-    try {
-      const res = await fetch(`/api/medical_records/${MR_ID}/odontogram/plan`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Clinic-Id': (window as any).__CLINIC_ID__ || '',
-          'X-Clinic-ID': (window as any).__CLINIC_ID__ || ''
-        },
-        body: JSON.stringify({ plan: planItems })
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        alert('Plan guardado exitosamente');
-        if (typeof onPlanChange === 'function') onPlanChange(planItems);
+    const newProc: any = {
+      id: editingProcId || String(Date.now()),
+      date,
+      procedure: procedure.trim(),
+      procedure_code: planProcedureCode || undefined,
+      sector: sectorString,
+      notes,
+      performedBy: 'current_doctor'
+    };
+
+    const newConditions = toothConditions.map((tooth) => {
+      if (tooth.number !== toothId) return tooth;
+      const procs = tooth.procedures ? [...tooth.procedures] : [];
+      if (editingProcId) {
+        const idx = procs.findIndex(p => String(p.id) === editingProcId || String(p.procId) === editingProcId);
+        if (idx >= 0) procs[idx] = newProc;
+        else procs.push(newProc);
       } else {
-        console.error('Error saving plan', json);
-        alert('Error guardando plan');
+        procs.push(newProc);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Error guardando plan');
-    } finally {
-      setSavingPlan(false);
-    }
-  };
-
-  const executePlanItem = async (planId: string) => {
-    const container = document.querySelector('[data-medical-record-id]') as HTMLElement | null;
-    const MR_ID = medicalRecordId || (container && container.dataset.medicalRecordId) || (window as any).__MEDICAL_RECORD_ID__;
-    if (!MR_ID) {
-      alert('medicalRecordId no definido.');
-      return;
-    }
-    setExecutingPlanId(planId);
-    try {
-      const res = await fetch(`/api/medical_records/${MR_ID}/odontogram/plan/${planId}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Clinic-Id': (window as any).__CLINIC_ID__ || '',
-          'X-Clinic-ID': (window as any).__CLINIC_ID__ || ''
-        },
-        body: JSON.stringify({ performed: { date: new Date().toISOString() } })
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        // update local plan item status
-        setPlanItems(prev => prev.map(p => p.id === planId ? { ...p, status: 'executed', executed_reference: json.data?.id || null } : p));
-        alert('Plan item ejecutado');
-      } else {
-        console.error('Error executing plan', json);
-        alert('Error ejecutando plan');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Error ejecutando plan');
-    } finally {
-      setExecutingPlanId(null);
-    }
-  };
-
-  const openViewFor = (toothId: number, sector: ToothSector['sector'] | null) => {
-    setSelectedTooth(toothId);
-    setSelectedSector(sector);
-    setShowViewModal(true);
-  };
-
-  // Add a procedure entry for a tooth (and optional sector)
-  const addProcedure = (toothId: number, sector: ToothSector['sector'] | null, date: string, procedure: string, notes?: string) => {
-    // Normalize incoming date to YYYY-MM-DD for comparison
-    const normalizedDate = date ? new Date(date).toISOString().split('T')[0] : null;
-
-    const newConditions = toothConditions.map(tooth => {
-      if (tooth.number === toothId) {
-        const procedures = tooth.procedures || [];
-
-        // If we're editing an existing procedure, update it in place
-        if (editingProcId) {
-          const foundIndex = procedures.findIndex((p: any) => p.id === editingProcId || p.procId === editingProcId);
-          if (foundIndex >= 0) {
-            const updated = procedures.slice();
-            const existing = updated[foundIndex] || {};
-            updated[foundIndex] = { ...existing, date, procedure, sector: sector || undefined, notes, procedure_code: planProcedureCode || existing.procedure_code || existing.code || undefined };
-            // clear editing state after update
-            setEditingProcId(null);
-            setNewProcedureText('');
-            setNewProcedureNotes('');
-            setNewProcedureDate(new Date().toISOString().split('T')[0]);
-            setPlanProcedureCode('');
-            return { ...tooth, procedures: updated };
-          }
-          // if editingProcId not found on this tooth, fallthrough to adding as new
-        }
-
-        // Prevent adding more than one procedure on the same tooth for the same day
-        if (normalizedDate) {
-          const existsSameDay = procedures.some(p => {
-            if (!p || !p.date) return false;
-            try {
-              const pd = new Date(p.date).toISOString().split('T')[0];
-              return pd === normalizedDate;
-            } catch (e) {
-              return false;
-            }
-          });
-          if (existsSameDay) {
-            alert('Ya existe una prestación para esta pieza en la misma fecha. Edita la prestación existente si necesitas cambiarla.');
-            return tooth; // no changes
-          }
-        }
-
-        const newProc = { id: 'PR_' + new Date().toISOString().replace(/[^0-9]/g, '') + Math.floor(Math.random()*1000), date, procedure, sector: sector || undefined, notes, procedure_code: planProcedureCode || undefined } as any;
-        // clear editing state if any
-        setEditingProcId(null);
-        setNewProcedureText('');
-        setNewProcedureNotes('');
-        setNewProcedureDate(new Date().toISOString().split('T')[0]);
-        setPlanProcedureCode('');
-        return { ...tooth, procedures: [...procedures, newProc] };
-      }
-      return tooth;
+      return { ...tooth, procedures: procs };
     });
 
     setToothConditions(newConditions);
     onUpdate(newConditions);
-
-    // Update plan items: change 'en_proceso' or 'planned' status to 'realizado' for matching procedures.
-    // Note: the local planItems may still have status 'planned' if the parent updated it to 'en_proceso'
-    // externally (via initialPlan prop) but the local sync guard (planItems.length === 0) prevented
-    // the Odontogram from picking up that external change.
-    if (!planMode) {
-      console.log('addProcedure: updating plan items to realizado', { toothId, procedure, planMode });
-      setPlanItems(prev => {
-        console.log('addProcedure: before update', prev);
-        const updated = prev.map(item => {
-          const itemTooth = Number(item.tooth || item.pieza);
-          const itemProcedure = (item.procedure_name || item.nombre || item.name || '').toLowerCase();
-          const currentProcedure = procedure.toLowerCase();
-          
-          // Match by tooth + procedure name, regardless of current status (en_proceso or planned)
-          if (itemTooth === toothId && 
-              itemProcedure === currentProcedure &&
-              (item.status === 'en_proceso' || item.status === 'planned' || item.status === 'plan' || item.status === 'pending')) {
-            console.log('addProcedure: updating item to realizado', item);
-            return { ...item, status: 'realizado' };
-          }
-          return item;
-        });
-        console.log('addProcedure: after update', updated);
-        return updated;
-      });
-    }
+    return true;
   };
 
   const handleCrownClick = (toothId: number, event: React.MouseEvent) => {
-    if (readOnly || !crownMode) return;
-    
-    // No permitir coronas en dientes ausentes
-    const tooth = toothConditions.find(t => t.number === toothId);
-    if (tooth?.status === 'missing') return;
-    
     event.preventDefault();
     event.stopPropagation();
     if (planMode) {
       setPlannedToothConditions(prev => prev.map(t => {
         if (t.number !== toothId) return t;
-        const turningOn = !t.hasCrown;
-        if (turningOn) {
-          return { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
-        }
-        return { ...t, hasCrown: false };
+        return { ...t, hasCrown: !t.hasCrown, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
       }));
-      const toothBefore = plannedToothConditions.find(t => t.number === toothId);
-      const wasCrown = toothBefore?.hasCrown || false;
-      const nowTurningOn = !wasCrown;
-      if (nowTurningOn) setSelectedSector(null);
+      setSelectedTooth(toothId);
     } else {
       const newConditions = toothConditions.map(t => {
         if (t.number !== toothId) return t;
-        const turningOn = !t.hasCrown;
-        if (turningOn) {
-          return { ...t, hasCrown: true, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
-        }
-        return { ...t, hasCrown: false };
+        return { ...t, hasCrown: !t.hasCrown, hasProsthesis: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
       });
-      const toothBefore = toothConditions.find(t => t.number === toothId);
-      const wasCrown = toothBefore?.hasCrown || false;
-      const nowTurningOn = !wasCrown;
       setToothConditions(newConditions);
       onUpdate(newConditions);
-      if (nowTurningOn) setSelectedSector(null);
+      setSelectedTooth(toothId);
+    }
+  };
+
+  const handleProsthesisClick = (toothId: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (planMode) {
+      setPlannedToothConditions(prev => prev.map(t => {
+        if (t.number !== toothId) return t;
+        return { ...t, hasProsthesis: !t.hasProsthesis, hasCrown: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
+      }));
+      setSelectedTooth(toothId);
+    } else {
+      const newConditions = toothConditions.map(t => {
+        if (t.number !== toothId) return t;
+        return { ...t, hasProsthesis: !t.hasProsthesis, hasCrown: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
+      });
+      setToothConditions(newConditions);
+      onUpdate(newConditions);
+      setSelectedTooth(toothId);
+    }
+  };
+
+  const handleExtractionClick = (toothId: number, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (planMode) {
+      setPlannedToothConditions(prev => prev.map(t => {
+        if (t.number !== toothId) return t;
+        const newStatus = t.status === 'extraction' ? 'healthy' : 'extraction';
+        return { ...t, status: newStatus as any, hasCrown: false, hasProsthesis: false, sectors: [] };
+      }));
+      setSelectedTooth(toothId);
+    } else {
+      const newConditions = toothConditions.map(t => {
+        if (t.number !== toothId) return t;
+        const newStatus = t.status === 'extraction' ? 'healthy' : 'extraction';
+        return { ...t, status: newStatus as any, hasCrown: false, hasProsthesis: false, sectors: [] };
+      });
+      setToothConditions(newConditions);
+      onUpdate(newConditions);
+      setSelectedTooth(toothId);
     }
   };
 
   const getToothCrown = (toothId: number): boolean => {
     const active = getActiveConditions();
-    const tooth = active.find(t => t.number === toothId);
-    return tooth?.hasCrown || false;
-  };
-
-  const handleProsthesisClick = (toothId: number, event: React.MouseEvent) => {
-    if (readOnly || !prosthesisMode) return;
-    
-    // No permitir prótesis en dientes ausentes
-    const tooth = toothConditions.find(t => t.number === toothId);
-    if (tooth?.status === 'missing') return;
-    
-    event.preventDefault();
-    event.stopPropagation();
-    if (planMode) {
-      setPlannedToothConditions(prev => prev.map(t => {
-        if (t.number !== toothId) return t;
-        const turningOn = !t.hasProsthesis;
-        if (turningOn) {
-          return { ...t, hasProsthesis: true, hasCrown: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
-        }
-        return { ...t, hasProsthesis: false };
-      }));
-      const toothBefore = plannedToothConditions.find(t => t.number === toothId);
-      const wasProst = toothBefore?.hasProsthesis || false;
-      const nowTurningOn = !wasProst;
-      if (nowTurningOn) setSelectedSector(null);
-    } else {
-      const newConditions = toothConditions.map(t => {
-        if (t.number !== toothId) return t;
-        const turningOn = !t.hasProsthesis;
-        if (turningOn) {
-          return { ...t, hasProsthesis: true, hasCrown: false, sectors: [], status: t.status === 'extraction' ? 'healthy' : t.status };
-        }
-        return { ...t, hasProsthesis: false };
-      });
-      const toothBefore = toothConditions.find(t => t.number === toothId);
-      const wasProst = toothBefore?.hasProsthesis || false;
-      const nowTurningOn = !wasProst;
-      setToothConditions(newConditions);
-      onUpdate(newConditions);
-      if (nowTurningOn) setSelectedSector(null);
-    }
+    return active.find(t => t.number === toothId)?.hasCrown || false;
   };
 
   const getToothProsthesis = (toothId: number): boolean => {
     const active = getActiveConditions();
-    const tooth = active.find(t => t.number === toothId);
-    return tooth?.hasProsthesis || false;
+    return active.find(t => t.number === toothId)?.hasProsthesis || false;
   };
 
-  const handleExtractionClick = (toothId: number, event: React.MouseEvent) => {
-    if (readOnly || !extractionMode) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    if (planMode) {
-      setPlannedToothConditions(prev => prev.map(t => {
-        if (t.number !== toothId) return t;
-        const turningOn = t.status !== 'extraction';
-        if (turningOn) {
-          return { ...t, status: 'extraction', hasCrown: false, hasProsthesis: false, sectors: [] };
-        }
-        return { ...t, status: 'healthy' } as any;
-      }));
-      const toothBefore = plannedToothConditions.find(t => t.number === toothId);
-      const wasExtraction = toothBefore?.status === 'extraction';
-      const nowTurningOn = !wasExtraction;
-      if (nowTurningOn) setSelectedSector(null);
-    } else {
-      const newConditions = toothConditions.map(t => {
-        if (t.number !== toothId) return t;
-        const turningOn = t.status !== 'extraction';
-        if (turningOn) {
-          return { ...t, status: 'extraction', hasCrown: false, hasProsthesis: false, sectors: [] };
-        }
-        return { ...t, status: 'healthy' } as any;
-      });
-      const toothBefore = toothConditions.find(t => t.number === toothId);
-      const wasExtraction = toothBefore?.status === 'extraction';
-      const nowTurningOn = !wasExtraction;
-      setToothConditions(newConditions);
-      onUpdate(newConditions);
-      if (nowTurningOn) setSelectedSector(null);
-    }
-  };
-
-  const getToothCondition = (toothId: number) => {
+  const getToothCondition = (toothId: number): ToothCondition['status'] => {
     const active = getActiveConditions();
     return active.find(t => t.number === toothId)?.status || 'healthy';
   };
 
-  // Componente de diente
-  const Tooth = ({ number, position, labelPosition = 'top' }: { number: number, position: { x: number, y: number }, labelPosition?: 'top' | 'bottom' }) => {
-    const condition = getToothCondition(number);
-    const isSelected = selectedTooth === number;
-    const isDisabled = selectedTooth !== null && selectedTooth !== number;
-    
-    // Calcular posición del texto basado en labelPosition
-    const textY = labelPosition === 'top' ? position.y - 6 : position.y + 44 + 16;
-    
-    const toothColor = getToothColor(condition as any);
+  const openViewFor = (toothId: number, sector?: ToothSector['sector']) => {
+    const procs = getProceduresFor(toothId, sector || null);
+    if (procs.length > 0) {
+      setSelectedProcedure(procs[procs.length - 1]);
+      setShowViewModal(true);
+    }
+  };
 
+  const Tooth = ({ number, position, labelPosition }: { number: number, position: { x: number, y: number }, labelPosition: 'top' | 'bottom' }) => {
+    const isSelected = selectedTooth === number;
+    const isDisabled = readOnly;
+    
     return (
-      <g>
-        {/* Número del diente */}
+      <g 
+        className={`transition-all ${isDisabled ? 'cursor-default' : 'cursor-pointer'}`}
+        onClick={(e) => handleToothClick(number, e)}
+      >
+        {/* Etiqueta con el número del diente */}
         <text
           x={position.x + 22}
-          y={textY}
+          y={labelPosition === 'top' ? position.y - 10 : position.y + 60}
           textAnchor="middle"
-          fill="#374151"
-          style={{ fontSize: '14px', fontWeight: 700, pointerEvents: 'none' } as any}
+          className={`text-[12px] font-bold select-none ${isSelected ? 'fill-blue-600' : 'fill-gray-500'}`}
         >
           {number}
         </text>
-        
-        {/* Cuadrado exterior */}
+
+        {/* Rectángulo exterior (borde del diente) */}
         <rect
           x={position.x}
           y={position.y}
           width="44"
           height="44"
-          fill={printMode ? (toothColor as any).fill : undefined}
-          stroke={printMode ? (toothColor as any).stroke : undefined}
-          strokeWidth={isSelected ? 4 : 2}
-          style={printMode ? { cursor: condition !== 'missing' ? 'pointer' : 'not-allowed', opacity: condition === 'missing' ? 0.6 : 1 } as any : undefined}
-          className={!printMode ? `${getToothColor(condition as any)} ${isSelected ? 'stroke-4 stroke-blue-600' : 'stroke-2'} ${condition !== 'missing' ? (isDisabled ? 'cursor-default pointer-events-none opacity-60' : 'cursor-pointer hover:opacity-80') : 'cursor-not-allowed opacity-60'} transition-all` : undefined}
-          onClick={(e) => condition !== 'missing' && !isDisabled ? handleToothClick(number, e) : e.preventDefault()}
+          fill="none"
+          stroke={isSelected ? '#2563eb' : '#1f2937'}
+          strokeWidth={isSelected ? '2' : '1'}
+          className="transition-all"
         />
-        
-        {/* Sectores clickeables para restauraciones */}
-        {sectorMode && !readOnly && condition !== 'missing' && (
+
+        {/* Sectores internos (caras) */}
+        {true && (
           <>
-            {/* Sector superior dividido: topUpper (franja externa) y topLower (franja interna) */}
-            {/* topUpper: cerca del borde exterior */}
+            {/* Sector superior: topUpper (más afuera) */}
             <polygon
-              points={`${position.x + 11},${position.y + 11} ${position.x + 33},${position.y + 11} ${position.x + 44},${position.y + 6} ${position.x},${position.y + 6}`}
+              points={`${position.x},${position.y} ${position.x + 44},${position.y} ${position.x + 33},${position.y + 11} ${position.x + 11},${position.y + 11}`}
               fill={getDisplayedSectorColor(number, 'topUpper') || 'transparent'}
               className="cursor-pointer hover:opacity-70 transition-all"
               onClick={(e) => handleSectorClick(number, 'topUpper', e)}
@@ -1242,29 +1216,17 @@ export default function Odontogram({
               <title>{getFaceName(number, 'right')}</title>
             </polygon>
             
-            {/* Sector centro subdividido en Mesial (izquierda) y Distal (derecha) */}
+            {/* Centro: una sola cara (oclusal/incisal) */}
             <rect
               x={position.x + 11}
               y={position.y + 11}
-              width="11"
+              width="22"
               height="22"
-              fill={getDisplayedSectorColor(number, 'centerMesial') || 'transparent'}
-              className="cursor-pointer hover:opacity-70 transition-all"
-              onClick={(e) => handleSectorClick(number, 'centerMesial', e)}
-            >
-              <title>{getFaceName(number, 'centerMesial')}</title>
-            </rect>
-
-            <rect
-              x={position.x + 22}
-              y={position.y + 11}
-              width="11"
-              height="22"
-              fill={getDisplayedSectorColor(number, 'centerDistal') || 'transparent'}
+              fill={getDisplayedSectorColor(number, 'center') || 'transparent'}
               className={`${isDisabled ? 'pointer-events-none opacity-50 cursor-default' : 'cursor-pointer hover:opacity-70'} transition-all`}
-              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'centerDistal', e); }}
+              onClick={(e) => { if (!isDisabled) handleSectorClick(number, 'center', e); }}
             >
-              <title>{getFaceName(number, 'centerDistal')}</title>
+              <title>{getFaceName(number, 'center')}</title>
             </rect>
           </>
         )}
@@ -1372,30 +1334,17 @@ export default function Odontogram({
                 <title>{getFaceName(number, 'right')}</title>
               </polygon>
             )}
-            {getDisplayedSectorColor(number, 'centerMesial') && (
+            {getDisplayedSectorColor(number, 'center') && (
               <rect
                 x={position.x + 11}
                 y={position.y + 11}
-                width="11"
+                width="22"
                 height="22"
-                fill={getDisplayedSectorColor(number, 'centerMesial') || undefined}
+                fill={getDisplayedSectorColor(number, 'center') || undefined}
                 className="cursor-pointer"
-                onClick={() => openViewFor(number, 'centerMesial')}
+                onClick={() => openViewFor(number, 'center')}
               >
-                <title>{getFaceName(number, 'centerMesial')}</title>
-              </rect>
-            )}
-            {getDisplayedSectorColor(number, 'centerDistal') && (
-              <rect
-                x={position.x + 22}
-                y={position.y + 11}
-                width="11"
-                height="22"
-                fill={getDisplayedSectorColor(number, 'centerDistal') || undefined}
-                className="cursor-pointer"
-                onClick={() => openViewFor(number, 'centerDistal')}
-              >
-                <title>{getFaceName(number, 'centerDistal')}</title>
+                <title>{getFaceName(number, 'center')}</title>
               </rect>
             )}
           </>
@@ -1885,13 +1834,25 @@ export default function Odontogram({
                     } else {
                       // Realizar prestación: registrar procedimiento inmediatamente
                       if (!planProcedureName || !planProcedureName.trim()) return;
-                      addProcedure(selectedTooth, selectedSector, newProcedureDate, planProcedureName.trim(), planNotes || undefined);
+                      const added = addProcedure(
+                        selectedTooth,
+                        selectedSector,
+                        newProcedureDate,
+                        planProcedureName.trim(),
+                        planNotes || undefined
+                      );
+                      if (!added) return;
                       setPlanProcedureCode('');
                       setPlanProcedureName('');
                       setPlanNotes('');
-                      // After performing a procedure, clear selection
                       setSelectedTooth(null);
                       setSelectedSector(null);
+                      // Evita que crown/sector/extracción sigan activos y se apliquen al siguiente diente sin re-elegir procedimiento
+                      setSectorMode(false);
+                      setCrownMode(false);
+                      setProsthesisMode(false);
+                      setExtractionMode(false);
+                      setShowProcedureDropdown(false);
                     }
                   }}
                   disabled={!selectedTooth || (!planMode && !planProcedureName)}
@@ -1917,93 +1878,31 @@ export default function Odontogram({
 
       {/* Referencias del odontograma */}
       {showLegend && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-          <button
-            onClick={() => {
-              const element = document.getElementById('odontogram-instructions');
-              if (element) {
-                element.classList.toggle('hidden');
-              }
-            }}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-200"
-          >
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <div className="flex flex-wrap gap-6 items-center justify-center">
             <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-              </svg>
-              <span className="text-sm font-semibold text-gray-900">Referencias</span>
+              <div className="w-5 h-5 bg-red-500 rounded border border-gray-400"></div>
+              <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Obturación</span>
             </div>
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <div id="odontogram-instructions" className="p-4 bg-gray-50 text-sm text-gray-600 space-y-2 hidden">
-            <p><strong>Modo de uso:</strong></p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Haga clic en un diente para seleccionarlo.</li>
-              <li>Use el panel de la derecha para registrar tratamientos o planificaciones.</li>
-              <li>Para restauraciones por caras, seleccione el procedimiento "Restauración" y luego haga clic en las áreas del diente (superior, inferior, centro, etc.).</li>
-              <li>Las marcas de colores indican el estado actual o planificado de cada pieza dental.</li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {showViewModal && selectedTooth && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-40" onClick={() => { setShowViewModal(false); setSelectedTooth(null); setSelectedSector(null); }} />
-          <div className="relative bg-white rounded-lg shadow-lg max-w-lg w-full p-4 z-10">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">Tratamientos - Pieza {selectedTooth}</h4>
-              <button onClick={() => { setShowViewModal(false); setSelectedTooth(null); setSelectedSector(null); }} className="text-sm text-gray-600">Cerrar</button>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 border-2 border-blue-600 rounded-full"></div>
+              <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Corona</span>
             </div>
-            
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {getProceduresFor(selectedTooth, selectedSector).length > 0 ? (
-                getProceduresFor(selectedTooth, selectedSector).map((proc, idx) => (
-                  <div key={idx} className="p-2 border rounded-md bg-gray-50">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{proc.date}</span>
-                      <span>{proc.sector ? getFaceName(selectedTooth, proc.sector) : 'Pieza completa'}</span>
-                    </div>
-                    <div className="font-medium text-gray-800">{proc.procedure}</div>
-                    {proc.notes && <div className="text-xs text-gray-600 mt-1">{proc.notes}</div>}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">No hay registros para esta selección.</div>
-              )}
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 border-t-2 border-b-2 border-green-600"></div>
+              <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Prótesis</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-red-600 text-lg font-bold leading-none">✕</div>
+              <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Extracción</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-gray-400 rounded border border-gray-400"></div>
+              <span className="text-xs text-gray-600 font-medium uppercase tracking-wider">Ausente</span>
             </div>
           </div>
         </div>
       )}
-
-      {showDetailModal && selectedProcedure && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black opacity-40" onClick={() => { setShowDetailModal(false); setSelectedProcedure(null); }} />
-          <div className="relative bg-white rounded-lg shadow-lg max-w-lg w-full p-4 z-10">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">Detalle del Procedimiento</h4>
-              <button onClick={() => { setShowDetailModal(false); setSelectedProcedure(null); }} className="text-sm text-gray-600">Cerrar</button>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div><strong>Procedimiento:</strong> {selectedProcedure.procedure}</div>
-              <div><strong>Fecha:</strong> {selectedProcedure.date}</div>
-              <div><strong>Diente:</strong> {selectedProcedure.tooth || selectedTooth}</div>
-              <div><strong>Sector:</strong> {selectedProcedure.sector || '-'}</div>
-              <div><strong>Realizado por:</strong> {selectedProcedure.performedBy || '-'}</div>
-              {selectedProcedure.quantity && <div><strong>Cantidad:</strong> {selectedProcedure.quantity}</div>}
-              {selectedProcedure.estimated_price && <div><strong>Precio estimado:</strong> {selectedProcedure.estimated_price}</div>}
-              {selectedProcedure.notes && <div><strong>Notas:</strong><div className="mt-1 text-gray-700">{selectedProcedure.notes}</div></div>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal removed: plan is added via the right-side inline panel */}
-
-      {/* Panel de detalles por diente eliminado */}
     </div>
   );
 }

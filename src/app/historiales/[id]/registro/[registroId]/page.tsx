@@ -8,6 +8,7 @@ import medicalRecordsService, { MedicalRecord } from '@/services/medicalRecords'
 import { dateHelper } from '@/utils/date-helper';
 import { patientsService } from '@/services/api/patients.service';
 import { usersService } from '@/services/api/users.service';
+import { medicalRecordsService as medicalRecordsApiService } from '@/services/api/medical-records.service';
 import { useAuth } from '@/hooks/useAuth';
 import Odontogram from '../../../components/Odontogram';
 import ImageViewerModal from '../../../modals/ImageViewerModal';
@@ -15,6 +16,7 @@ import * as ReactDOM from 'react-dom/client';
 import { OdontogramTemplate } from '@/components/pdf/OdontogramTemplate';
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
+import { getOdontogramProcedureFaceInitials } from '@/utils/odontogram-face-initials';
 
 /**
  * Página de detalle de registro médico (Solo lectura)
@@ -154,6 +156,29 @@ export default function RegistroDetailPage() {
     if (isPrinting) return;
     setIsPrinting(true);
 
+    // Obtener todas las prestaciones del mes de la consulta
+    const consultationDate = new Date(registro.fecha);
+    const month = consultationDate.getMonth();
+    const year = consultationDate.getFullYear();
+
+    // Recopilar todas las prestaciones de todos los dientes que ocurrieron en este mes
+    const monthlyProcedures: any[] = [];
+    const odontogramConditions = registro.odontogramas?.actual || [];
+    
+    odontogramConditions.forEach((tooth: any) => {
+      if (tooth.procedures && Array.isArray(tooth.procedures)) {
+        tooth.procedures.forEach((proc: any) => {
+          const procDate = new Date(proc.date);
+          if (procDate.getMonth() === month && procDate.getFullYear() === year) {
+            monthlyProcedures.push({ ...proc, toothNumber: tooth.number });
+          }
+        });
+      }
+    });
+
+    // Ordenar por día
+    monthlyProcedures.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
     const mountDiv = document.createElement('div');
     mountDiv.style.cssText =
       'position:fixed;top:0;left:-10000px;width:794px;' +
@@ -171,7 +196,8 @@ export default function RegistroDetailPage() {
               consultationDate={registro.fecha}
               doctorName={doctorName || 'N/A'}
               doctorMatricula={doctorLicense || ''}
-              odontogramConditions={registro.odontogramas?.actual || []}
+              odontogramConditions={odontogramConditions}
+              monthlyProcedures={monthlyProcedures}
               observaciones={registro.observaciones || ''}
               printMode={true}
             />
@@ -281,6 +307,101 @@ export default function RegistroDetailPage() {
     };
     return types[type] || type;
   };
+
+  // Memoize consultation procedures for the current record
+  const currentProcedures = useMemo(() => {
+    if (!registro || !registro.odontogramas?.actual) return [];
+    
+    const recordProcedures: any[] = [];
+    const recordDate = new Date(registro.fecha).toISOString().split('T')[0];
+    
+    registro.odontogramas.actual.forEach((tooth: any) => {
+      if (tooth.procedures && Array.isArray(tooth.procedures)) {
+        tooth.procedures.forEach((proc: any) => {
+          const procDate = new Date(proc.date).toISOString().split('T')[0];
+          if (procDate === recordDate) {
+            recordProcedures.push({
+              ...proc,
+              toothNumber: tooth.number,
+              sectors: tooth.sectors || []
+            });
+          }
+        });
+      }
+    });
+    
+    return recordProcedures;
+  }, [registro]);
+
+  const [historicalProcedures, setHistoricalProcedures] = useState<any[]>([]);
+
+  useEffect(() => {
+    const extractFromHistoricoSnapshot = () => {
+      if (!registro?.odontogramas?.historico) return [];
+      const list: any[] = [];
+      registro.odontogramas.historico.forEach((tooth: any) => {
+        if (tooth.procedures && Array.isArray(tooth.procedures)) {
+          tooth.procedures.forEach((proc: any) => {
+            list.push({
+              ...proc,
+              toothNumber: tooth.number,
+              sectors: tooth.sectors || [],
+            });
+          });
+        }
+      });
+      return list;
+    };
+
+    const sortProcList = (list: any[]) =>
+      [...list].sort((a, b) => {
+        const ta = new Date(a.date || 0).getTime();
+        const tb = new Date(b.date || 0).getTime();
+        if (ta !== tb) return ta - tb;
+        return (a.toothNumber || 0) - (b.toothNumber || 0);
+      });
+
+    if (!clinicId || !patientId || !registro?.id) {
+      setHistoricalProcedures([]);
+      return;
+    }
+
+    const loadHistoricalProcedures = async () => {
+      try {
+        const response = await medicalRecordsApiService.getPatientRecords(patientId, clinicId, 1, 1000);
+        if (!response.success || !response.data) {
+          setHistoricalProcedures(sortProcList(extractFromHistoricoSnapshot()));
+          return;
+        }
+        const cutoff = new Date(registro.fecha).getTime();
+        const list: any[] = [];
+        response.data
+          .filter(
+            (r: any) =>
+              (!r.estadoRegistro || r.estadoRegistro === 'guardado') &&
+              r.id !== registro.id &&
+              new Date(r.fecha).getTime() < cutoff
+          )
+          .forEach((r: any) => {
+            r.odontogramas?.actual?.forEach((tooth: any) => {
+              tooth.procedures?.forEach((proc: any) => {
+                list.push({
+                  ...proc,
+                  toothNumber: tooth.number,
+                  sectors: tooth.sectors || [],
+                });
+              });
+            });
+          });
+        const sorted = sortProcList(list);
+        setHistoricalProcedures(sorted.length > 0 ? sorted : sortProcList(extractFromHistoricoSnapshot()));
+      } catch {
+        setHistoricalProcedures(sortProcList(extractFromHistoricoSnapshot()));
+      }
+    };
+
+    loadHistoricalProcedures();
+  }, [clinicId, patientId, registro?.id, registro?.fecha, registro?.odontogramas?.historico]);
 
   if (loading) {
     return (
@@ -603,6 +724,55 @@ export default function RegistroDetailPage() {
                       interventionColor="blue"
                     />
                   </div>
+
+                  {/* Tabla de Prestaciones Realizadas */}
+                  <div className="mt-8 border-t border-gray-100 pt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ClipboardList className="w-5 h-5 text-blue-600" />
+                      <h4 className="text-lg font-semibold text-gray-900">Prestaciones Realizadas en esta Consulta</h4>
+                    </div>
+                    
+                    {currentProcedures.length > 0 ? (
+                      <div className="overflow-x-auto rounded-xl border border-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Día</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pieza</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cara</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Procedimiento</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notas</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {currentProcedures.map((proc: any, idx: number) => {
+                              const procDate = new Date(proc.date);
+                              const day = !isNaN(procDate.getTime()) ? String(procDate.getDate()).padStart(2, '0') : '';
+                              return (
+                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{day}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{proc.toothNumber}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {getOdontogramProcedureFaceInitials(proc.toothNumber, proc.sector, proc.sectors)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
+                                    {proc.code || proc.procedure_code || '---'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{proc.procedure}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{proc.notes || '---'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <p className="text-gray-500 italic">No se registraron prestaciones específicas en esta consulta.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -622,6 +792,56 @@ export default function RegistroDetailPage() {
                       showLegend={false}
                       interventionColor="red"
                     />
+                  </div>
+
+                  <div className="mt-8 border-t border-gray-100 pt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ClipboardList className="w-5 h-5 text-red-600" />
+                      <h4 className="text-lg font-semibold text-gray-900">Prestaciones del historial</h4>
+                    </div>
+                    {historicalProcedures.length > 0 ? (
+                      <div className="overflow-x-auto rounded-xl border border-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Fecha</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pieza</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Cara</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Procedimiento</th>
+                              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Notas</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {historicalProcedures.map((proc: any, idx: number) => {
+                              const procDate = proc.date ? new Date(proc.date) : null;
+                              const fecha =
+                                procDate && !isNaN(procDate.getTime())
+                                  ? procDate.toLocaleDateString('es-AR')
+                                  : '—';
+                              return (
+                                <tr key={`${proc.id || proc.procId || idx}_${proc.toothNumber}_${idx}`} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{fecha}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{proc.toothNumber}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                    {getOdontogramProcedureFaceInitials(proc.toothNumber, proc.sector, proc.sectors)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-red-600">
+                                    {proc.code || proc.procedure_code || '—'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{proc.procedure}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{proc.notes || '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <p className="text-gray-500 italic">No hay prestaciones registradas en el historial acumulado.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
