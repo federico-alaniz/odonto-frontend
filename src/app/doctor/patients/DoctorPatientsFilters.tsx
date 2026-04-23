@@ -90,6 +90,7 @@ export default function DoctorPatientsFilters({ filters, onFiltersChange }: Filt
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="w-full h-9 pl-9 pr-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white"
+            suppressHydrationWarning
           />
         </div>
         

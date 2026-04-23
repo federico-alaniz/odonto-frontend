@@ -196,6 +196,7 @@ export default function LoginPage() {
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 placeholder-gray-400"
                     placeholder="tu@email.com"
                     disabled={isLoading}
+                    suppressHydrationWarning
                   />
                 </div>
               </div>
@@ -217,6 +218,7 @@ export default function LoginPage() {
                     className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-gray-900 placeholder-gray-400"
                     placeholder="••••••••"
                     disabled={isLoading}
+                    suppressHydrationWarning
                   />
                   <button
                     type="button"
@@ -240,6 +242,7 @@ export default function LoginPage() {
                     id="remember"
                     type="checkbox"
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    suppressHydrationWarning
                   />
                   <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
                     Recordarme
