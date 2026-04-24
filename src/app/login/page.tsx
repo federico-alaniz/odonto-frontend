@@ -235,27 +235,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Recordarme y Olvidé mi contraseña */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember"
-                    type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    suppressHydrationWarning
-                  />
-                  <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                    Recordarme
-                  </label>
-                </div>
-                <Link
-                  href="/recuperar-password"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
-
               {/* Botón de Submit */}
               <button
                 type="submit"
@@ -276,20 +255,6 @@ export default function LoginPage() {
               </button>
             </form>
           </div>
-        </div>
-
-        {/* Info adicional */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Al iniciar sesión, aceptas nuestros{' '}
-            <Link href="/terminos" className="text-blue-600 hover:text-blue-700 underline">
-              Términos de Servicio
-            </Link>{' '}
-            y{' '}
-            <Link href="/privacidad" className="text-blue-600 hover:text-blue-700 underline">
-              Política de Privacidad
-            </Link>
-          </p>
         </div>
       </div>
     </div>
