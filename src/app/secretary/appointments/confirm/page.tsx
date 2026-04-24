@@ -78,11 +78,20 @@ function ConfirmAppointmentContent() {
         if (especialidadId) {
           const specialtiesRes = await clinicSettingsService.getSpecialties(clinicId);
           if (specialtiesRes.success && specialtiesRes.data) {
-            const spec = specialtiesRes.data.find((s: any) => s.id === especialidadId);
+            // Primero buscar por ID
+            let spec = specialtiesRes.data.find((s: any) => s.id === especialidadId);
+            // Si no encuentra por ID, buscar por nombre
+            if (!spec) {
+              spec = specialtiesRes.data.find((s: any) => 
+                (s.nombre || s.name) === especialidadId
+              );
+            }
             if (spec) {
-              setSpecialtyName((spec as any).nombre || (spec as any).name || 'Medicina General');
+              setSpecialtyName((spec as any).nombre || (spec as any).name || especialidadId);
             } else {
-              setSpecialtyName('Medicina General');
+              // Si no encuentra en la configuración, usar el helper de especialidades
+              const { getSpecialtyName } = await import('@/utils/specialty-helpers');
+              setSpecialtyName(getSpecialtyName(especialidadId));
             }
           }
         } else {

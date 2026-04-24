@@ -276,7 +276,7 @@ function HistorialesContent() {
       {/* Panel de Filtros */}
       {showFilters && (
         <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-b border-purple-200">
-          <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="w-full px-6 py-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Búsqueda por nombre */}
@@ -394,8 +394,8 @@ function HistorialesContent() {
         </div>
       )}
 
-      {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Content */}
+      <div className="w-full px-6 py-8">
         <PatientHistoryList
           histories={filteredHistories}
         />

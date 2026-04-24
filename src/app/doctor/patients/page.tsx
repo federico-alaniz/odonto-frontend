@@ -66,7 +66,7 @@ export default function DoctorPatientsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-6 py-8">
         
         {/* Tabla de pacientes */}
         <DoctorPatientsTable

@@ -17,7 +17,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { UserRole } from '@/types/roles';
 
 const AUTH_DEBUG = process.env.NEXT_PUBLIC_AUTH_DEBUG === '1';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 const readCookie = (name: string) => {
   if (typeof document === 'undefined') return '';

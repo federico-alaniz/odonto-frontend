@@ -148,59 +148,55 @@ export default function SecretaryPatientsPage() {
         </div>
       </div>
 
-      {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      {/* Content */}
+      <div className="w-full px-6 py-8 space-y-8">
         
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Pacientes</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-                <p className="text-sm text-gray-500">Registrados en el sistema</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Users className="w-5 h-5" />
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pacientes Activos</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.active}</p>
-                <p className="text-sm text-green-600">En seguimiento</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <UserPlus className="w-6 h-6 text-green-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Pacientes</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.total}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Con Turno Hoy</p>
-                <p className="text-3xl font-bold text-gray-900">{appointmentsToday}</p>
-                <p className="text-sm text-blue-600">Ver agenda</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                <UserPlus className="w-5 h-5" />
               </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-orange-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Pacientes Activos</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.active}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Requieren Seguimiento</p>
-                <p className="text-3xl font-bold text-gray-900">{requireFollowUp}</p>
-                <p className="text-sm text-red-600">Atención requerida</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-50 rounded-lg text-orange-600 border border-orange-100 group-hover:bg-orange-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Calendar className="w-5 h-5" />
               </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <ClipboardList className="w-6 h-6 text-red-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Con Turno Hoy</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{appointmentsToday}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-50 rounded-lg text-red-600 border border-red-100 group-hover:bg-red-600 group-hover:text-white transition-colors flex-shrink-0">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Requieren Seguimiento</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{requireFollowUp}</p>
               </div>
             </div>
           </div>

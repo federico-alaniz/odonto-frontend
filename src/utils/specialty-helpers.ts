@@ -11,6 +11,7 @@ export const SPECIALTY_NAMES: Record<string, string> = {
   'ginecologia': 'Ginecología',
   'obstetricia': 'Obstetricia',
   'odontologia': 'Odontología',
+  'Odontologia': 'Odontología',
   'cirugia-oral': 'Cirugía Oral',
   'traumatologia': 'Traumatología',
   'ortopedia': 'Ortopedia',

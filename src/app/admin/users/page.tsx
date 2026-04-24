@@ -305,14 +305,6 @@ export default function AdminUsersPage() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Upload className="w-4 h-4" />
-                Importar
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <Download className="w-4 h-4" />
-                Exportar
-              </button>
               <Link
                 href="/admin/users/new"
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -325,7 +317,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="w-full px-6 py-8">
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-6">
@@ -341,7 +333,7 @@ export default function AdminUsersPage() {
                   <div className="bg-red-100 rounded-lg p-3 mb-3">
                     <p className="text-sm font-medium text-red-900 mb-2">Posibles causas:</p>
                     <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
-                      <li>El backend no está corriendo en <code className="bg-red-200 px-1 rounded">localhost:5000</code></li>
+                      <li>El backend no está corriendo en <code className="bg-red-200 px-1 rounded">localhost:8000</code></li>
                       <li>Credenciales de MongoDB incorrectas</li>
                       <li>IP no autorizada en MongoDB Atlas</li>
                       <li>Usuario de base de datos sin permisos</li>
@@ -360,7 +352,7 @@ export default function AdminUsersPage() {
                     Reintentar
                   </button>
                   <a 
-                    href="http://localhost:5000/api/users" 
+                    href="http://localhost:8000/api/users" 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
@@ -383,164 +375,67 @@ export default function AdminUsersPage() {
         {!isLoading && !error && (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Total Usuarios</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                    <Users className="w-5 h-5" />
                   </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <Users className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium">Activos</p>
-                    <p className="text-2xl font-bold text-blue-600 mt-1">{stats.active}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <UserCheck className="w-6 h-6 text-blue-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Usuarios</p>
+                    <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.total}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Doctores</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.doctors}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Stethoscope className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Secretarias</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.secretaries}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <UserCog className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Admins</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.admins}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Shield className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex items-center gap-4">
-            {/* Filter Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
-                showFilters || hasActiveFilters
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              Filtros
-              {hasActiveFilters && (
-                <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">
-                  {[filters.role, filters.status, filters.specialty].filter(Boolean).length}
-                </span>
-              )}
-            </button>
-
-            {selectedUsers.length > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedUsers.length} seleccionados
-                </span>
-                <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Acciones
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
-                  <select
-                    value={filters.role}
-                    onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Todos los roles</option>
-                    <option value="admin">Administrador</option>
-                    <option value="doctor">Doctor</option>
-                    <option value="secretary">Secretaria</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                  <select
-                    value={filters.status}
-                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Todos los estados</option>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                    <option value="suspendido">Suspendido</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Especialidad</label>
-                  <select
-                    value={filters.specialty}
-                    onChange={(e) => setFilters({ ...filters, specialty: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={filters.role !== 'doctor' && filters.role !== ''}
-                  >
-                    <option value="">Todas las especialidades</option>
-                    <option value="clinica-medica">Clínica Médica</option>
-                    <option value="cardiologia">Cardiología</option>
-                    <option value="pediatria">Pediatría</option>
-                    <option value="dermatologia">Dermatología</option>
-                    <option value="traumatologia">Traumatología</option>
-                  </select>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Activos</p>
+                    <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.active}</p>
+                  </div>
                 </div>
               </div>
 
-              {hasActiveFilters && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Limpiar filtros
-                  </button>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                    <Stethoscope className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Doctores</p>
+                    <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.doctors}</p>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 rounded-lg text-purple-600 border border-purple-100 group-hover:bg-purple-600 group-hover:text-white transition-colors flex-shrink-0">
+                    <UserCog className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Secretarias</p>
+                    <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.secretaries}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-50 rounded-lg text-orange-600 border border-orange-100 group-hover:bg-orange-600 group-hover:text-white transition-colors flex-shrink-0">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Admins</p>
+                    <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.admins}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
         {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -549,14 +444,6 @@ export default function AdminUsersPage() {
               <table className="min-w-full w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                  </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Usuario
                   </th>
@@ -589,14 +476,6 @@ export default function AdminUsersPage() {
 
                   return (
                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={() => handleSelectUser(user.id)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                      </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           {user.avatar ? (

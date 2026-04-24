@@ -335,54 +335,54 @@ export default function SecretaryDashboardPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="w-full px-6 py-8 space-y-8">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Citas de Hoy</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.citasHoy}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-50 rounded-lg text-blue-600 border border-gray-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Calendar className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-blue-100">
-                <Calendar className="w-7 h-7 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pacientes Esperando</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.pacientesEsperando}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-yellow-100">
-                <Clock className="w-7 h-7 text-yellow-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Citas de Hoy</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.citasHoy}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.citasPendientes}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-50 rounded-lg text-yellow-600 border border-yellow-100 group-hover:bg-yellow-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Clock className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-orange-100">
-                <AlertTriangle className="w-7 h-7 text-orange-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Pacientes Esperando</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.pacientesEsperando}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completadas</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.consultasCompletadas}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-50 rounded-lg text-orange-600 border border-orange-100 group-hover:bg-orange-600 group-hover:text-white transition-colors flex-shrink-0">
+                <AlertTriangle className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-green-100">
-                <CheckCircle className="w-7 h-7 text-green-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Pendientes</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.citasPendientes}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Completadas</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.consultasCompletadas}</p>
               </div>
             </div>
           </div>

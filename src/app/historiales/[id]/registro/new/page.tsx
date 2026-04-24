@@ -812,9 +812,12 @@ export default function NewMedicalRecordPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando datos del paciente...</p>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-600 rounded-full animate-spin border-t-transparent"></div>
+          </div>
+          <p className="text-gray-600 font-medium">Aguarde un instante...</p>
         </div>
       </div>
     );

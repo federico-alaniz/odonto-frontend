@@ -314,54 +314,58 @@ export default function DoctorDashboard() {
       </div>
 
       {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="w-full px-6 py-8 space-y-8">
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Citas</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.total}</p>
+          {/* Total Citas */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-50 rounded-lg text-blue-600 border border-gray-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Calendar className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-gray-50 text-blue-700 border border-gray-200">
-                <Calendar className="w-7 h-7" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Confirmadas</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.confirmadas}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-200">
-                <UserCheck className="w-7 h-7" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Citas</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.total}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">En Curso</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.enCurso}</p>
+          {/* Confirmadas */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-50 rounded-lg text-yellow-600 border border-yellow-100 group-hover:bg-yellow-600 group-hover:text-white transition-colors flex-shrink-0">
+                <UserCheck className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                <Activity className="w-7 h-7" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Confirmadas</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.confirmadas}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completadas</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">{stats.completadas}</p>
+          {/* En Curso */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Activity className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-gray-50 text-gray-700 border border-gray-200">
-                <CheckCircle className="w-7 h-7" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">En Curso</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.enCurso}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Completadas */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-50 rounded-lg text-gray-600 border border-gray-100 group-hover:bg-gray-600 group-hover:text-white transition-colors flex-shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Completadas</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{stats.completadas}</p>
               </div>
             </div>
           </div>

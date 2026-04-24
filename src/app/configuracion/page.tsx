@@ -1,22 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings, Bell, Shield, Info } from 'lucide-react';
 import MedicalFormContainer from '@/components/forms/MedicalFormContainer';
 import MedicalFormSection from '@/components/forms/MedicalFormSection';
 import MedicalSelectField from '@/components/forms/MedicalSelectField';
 import MedicalFieldGroup from '@/components/forms/MedicalFieldGroup';
 import MedicalButton from '@/components/forms/MedicalButton';
+import { userSettingsService, UserSettings } from '@/services/api/user-settings.service';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function ConfiguracionPage() {
+  const { currentUser } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<UserSettings>({
     notificacionesEmail: true,
     notificacionesPush: true,
     notificacionesCitas: true,
     sesionExpira: '8'
   });
+
+  const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+  const userId = (currentUser as any)?.id;
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!clinicId || !userId) return;
+      
+      try {
+        setLoading(true);
+        const response = await userSettingsService.getSettings(clinicId, userId);
+        if (response.success) {
+          setSettings(response.data);
+        }
+      } catch (error: any) {
+        console.error('Error al cargar configuración:', error);
+        showError(error.message || 'Error al cargar configuración');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [clinicId, userId, showError]);
 
   const handleSettingChange = (field: string, value: string | boolean) => {
     setSettings(prev => ({
@@ -26,11 +56,23 @@ export default function ConfiguracionPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    // Simular guardado
-    setTimeout(() => {
+    if (!clinicId || !userId) {
+      showError('Error de autenticación');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await userSettingsService.updateSettings(clinicId, userId, settings);
+      if (response.success) {
+        showSuccess('Configuración guardada correctamente');
+      }
+    } catch (error: any) {
+      console.error('Error al guardar configuración:', error);
+      showError(error.message || 'Error al guardar configuración');
+    } finally {
       setSaving(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -168,16 +210,6 @@ export default function ConfiguracionPage() {
                 ]}
               />
             </MedicalFieldGroup>
-            
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-amber-600" />
-                <h4 className="text-sm font-medium text-amber-800">Configuración de Seguridad Avanzada</h4>
-              </div>
-              <p className="text-sm text-amber-700 mt-2">
-                Para cambiar tu contraseña o configurar autenticación de dos factores, visita la sección de Seguridad.
-              </p>
-            </div>
           </MedicalFormSection>
 
         </MedicalFormContainer>

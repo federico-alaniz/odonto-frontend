@@ -207,45 +207,54 @@ export default function BillingPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <div className="w-full px-6 py-8 space-y-6">
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Facturado</p>
-                <p className="text-3xl font-bold mt-2 text-gray-900">${paymentStats.totalRevenue.toFixed(2)}</p>
-                <p className="text-sm text-gray-500 mt-1">{filteredPayments.length} registros</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <DollarSign className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-blue-100">
-                <DollarSign className="w-7 h-7 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pagos Completados</p>
-                <p className="text-3xl font-bold mt-2 text-green-600">${paymentStats.totalPaid.toFixed(2)}</p>
-                <p className="text-sm text-gray-500 mt-1">{paymentStats.paidCount} pagos</p>
-              </div>
-              <div className="p-3 rounded-lg bg-green-100">
-                <CheckCircle className="w-7 h-7 text-green-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Facturado</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">${paymentStats.totalRevenue.toFixed(2)}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pagos Pendientes</p>
-                <p className="text-3xl font-bold mt-2 text-yellow-600">${paymentStats.totalPending.toFixed(2)}</p>
-                <p className="text-sm text-gray-500 mt-1">{paymentStats.pendingCount} pendientes</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                <CheckCircle className="w-5 h-5" />
               </div>
-              <div className="p-3 rounded-lg bg-yellow-100">
-                <Clock className="w-7 h-7 text-yellow-600" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Pagos Completados</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">${paymentStats.totalPaid.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-50 rounded-lg text-yellow-600 border border-yellow-100 group-hover:bg-yellow-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Pagos Pendientes</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">${paymentStats.totalPending.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg text-purple-600 border border-purple-100 group-hover:bg-purple-600 group-hover:text-white transition-colors flex-shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Registros</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{filteredPayments.length}</p>
               </div>
             </div>
           </div>

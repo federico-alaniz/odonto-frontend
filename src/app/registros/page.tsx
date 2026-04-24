@@ -141,7 +141,7 @@ export default function RegistrosMedicosPage() {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 min-h-screen">
+    <div className="flex-1 bg-gray-50 min-h-screen w-full">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="px-6 py-6">
@@ -277,7 +277,7 @@ export default function RegistrosMedicosPage() {
       </div>
 
       {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-6 py-8">
         {filteredEntries.length === 0 ? (
           <div className="text-center py-12">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -443,7 +443,10 @@ export default function RegistrosMedicosPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex space-x-2 justify-end">
                           <button
-                            onClick={() => handleViewEntry(entry)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewEntry(entry);
+                            }}
                             className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-sm transition-colors"
                             title="Ver detalle"
                           >
@@ -453,7 +456,10 @@ export default function RegistrosMedicosPage() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleEditEntry(entry)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditEntry(entry);
+                            }}
                             className="text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-1 rounded text-sm transition-colors"
                             title="Editar"
                           >

@@ -83,8 +83,8 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {/* Content Container */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Calendario */}
+      <div className="w-full px-6 py-8">
         {viewMode === 'calendar' ? (
           <Calendar />
         ) : (

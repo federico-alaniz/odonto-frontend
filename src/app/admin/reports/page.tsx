@@ -417,43 +417,34 @@ export default function ReportsPage() {
 
   return (
     <RoleGuard allowedRoles={['admin']}>
-      <div className="min-h-screen bg-gray-50/50 p-6">
-        <div className="max-w-7xl mx-auto space-y-8">
-          
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-xl shadow-lg shadow-blue-200">
-                <BarChart3 className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gray-50/50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="px-6 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-blue-600 rounded-xl shadow-sm">
+                  <BarChart3 className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Reportes y Estadísticas</h1>
+                  <p className="text-gray-600 mt-1">Gestión clínica y análisis de datos odontológicos</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Reportes y Estadísticas</h1>
-                <p className="text-gray-500 mt-1 flex items-center gap-2">
-                  Gestión clínica y análisis de datos odontológicos
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                    Admin
-                  </span>
-                </p>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={exportPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  Imprimir PDF
+                </button>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={exportCSV}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium"
-              >
-                <Download className="w-4 h-4" />
-                Exportar CSV
-              </button>
-              <button 
-                onClick={exportPDF}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-medium"
-              >
-                <Printer className="w-4 h-4" />
-                Imprimir PDF
-              </button>
             </div>
           </div>
+        </div>
+
+        <div className="w-full px-6 py-8 space-y-8">
 
           {/* Filters & Navigation */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -623,19 +614,23 @@ export default function ReportsPage() {
                     {activeReport === 'appointments' && (
                       <div className="space-y-8">
                         {/* Cards Summary */}
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                           {[
                             { label: 'Total Turnos', value: appointmentStats.total, icon: CalendarDays, color: 'blue' },
                             { label: 'Completados', value: appointmentStats.completed, icon: UserCheck, color: 'emerald' },
                             { label: 'Cancelados', value: appointmentStats.cancelled, icon: Clock, color: 'rose' },
                             { label: 'Pendientes', value: appointmentStats.pending, icon: Activity, color: 'amber' }
                           ].map((stat, i) => (
-                            <div key={i} className={`p-4 rounded-2xl border border-${stat.color}-100 bg-${stat.color}-50/30`}>
-                              <div className="flex items-center justify-between mb-2">
-                                <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+                            <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 bg-${stat.color}-50 rounded-lg text-${stat.color}-600 border border-${stat.color}-100 group-hover:bg-${stat.color}-600 group-hover:text-white transition-colors flex-shrink-0`}>
+                                  <stat.icon className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">{stat.label}</p>
+                                  <p className="text-xl font-black text-gray-900 leading-none mt-1">{stat.value}</p>
+                                </div>
                               </div>
-                              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{stat.label}</p>
                             </div>
                           ))}
                         </div>
@@ -763,23 +758,41 @@ export default function ReportsPage() {
 
                     {activeReport === 'patients' && (
                       <div className="space-y-8">
-                        <div className="grid grid-cols-3 gap-6">
-                          <div className="p-6 rounded-3xl bg-emerald-50 border border-emerald-100">
-                            <h4 className="text-sm font-bold text-emerald-700 uppercase tracking-wider mb-2">Total Pacientes</h4>
-                            <p className="text-4xl font-black text-emerald-900">{patientStats.total}</p>
-                            <p className="text-xs text-emerald-600 mt-1 font-medium">Registrados en la clínica</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600 border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors flex-shrink-0">
+                                <Users className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Pacientes</p>
+                                <p className="text-xl font-black text-gray-900 leading-none mt-1">{patientStats.total}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="p-6 rounded-3xl bg-blue-50 border border-blue-100">
-                            <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wider mb-2">Nuevos Pacientes</h4>
-                            <p className="text-4xl font-black text-blue-900">{patientStats.newInPeriod}</p>
-                            <p className="text-xs text-blue-600 mt-1 font-medium">En el periodo seleccionado</p>
+                          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                                <UserCheck className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Nuevos Pacientes</p>
+                                <p className="text-xl font-black text-gray-900 leading-none mt-1">{patientStats.newInPeriod}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="p-6 rounded-3xl bg-indigo-50 border border-indigo-100">
-                            <h4 className="text-sm font-bold text-indigo-700 uppercase tracking-wider mb-2">Tasa de Crecimiento</h4>
-                            <p className="text-4xl font-black text-indigo-900">
-                              {Math.round((patientStats.newInPeriod / (patientStats.total || 1)) * 100)}%
-                            </p>
-                            <p className="text-xs text-indigo-600 mt-1 font-medium">Respecto al total</p>
+                          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 border border-indigo-100 group-hover:bg-indigo-600 group-hover:text-white transition-colors flex-shrink-0">
+                                <TrendingUp className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Tasa de Crecimiento</p>
+                                <p className="text-xl font-black text-gray-900 leading-none mt-1">
+                                  {Math.round((patientStats.newInPeriod / (patientStats.total || 1)) * 100)}%
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
 

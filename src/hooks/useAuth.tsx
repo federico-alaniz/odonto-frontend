@@ -85,7 +85,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // tenantId debería venir en el token/session después del login; no
     // debemos asumir un valor por defecto que provoque crear datos en la
     // clínica equivocada.
-    const tenantId = ((session as any)?.tenantId ?? (sessionUser as any)?.tenantId) as string | undefined;
+    const tenantId = ((session as any)?.tenantId ?? (sessionUser as any)?.tenantId ?? 'doyltct_clinics') as string;
 
     void (async () => {
       try {

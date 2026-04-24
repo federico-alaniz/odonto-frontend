@@ -290,43 +290,55 @@ export default function MedicalStaffPage() {
         </div>
       </div>
 
-      <div className="px-6 py-8">
+      <div className="w-full px-6 py-8">
         {/* Estadísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Total Médicos</span>
-              <Users className="w-5 h-5 text-blue-600" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Total Médicos</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{doctors.length}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-gray-900">{doctors.length}</div>
-            <div className="text-xs text-gray-500 mt-1">Personal activo</div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Presentes</span>
-              <UserCheck className="w-5 h-5 text-green-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg text-green-600 border border-green-100 group-hover:bg-green-600 group-hover:text-white transition-colors flex-shrink-0">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Presentes</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{onlineDoctors}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-green-700">{onlineDoctors}</div>
-            <div className="text-xs text-green-600 mt-1">Logueados</div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Atendiendo</span>
-              <CircleDot className="w-5 h-5 text-blue-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg text-blue-600 border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors flex-shrink-0">
+                <CircleDot className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Atendiendo</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{attendingDoctors}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-blue-700">{attendingDoctors}</div>
-            <div className="text-xs text-blue-600 mt-1">En consulta</div>
           </div>
 
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Avisos Nuevos</span>
-              <Bell className="w-5 h-5 text-yellow-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-50 rounded-lg text-yellow-600 border border-yellow-100 group-hover:bg-yellow-600 group-hover:text-white transition-colors flex-shrink-0">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">Avisos Nuevos</p>
+                <p className="text-xl font-black text-gray-900 leading-none mt-1">{avisosNoLeidos}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-yellow-700">{avisosNoLeidos}</div>
-            <div className="text-xs text-yellow-600 mt-1">Sin leer</div>
           </div>
         </div>
 

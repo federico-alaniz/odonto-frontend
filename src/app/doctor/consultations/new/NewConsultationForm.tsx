@@ -170,9 +170,12 @@ export default function NewConsultationForm() {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando información del paciente...</p>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-12 h-12 border-4 border-gray-200 rounded-full"></div>
+              <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-600 rounded-full animate-spin border-t-transparent"></div>
+            </div>
+            <p className="text-gray-600 font-medium">Aguarde un instante...</p>
           </div>
         </div>
       </div>

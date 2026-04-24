@@ -34,7 +34,7 @@ import { rolePermissionsService, RoleConfig, RolePermissions } from '@/services/
 import { emailConfigService, EmailConfig } from '@/services/api/email-config.service';
 import { useAuth } from '@/hooks/useAuth';
 
-type SettingsTab = 'general' | 'resources' | 'notifications' | 'security' | 'permissions' | 'billing' | 'integrations';
+type SettingsTab = 'general' | 'resources' | 'permissions' | 'integrations';
 
 interface MedicalSpecialty {
   id: string;
@@ -112,6 +112,7 @@ export default function AdminSettingsPage() {
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [testEmail, setTestEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Cargar configuración al montar
   useEffect(() => {
@@ -235,7 +236,16 @@ export default function AdminSettingsPage() {
       const response = await emailConfigService.getConfig(clinicId);
       
       if (response.success && response.data) {
-        setEmailConfig(response.data);
+        // Asegurar que todos los campos tengan valores por defecto para evitar inputs no controlados
+        setEmailConfig({
+          smtpHost: response.data.smtpHost || '',
+          smtpPort: response.data.smtpPort || 587,
+          smtpUser: response.data.smtpUser || '',
+          smtpPassword: response.data.smtpPassword || '',
+          fromEmail: response.data.fromEmail || '',
+          fromName: response.data.fromName || '',
+          enabled: response.data.enabled || false
+        });
       }
     } catch (error: any) {
       console.error('Error al cargar configuración de email:', error);
@@ -383,12 +393,9 @@ export default function AdminSettingsPage() {
   };
 
   const tabs = [
-    { id: 'general' as SettingsTab, label: 'General', icon: Building2, color: 'blue' },
+    { id: 'general' as SettingsTab, label: 'General', icon: Settings, color: 'blue' },
     { id: 'resources' as SettingsTab, label: 'Recursos Clínicos', icon: Stethoscope, color: 'teal' },
-    { id: 'notifications' as SettingsTab, label: 'Notificaciones', icon: Bell, color: 'yellow' },
-    { id: 'security' as SettingsTab, label: 'Seguridad', icon: Shield, color: 'red' },
     { id: 'permissions' as SettingsTab, label: 'Permisos', icon: Shield, color: 'indigo' },
-    { id: 'billing' as SettingsTab, label: 'Facturación', icon: DollarSign, color: 'green' },
     { id: 'integrations' as SettingsTab, label: 'Integraciones', icon: Database, color: 'purple' },
   ];
 
@@ -606,6 +613,21 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleToggleRoom = async (id: string) => {
+    const updatedRooms = consultingRooms.map(r => r.id === id ? { ...r, active: !r.active } : r);
+    setConsultingRooms(updatedRooms);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateConsultingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(consultingRoomsStorageKey, JSON.stringify(updatedRooms));
+    } catch (error) {
+      console.error('Error actualizando consultorio:', error);
+      // Revertir cambio en caso de error
+      setConsultingRooms(consultingRooms);
+    }
+  };
+
   const handleAddOperatingRoom = async (room: Omit<OperatingRoom, 'id'>) => {
     const newRoom = { ...room, id: Date.now().toString() };
     const updatedRooms = [...operatingRooms, newRoom];
@@ -637,6 +659,21 @@ export default function AdminSettingsPage() {
     } catch (error) {
       console.error('Error eliminando quirófano:', error);
       showError('Error al eliminar', 'No se pudo eliminar el quirófano');
+      // Revertir cambio en caso de error
+      setOperatingRooms(operatingRooms);
+    }
+  };
+
+  const handleToggleOperatingRoom = async (id: string) => {
+    const updatedRooms = operatingRooms.map(r => r.id === id ? { ...r, active: !r.active } : r);
+    setOperatingRooms(updatedRooms);
+    
+    // Guardar automáticamente
+    try {
+      await clinicSettingsService.updateOperatingRooms(clinicId, updatedRooms, userId);
+      localStorage.setItem(operatingRoomsStorageKey, JSON.stringify(updatedRooms));
+    } catch (error) {
+      console.error('Error actualizando quirófano:', error);
       // Revertir cambio en caso de error
       setOperatingRooms(operatingRooms);
     }
@@ -680,7 +717,7 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-6 py-8">
         {/* Horizontal Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-x-auto">
           <nav className="flex items-center gap-2 p-2">
@@ -733,8 +770,9 @@ export default function AdminSettingsPage() {
                         <h3 className="text-lg font-semibold text-gray-900">Información de la Clínica</h3>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2 md:col-span-2">
+                      <div className="space-y-6">
+                        {/* Nombre de la Clínica */}
+                        <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-700">
                             Nombre de la Clínica *
                           </label>
@@ -742,13 +780,13 @@ export default function AdminSettingsPage() {
                             type="text"
                             value={generalSettings.clinicName}
                             onChange={(e) => setGeneralSettings({...generalSettings, clinicName: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            className="w-full max-w-2xl px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             placeholder="Ej: Centro Médico MediCore"
                           />
                         </div>
 
                         {/* Logo de la Clínica */}
-                        <div className="space-y-2 md:col-span-2">
+                        <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
                             <ImageIcon className="w-4 h-4" />
                             Logo de la Clínica
@@ -804,121 +842,130 @@ export default function AdminSettingsPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Dirección *
-                          </label>
-                          <input
-                            type="text"
-                            value={generalSettings.clinicAddress}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicAddress: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: Av. Corrientes 1234"
-                          />
+                        {/* Información de Ubicación */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <MapPin className="w-5 h-5 text-blue-600" />
+                            <h4 className="text-sm font-semibold text-gray-900">Ubicación</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2 md:col-span-3">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Dirección *
+                              </label>
+                              <input
+                                type="text"
+                                value={generalSettings.clinicAddress}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicAddress: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: Av. Corrientes 1234"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Ciudad *
+                              </label>
+                              <input
+                                type="text"
+                                value={generalSettings.clinicCity}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicCity: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: Buenos Aires"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Provincia *
+                              </label>
+                              <select
+                                value={generalSettings.clinicProvince}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicProvince: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                              >
+                                <option value="Buenos Aires">Buenos Aires</option>
+                                <option value="Córdoba">Córdoba</option>
+                                <option value="Santa Fe">Santa Fe</option>
+                                <option value="Mendoza">Mendoza</option>
+                                <option value="Tucumán">Tucumán</option>
+                                <option value="Entre Ríos">Entre Ríos</option>
+                                <option value="Salta">Salta</option>
+                                <option value="Chaco">Chaco</option>
+                                <option value="Corrientes">Corrientes</option>
+                                <option value="Misiones">Misiones</option>
+                                <option value="San Juan">San Juan</option>
+                                <option value="Jujuy">Jujuy</option>
+                                <option value="Río Negro">Río Negro</option>
+                                <option value="Neuquén">Neuquén</option>
+                                <option value="Formosa">Formosa</option>
+                                <option value="Chubut">Chubut</option>
+                                <option value="San Luis">San Luis</option>
+                                <option value="Catamarca">Catamarca</option>
+                                <option value="La Rioja">La Rioja</option>
+                                <option value="La Pampa">La Pampa</option>
+                                <option value="Santa Cruz">Santa Cruz</option>
+                                <option value="Tierra del Fuego">Tierra del Fuego</option>
+                                <option value="Santiago del Estero">Santiago del Estero</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Código Postal
+                              </label>
+                              <input
+                                type="text"
+                                value={generalSettings.clinicPostalCode}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicPostalCode: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: 1043"
+                              />
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Ciudad *
-                          </label>
-                          <input
-                            type="text"
-                            value={generalSettings.clinicCity}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicCity: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: Buenos Aires"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Provincia *
-                          </label>
-                          <select
-                            value={generalSettings.clinicProvince}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicProvince: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          >
-                            <option value="Buenos Aires">Buenos Aires</option>
-                            <option value="Córdoba">Córdoba</option>
-                            <option value="Santa Fe">Santa Fe</option>
-                            <option value="Mendoza">Mendoza</option>
-                            <option value="Tucumán">Tucumán</option>
-                            <option value="Entre Ríos">Entre Ríos</option>
-                            <option value="Salta">Salta</option>
-                            <option value="Chaco">Chaco</option>
-                            <option value="Corrientes">Corrientes</option>
-                            <option value="Misiones">Misiones</option>
-                            <option value="San Juan">San Juan</option>
-                            <option value="Jujuy">Jujuy</option>
-                            <option value="Río Negro">Río Negro</option>
-                            <option value="Neuquén">Neuquén</option>
-                            <option value="Formosa">Formosa</option>
-                            <option value="Chubut">Chubut</option>
-                            <option value="San Luis">San Luis</option>
-                            <option value="Catamarca">Catamarca</option>
-                            <option value="La Rioja">La Rioja</option>
-                            <option value="La Pampa">La Pampa</option>
-                            <option value="Santa Cruz">Santa Cruz</option>
-                            <option value="Tierra del Fuego">Tierra del Fuego</option>
-                            <option value="Santiago del Estero">Santiago del Estero</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Código Postal
-                          </label>
-                          <input
-                            type="text"
-                            value={generalSettings.clinicPostalCode}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicPostalCode: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: 1043"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            Teléfono *
-                          </label>
-                          <input
-                            type="tel"
-                            value={generalSettings.clinicPhone}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicPhone: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: +54 11 4567-8900"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Email *
-                          </label>
-                          <input
-                            type="email"
-                            value={generalSettings.clinicEmail}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicEmail: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: contacto@clinica.com"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700 flex items-center gap-2">
-                            <Globe className="w-4 h-4" />
-                            Sitio Web
-                          </label>
-                          <input
-                            type="url"
-                            value={generalSettings.clinicWebsite}
-                            onChange={(e) => setGeneralSettings({...generalSettings, clinicWebsite: e.target.value})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="Ej: www.clinica.com"
-                          />
+                        {/* Información de Contacto */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Phone className="w-5 h-5 text-blue-600" />
+                            <h4 className="text-sm font-semibold text-gray-900">Contacto</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Teléfono *
+                              </label>
+                              <input
+                                type="tel"
+                                value={generalSettings.clinicPhone}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicPhone: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: +54 11 4567-8900"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Email *
+                              </label>
+                              <input
+                                type="email"
+                                value={generalSettings.clinicEmail}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicEmail: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: contacto@clinica.com"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Sitio Web
+                              </label>
+                              <input
+                                type="url"
+                                value={generalSettings.clinicWebsite}
+                                onChange={(e) => setGeneralSettings({...generalSettings, clinicWebsite: e.target.value})}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Ej: www.clinica.com"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -952,53 +999,62 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                           onClick={() => setShowSpecialtyModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                          title="Agregar Especialidad"
                         >
-                          <Plus className="w-4 h-4" />
-                          Agregar Especialidad
+                          <Plus className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {specialties.map((specialty) => (
-                          <div key={specialty.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h4 className="font-semibold text-gray-900">{specialty.name}</h4>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${specialty.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
-                                    {specialty.active ? 'Activa' : 'Inactiva'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600">{specialty.description}</p>
-                              </div>
-                              <div className="flex items-center gap-2 ml-4">
-                                <button
-                                  onClick={() => handleToggleSpecialty(specialty.id)}
-                                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                  title={specialty.active ? 'Desactivar' : 'Activar'}
-                                >
-                                  <Activity className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSpecialty(specialty.id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                              <th className="w-24 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                              <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {specialties.map((specialty) => (
+                              <tr key={specialty.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="font-medium text-gray-900">{specialty.name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{specialty.description}</td>
+                                <td className="w-24 px-4 py-3 text-center">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={specialty.active}
+                                      onChange={() => handleToggleSpecialty(specialty.id)}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                  </label>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleDeleteSpecialty(specialty.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
 
-                      {specialties.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                          <p>No hay especialidades configuradas</p>
-                        </div>
-                      )}
+                        {specialties.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No hay especialidades configuradas</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Áreas de Secretaría */}
@@ -1010,53 +1066,62 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                           onClick={() => setShowAreaModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                          title="Agregar Área"
                         >
-                          <Plus className="w-4 h-4" />
-                          Agregar Área
+                          <Plus className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {secretaryAreas.map((area) => (
-                          <div key={area.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <h4 className="font-semibold text-gray-900">{area.name}</h4>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${area.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
-                                    {area.active ? 'Activa' : 'Inactiva'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600">{area.description}</p>
-                              </div>
-                              <div className="flex items-center gap-2 ml-4">
-                                <button
-                                  onClick={() => handleToggleArea(area.id)}
-                                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                                  title={area.active ? 'Desactivar' : 'Activar'}
-                                >
-                                  <Activity className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteArea(area.id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                              <th className="w-24 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                              <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {secretaryAreas.map((area) => (
+                              <tr key={area.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="font-medium text-gray-900">{area.name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{area.description}</td>
+                                <td className="w-24 px-4 py-3 text-center">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={area.active}
+                                      onChange={() => handleToggleArea(area.id)}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                  </label>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleDeleteArea(area.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
 
-                      {secretaryAreas.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Briefcase className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                          <p>No hay áreas configuradas</p>
-                        </div>
-                      )}
+                        {secretaryAreas.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <Briefcase className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No hay áreas configuradas</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Consultorios */}
@@ -1068,59 +1133,76 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                           onClick={() => setShowRoomModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                          title="Agregar Consultorio"
                         >
-                          <Plus className="w-4 h-4" />
-                          Agregar Consultorio
+                          <Plus className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {consultingRooms.map((room) => (
-                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-gray-900">{room.name}</span>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
-                                    {room.active ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600">N° {room.number} - Piso {room.floor}</p>
-                              </div>
-                              <button
-                                onClick={() => handleDeleteRoom(room.id)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                              <p className="text-gray-600">
-                                <span className="font-medium">Capacidad:</span> {room.capacity} personas
-                              </p>
-                              <div>
-                                <p className="font-medium text-gray-700 mb-1">Equipamiento:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {room.equipment.map((eq, idx) => (
-                                    <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
-                                      {eq}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Piso</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacidad</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipamiento</th>
+                              <th className="w-24 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                              <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {consultingRooms.map((room) => (
+                              <tr key={room.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="font-medium text-gray-900">{room.name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{room.number}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{room.floor}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{room.capacity} personas</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {room.equipment.map((eq, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
+                                        {eq}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-center">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={room.active}
+                                      onChange={() => handleToggleRoom(room.id)}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                  </label>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleDeleteRoom(room.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
 
-                      {consultingRooms.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <DoorOpen className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                          <p>No hay consultorios configurados</p>
-                        </div>
-                      )}
+                        {consultingRooms.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <DoorOpen className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No hay consultorios configurados</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Quirófanos */}
@@ -1132,57 +1214,78 @@ export default function AdminSettingsPage() {
                         </div>
                         <button
                           onClick={() => setShowOperatingRoomModal(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                          title="Agregar Quirófano"
                         >
-                          <Plus className="w-4 h-4" />
-                          Agregar Quirófano
+                          <Plus className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {operatingRooms.map((room) => (
-                          <div key={room.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-semibold text-gray-900">{room.name}</span>
-                                  <span className={`px-2 py-0.5 text-xs rounded-full ${room.active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600'}`}>
-                                    {room.active ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600">N° {room.number} - Piso {room.floor}</p>
-                                <p className="text-sm text-gray-600">
-                                  Tipo: <span className="font-medium">{room.type === 'general' ? 'General' : 'Especializado'}</span>
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => handleDeleteOperatingRoom(room.id)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-700 mb-1 text-sm">Equipamiento:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {room.equipment.map((eq, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-teal-50 text-teal-700 text-xs rounded">
-                                    {eq}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Piso</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipamiento</th>
+                              <th className="w-24 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                              <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {operatingRooms.map((room) => (
+                              <tr key={room.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <span className="font-medium text-gray-900">{room.name}</span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{room.number}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">{room.floor}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  <span className="font-medium">{room.type === 'general' ? 'General' : 'Especializado'}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {room.equipment.map((eq, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
+                                        {eq}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-center">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={room.active}
+                                      onChange={() => handleToggleOperatingRoom(room.id)}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                  </label>
+                                </td>
+                                <td className="w-24 px-4 py-3 text-right">
+                                  <button
+                                    onClick={() => handleDeleteOperatingRoom(room.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
 
-                      {operatingRooms.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                          <p>No hay quirófanos configurados</p>
-                        </div>
-                      )}
+                        {operatingRooms.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <Activity className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                            <p>No hay quirófanos configurados</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Info Box */}
@@ -1196,62 +1299,6 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
               )}
-
-              {/* Notifications Settings */}
-              {activeTab === 'notifications' && (
-                <div>
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 rounded-lg">
-                        <Bell className="w-5 h-5 text-yellow-700" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Notificaciones</h2>
-                        <p className="text-sm text-gray-600 mt-1">Configura cómo y cuándo recibir notificaciones</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="text-center py-12">
-                      <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium text-lg">Sección en desarrollo</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        Esta sección incluirá: notificaciones por email/SMS, recordatorios de citas, alertas de nuevos pacientes, alertas de facturación
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Security Settings */}
-              {activeTab === 'security' && (
-                <div>
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <Shield className="w-5 h-5 text-red-700" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Seguridad</h2>
-                        <p className="text-sm text-gray-600 mt-1">Configuración de seguridad y control de acceso</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="text-center py-12">
-                      <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium text-lg">Sección en desarrollo</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        Esta sección incluirá: autenticación 2FA, tiempo de sesión, expiración de contraseñas, requisitos de contraseña, intentos de login
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Permissions Settings */}
               {activeTab === 'permissions' && (
                 <div>
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-b border-gray-200 px-6 py-5">
@@ -1460,33 +1507,7 @@ export default function AdminSettingsPage() {
                 </div>
               )}
 
-              {/* Billing Settings */}
-              {activeTab === 'billing' && (
-                <div>
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <DollarSign className="w-5 h-5 text-green-700" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Facturación</h2>
-                        <p className="text-sm text-gray-600 mt-1">Configuración de facturación y pagos</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="text-center py-12">
-                      <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium text-lg">Sección en desarrollo</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        Esta sección incluirá: moneda, tasa de IVA, prefijo de factura, numeración, métodos de pago, facturación automática, recargos por mora
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+              
               {/* Integrations Settings */}
               {activeTab === 'integrations' && (
                 <div>
@@ -1593,13 +1614,31 @@ export default function AdminSettingsPage() {
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Contraseña SMTP <span className="text-red-500">*</span>
                               </label>
-                              <input
-                                type="password"
-                                value={emailConfig.smtpPassword}
-                                onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
-                                placeholder="••••••••••••••••"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                              />
+                              <div className="relative">
+                                <input
+                                  type={showPassword ? "text" : "password"}
+                                  value={emailConfig.smtpPassword}
+                                  onChange={(e) => setEmailConfig({ ...emailConfig, smtpPassword: e.target.value })}
+                                  placeholder="••••••••••••••••"
+                                  className="w-full px-4 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                >
+                                  {showPassword ? (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                  )}
+                                </button>
+                              </div>
                               <p className="text-xs text-gray-500 mt-1">
                                 Para Gmail, usa una contraseña de aplicación
                               </p>

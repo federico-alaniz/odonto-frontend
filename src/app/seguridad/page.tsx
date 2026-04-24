@@ -25,7 +25,7 @@ export default function SeguridadPage() {
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handlePasswordChange = (field: string, value: string) => {
     setPasswordForm(prev => ({

@@ -1,7 +1,7 @@
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const COOKIE_DOMAIN = process.env.NEXTAUTH_COOKIE_DOMAIN;
 const AUTH_DEBUG = process.env.AUTH_DEBUG === '1';
 

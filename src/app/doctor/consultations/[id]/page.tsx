@@ -264,7 +264,7 @@ export default function ConsultationDetailPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="w-full px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Sidebar - Información del Paciente */}

@@ -1,7 +1,7 @@
 // src/services/api/users.service.ts
 import { User, UserFormData } from '@/types/roles';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Headers comunes para todas las peticiones
 const getHeaders = (clinicId?: string, userId?: string) => {
@@ -45,7 +45,7 @@ const handleFetchError = (error: any) => {
   
   // Errores de red (backend no disponible)
   if (error.name === 'TypeError' && error.message.includes('fetch')) {
-    throw new Error('No se puede conectar con el backend. Verifica que esté corriendo en http://localhost:5000');
+    throw new Error('No se puede conectar con el backend. Verifica que esté corriendo en http://localhost:8000');
   }
   
   // Re-lanzar el error con el mensaje ya procesado
