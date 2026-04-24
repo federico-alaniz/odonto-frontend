@@ -1164,7 +1164,7 @@ export default function AdminSettingsPage() {
                                 <td className="px-4 py-3 text-sm text-gray-600">{room.capacity} personas</td>
                                 <td className="px-4 py-3">
                                   <div className="flex flex-wrap gap-1">
-                                    {room.equipment.map((eq, idx) => (
+                                    {room.equipment?.map((eq, idx) => (
                                       <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
                                         {eq}
                                       </span>
@@ -1247,7 +1247,7 @@ export default function AdminSettingsPage() {
                                 </td>
                                 <td className="px-4 py-3">
                                   <div className="flex flex-wrap gap-1">
-                                    {room.equipment.map((eq, idx) => (
+                                    {room.equipment?.map((eq, idx) => (
                                       <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">
                                         {eq}
                                       </span>
