@@ -59,6 +59,20 @@ function SecretaryAppointmentsContent() {
   
   // Calendar for scheduled view
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(dateHelper.now());
+  
+  // Calendar for availability view
+  const [calendarWeekStart, setCalendarWeekStart] = useState(() => {
+    const now = dateHelper.now();
+    const dayOfWeek = now.getDay();
+    const daysUntilMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - daysUntilMonday);
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
+
+  // Filter for scheduled calendar
+  const [scheduledCalendarDoctorFilter, setScheduledCalendarDoctorFilter] = useState<string>('');
 
   // Memoize clinicId to prevent unnecessary re-renders
   const clinicId = useMemo(() => {
@@ -375,6 +389,33 @@ function SecretaryAppointmentsContent() {
     return days;
   };
 
+  const goToPreviousWeek = () => {
+    setCalendarWeekStart(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() - 7);
+      return newDate;
+    });
+  };
+
+  const goToNextWeek = () => {
+    setCalendarWeekStart(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(newDate.getDate() + 7);
+      return newDate;
+    });
+  };
+
+  const getWeekRange = () => {
+    const weekEnd = new Date(calendarWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    
+    const format = (date: Date) => {
+      return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+    };
+    
+    return `${format(calendarWeekStart)} - ${format(weekEnd)}`;
+  };
+
   const getAppointmentsForMonth = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -444,24 +485,38 @@ function SecretaryAppointmentsContent() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {viewMode === 'search' ? 'Búsqueda de Turnos' : 'Mis Turnos Programados'}
+                  Turnos
                 </h1>
                 <p className="text-gray-600 mt-1 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  {viewMode === 'search' 
-                    ? 'Encuentra disponibilidad por médico o especialidad'
-                    : 'Gestiona tu agenda médica y visualiza tus próximas consultas'}
+                  Gestiona y agenda turnos médicos
                 </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setViewMode(viewMode === 'search' ? 'scheduled' : 'search')}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                {viewMode === 'search' ? 'Ver Calendario de turnos' : 'Buscar Turnos'}
-              </button>
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('search')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    viewMode === 'search'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Búsqueda
+                </button>
+                <button
+                  onClick={() => setViewMode('scheduled')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    viewMode === 'scheduled'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Programados
+                </button>
+              </div>
               <Link
                 href={buildPath('/secretary/appointments/new')}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
@@ -477,292 +532,180 @@ function SecretaryAppointmentsContent() {
       {/* Search View */}
       {viewMode === 'search' && (
         <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Filters Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden sticky top-6">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-                  <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                    <Search className="w-5 h-5" />
-                    Filtros de Búsqueda
-                  </h3>
-                  <p className="text-blue-100 text-xs mt-1">Encuentra el turno ideal</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Filters */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Doctor Name Search */}
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Nombre del médico..."
+                      value={searchDoctor}
+                      onChange={(e) => setSearchDoctor(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    />
+                  </div>
                 </div>
-                <div className="p-6">
-                
-                  {/* Doctor Name Search */}
-                  <div className="mb-5">
-                    <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Stethoscope className="w-4 h-4 text-blue-600" />
-                      Nombre del Médico
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Ej. Dr. Juan Pérez"
-                        value={searchDoctor}
-                        onChange={(e) => setSearchDoctor(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Specialty Filter */}
-                  <div className="mb-5">
-                    <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Especialidad
-                    </label>
-                    <select
-                      value={selectedSpecialty}
-                      onChange={(e) => setSelectedSpecialty(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white cursor-pointer"
-                    >
-                      <option value="">Seleccionar especialidad...</option>
-                      {specialties.map(specialty => (
-                        <option key={specialty} value={specialty}>{specialty}</option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Specialty Filter */}
+                <div className="flex-1 min-w-[200px]">
+                  <select
+                    value={selectedSpecialty}
+                    onChange={(e) => setSelectedSpecialty(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="">Todas las especialidades...</option>
+                    {specialties.map(specialty => (
+                      <option key={specialty} value={specialty}>{specialty}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  {/* Date Range */}
-                  <div className="mb-5">
-                    <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-teal-600" />
-                      Rango de Fecha
-                    </label>
-                    <select
-                      value={dateRange}
-                      onChange={(e) => setDateRange(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-gray-50 hover:bg-white cursor-pointer"
-                    >
-                      <option value="today">Hoy</option>
-                      <option value="week">Esta Semana</option>
-                      <option value="month">Este Mes</option>
-                    </select>
-                  </div>
-
-                  {/* Mini Calendar */}
-                  <div className="border-t border-gray-200 pt-5 mt-2">
-                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4 text-blue-600" />
-                      Disponibilidad
-                    </h4>
-                    <div className="text-xs">
-                    <div className="flex items-center justify-between mb-3">
-                      <button onClick={goToPreviousMonth} className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors">
-                        <ChevronLeft className="w-4 h-4 text-gray-600" />
-                      </button>
-                      <span className="font-semibold text-sm text-gray-900 capitalize">
-                        {currentMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-                      </span>
-                      <button onClick={goToNextMonth} className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors">
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                      {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, idx) => (
-                        <div key={`day-${idx}`} className="text-gray-600 font-semibold text-xs">{day}</div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {generateSmallCalendarDays().map((day, idx) => (
-                        <button
-                          key={idx}
-                          className={`
-                            aspect-square flex items-center justify-center rounded-lg text-xs font-medium transition-all
-                            ${!day.isCurrentMonth ? 'text-gray-300' : 'text-gray-700'}
-                            ${day.isToday ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-md' : ''}
-                            ${day.hasAppointments && !day.isToday ? 'bg-blue-50 text-blue-700 font-semibold border border-blue-200' : ''}
-                            ${!day.isToday && !day.hasAppointments ? 'hover:bg-gray-100' : ''}
-                          `}
-                        >
-                          {day.day}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  </div>
+                {/* Date Range */}
+                <div className="flex-1 min-w-[150px]">
+                  <select
+                    value={dateRange}
+                    onChange={(e) => setDateRange(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer"
+                  >
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta Semana</option>
+                    <option value="month">Este Mes</option>
+                  </select>
                 </div>
               </div>
             </div>
 
             {/* Doctor Results */}
-            <div className="lg:col-span-3">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Resultados encontrados ({filteredDoctors.length})
-                </h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-600">Ordenar por:</span>
-                  <select className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm">
-                    <option>Disponibilidad</option>
-                    <option>Calificación</option>
-                    <option>Nombre</option>
-                  </select>
-                </div>
-              </div>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Médico</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Especialidad</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Consultorio</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disponibilidad</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredDoctors.slice(0, 5).map((doctor) => {
+                      const slots = doctorSlots.get(doctor.id) || [];
+                      const labelText = dateRange === 'today' 
+                        ? 'PRÓXIMOS TURNOS HOY' 
+                        : dateRange === 'week' 
+                          ? 'ESTA SEMANA' 
+                          : 'ESTE MES';
+                      
+                      const emptyText = dateRange === 'today' 
+                        ? 'No disponible hoy' 
+                        : dateRange === 'week' 
+                          ? 'No disponible esta semana' 
+                          : 'No disponible este mes';
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredDoctors.map((doctor, index) => {
-                  // Rotar entre diferentes gradientes de colores
-                  const colorSchemes = [
-                    { gradient: 'from-blue-500 to-blue-600', border: 'hover:border-blue-200', icon: 'text-blue-600', bg: 'bg-blue-50', text: 'text-blue-700', borderColor: 'border-blue-200' },
-                    { gradient: 'from-purple-500 to-purple-600', border: 'hover:border-purple-200', icon: 'text-purple-600', bg: 'bg-purple-50', text: 'text-purple-700', borderColor: 'border-purple-200' },
-                    { gradient: 'from-teal-500 to-teal-600', border: 'hover:border-teal-200', icon: 'text-teal-600', bg: 'bg-teal-50', text: 'text-teal-700', borderColor: 'border-teal-200' },
-                    { gradient: 'from-indigo-500 to-indigo-600', border: 'hover:border-indigo-200', icon: 'text-indigo-600', bg: 'bg-indigo-50', text: 'text-indigo-700', borderColor: 'border-indigo-200' },
-                    { gradient: 'from-rose-500 to-rose-600', border: 'hover:border-rose-200', icon: 'text-rose-600', bg: 'bg-rose-50', text: 'text-rose-700', borderColor: 'border-rose-200' },
-                    { gradient: 'from-amber-500 to-amber-600', border: 'hover:border-amber-200', icon: 'text-amber-600', bg: 'bg-amber-50', text: 'text-amber-700', borderColor: 'border-amber-200' },
-                  ];
-                  const colors = colorSchemes[index % colorSchemes.length];
-                  
-                  return (
-                  <div key={doctor.id} className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg ${colors.border} transition-all`}>
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${colors.gradient} rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0 overflow-hidden`}>
-                        {(doctor as any).avatar ? (
-                          <img
-                            src={(doctor as any).avatar}
-                            alt={`${doctor.nombres} ${doctor.apellidos}`}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span>{doctor.nombres?.[0]?.toUpperCase()}{doctor.apellidos?.[0]?.toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          Dr. {doctor.nombres} {doctor.apellidos}
-                        </h3>
-                        <p className="text-sm text-blue-600 font-medium">
-                          {(() => {
-                            const especialidades = doctor.especialidades;
-                            
-                            // Si es un array, convertir IDs a nombres
-                            if (Array.isArray(especialidades) && especialidades.length > 0) {
-                                const nombres = especialidades
-                                  .map((esp: string | { name?: string; nombre?: string }) => {
-                                    // Si es un objeto con name/nombre
-                                    if (typeof esp === 'object' && esp !== null) {
-                                      return esp.name || esp.nombre;
-                                    }
-                                    // Si es un ID, buscar en el mapa
-                                    if (typeof esp === 'string') {
-                                      return specialtiesMap.get(esp) || esp;
-                                    }
-                                    return esp;
-                                  })
-                                  .filter(Boolean);
-                                
-                                return nombres.length > 0 ? nombres.join(', ') : 'Medicina General';
+                      const getSpecialtyName = () => {
+                        const especialidades = doctor.especialidades;
+                        
+                        if (Array.isArray(especialidades) && especialidades.length > 0) {
+                          const nombres = especialidades
+                            .map((esp: string | { name?: string; nombre?: string }) => {
+                              if (typeof esp === 'object' && esp !== null) {
+                                return esp.name || esp.nombre;
                               }
-                              
-                              // Si es un string directo
-                              if (typeof especialidades === 'string') {
-                                return specialtiesMap.get(especialidades) || especialidades || 'Medicina General';
+                              if (typeof esp === 'string') {
+                                return specialtiesMap.get(esp) || esp;
                               }
-                              
-                              return 'Medicina General';
-                            })()}
-                          </p>
-                        </div>
-                      </div>
+                              return esp;
+                            })
+                            .filter(Boolean);
+                          return nombres.length > 0 ? nombres.join(', ') : 'Medicina General';
+                        }
+                        
+                        if (typeof especialidades === 'string') {
+                          return specialtiesMap.get(especialidades) || especialidades || 'Medicina General';
+                        }
+                        
+                        return 'Medicina General';
+                      };
 
-                    <div className="mb-4">
-                      <div className={`flex items-center gap-2 text-sm text-gray-600 ${colors.bg} px-3 py-2 rounded-lg`}>
-                        <MapPin className={`w-4 h-4 ${colors.icon}`} />
-                        <span className="font-medium">
-                          {(() => {
-                            const consultorio = doctor.consultorio;
-                            if (!consultorio) return 'Consultorio no asignado';
-                            
-                            // Si es un ID, buscar en el mapa
-                            if (typeof consultorio === 'string') {
-                              return consultoriosMap.get(consultorio) || consultorio;
-                            }
-                            
-                            return consultorio;
-                          })()}
-                        </span>
-                      </div>
-                    </div>
+                      const getConsultorioName = () => {
+                        const consultorio = doctor.consultorio;
+                        if (!consultorio) return 'No asignado';
+                        
+                        if (typeof consultorio === 'string') {
+                          return consultoriosMap.get(consultorio) || consultorio;
+                        }
+                        
+                        return consultorio;
+                      };
 
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      {(() => {
-                        const slots = doctorSlots.get(doctor.id) || [];
-                        const isExpanded = expandedDoctors.has(doctor.id);
-                        const visibleSlots = isExpanded ? slots : slots.slice(0, 3);
-                        const remainingCount = slots.length - 3;
-                        
-                        const labelText = dateRange === 'today' 
-                          ? 'PRÓXIMOS TURNOS HOY:' 
-                          : dateRange === 'week' 
-                            ? 'FECHAS DISPONIBLES ESTA SEMANA:' 
-                            : 'FECHAS DISPONIBLES ESTE MES:';
-                        
-                        const emptyText = dateRange === 'today' 
-                          ? 'No hay turnos disponibles hoy' 
-                          : dateRange === 'week' 
-                            ? 'No hay fechas disponibles esta semana' 
-                            : 'No hay fechas disponibles este mes';
-                        
-                        return (
-                          <>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                              {labelText}
-                            </p>
-                            {slots.length > 0 ? (
-                              <>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                  {visibleSlots.map((time, idx) => (
+                      return (
+                        <tr key={doctor.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  {doctor.nombres?.[0]?.toUpperCase()}{doctor.apellidos?.[0]?.toUpperCase()}
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  Dr. {doctor.nombres} {doctor.apellidos}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {getSpecialtyName()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {getConsultorioName()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                                {labelText}
+                              </p>
+                              {slots.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {slots.slice(0, 5).map((time, idx) => (
                                     <span
                                       key={idx}
-                                      className={`px-3 py-1.5 ${colors.bg} ${colors.text} rounded-lg text-sm font-semibold border ${colors.borderColor}`}
+                                      className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-200"
                                     >
                                       {time}
                                     </span>
                                   ))}
-                                  {!isExpanded && remainingCount > 0 && (
-                                    <button
-                                      onClick={() => toggleExpandSlots(doctor.id)}
-                                      className="px-3 py-1 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg transition-colors"
-                                    >
-                                      +{remainingCount} más
-                                    </button>
-                                  )}
-                                  {isExpanded && slots.length > 3 && (
-                                    <button
-                                      onClick={() => toggleExpandSlots(doctor.id)}
-                                      className="px-3 py-1 text-blue-600 text-sm font-medium hover:bg-blue-50 rounded-lg transition-colors"
-                                    >
-                                      Ver menos
-                                    </button>
+                                  {slots.length > 5 && (
+                                    <span className="text-xs text-gray-500">+{slots.length - 5} más</span>
                                   )}
                                 </div>
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-500 mb-4">{emptyText}</p>
-                            )}
+                              ) : (
+                                <p className="text-sm text-gray-500">{emptyText}</p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
                               onClick={() => router.push(buildPath(`/secretary/appointments/availability/${doctor.id}`))}
-                              className={`w-full bg-gradient-to-r ${colors.gradient} text-white px-4 py-3 rounded-lg hover:opacity-90 transition-all shadow-md hover:shadow-lg text-sm font-semibold`}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                             >
-                              Reservar Turno
+                              Reservar
                             </button>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  );
-                })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {filteredDoctors.length === 0 && (
-                <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+                <div className="p-12 text-center">
                   <Stethoscope className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     No se encontraron médicos
@@ -773,6 +716,157 @@ function SecretaryAppointmentsContent() {
                 </div>
               )}
             </div>
+
+            {/* Calendar View */}
+            {filteredDoctors.length > 0 && (
+              <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Calendario de Disponibilidad</h3>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={goToPreviousWeek}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <span className="text-sm font-medium text-gray-700">
+                        {getWeekRange()}
+                      </span>
+                      <button
+                        onClick={goToNextWeek}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[800px]">
+                    {/* Calendar Header - Days */}
+                    <div className="grid grid-cols-8 border-b border-gray-200">
+                      <div className="p-3 bg-gray-50 font-medium text-sm text-gray-600 text-center border-r border-gray-200">
+                        Horario
+                      </div>
+                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, idx) => {
+                        const date = new Date(calendarWeekStart);
+                        date.setDate(date.getDate() + idx);
+                        const dayDate = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                        return (
+                          <div key={day} className="p-3 bg-gray-50 font-medium text-sm text-gray-600 text-center">
+                            <div>{day}</div>
+                            <div className="text-xs text-gray-400">{dayDate}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Calendar Body - Time Slots */}
+                    {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map((time) => (
+                      <div key={time} className="grid grid-cols-8 border-b border-gray-200 last:border-0">
+                        <div className="p-3 text-sm text-gray-600 text-center border-r border-gray-200 font-medium">
+                          {time}
+                        </div>
+                        {[1, 2, 3, 4, 5, 6, 0].map((dayOfWeek, dayIdx) => {
+                          // Calculate the actual date for this cell
+                          const cellDate = new Date(calendarWeekStart);
+                          cellDate.setDate(calendarWeekStart.getDate() + dayIdx);
+                          const [timeHour, timeMin] = time.split(':').map(Number);
+                          cellDate.setHours(timeHour, timeMin, 0, 0);
+                          
+                          // Check if this time slot is in the past
+                          const now = dateHelper.now();
+                          const isPast = cellDate < now;
+
+                          // Get all doctors for this time slot and day (both available and busy)
+                          const doctorsInSlot = filteredDoctors.slice(0, 5).map(doctor => {
+                            const horarios = (doctor as any).horariosAtencion || [];
+                            const horario = horarios.find((h: any) => h.activo && h.dia === dayOfWeek);
+                            
+                            if (!horario) return null;
+                            
+                            const [startHour, startMin] = horario.horaInicio.split(':').map(Number);
+                            const [endHour, endMin] = horario.horaFin.split(':').map(Number);
+                            
+                            const timeInMinutes = timeHour * 60 + timeMin;
+                            const startInMinutes = startHour * 60 + startMin;
+                            const endInMinutes = endHour * 60 + endMin;
+                            
+                            // Check if time is within working hours
+                            if (timeInMinutes < startInMinutes || timeInMinutes >= endInMinutes) {
+                              return null;
+                            }
+                            
+                            // Check if there's an existing appointment at this time using calendarWeekStart
+                            const checkDate = new Date(calendarWeekStart);
+                            checkDate.setDate(calendarWeekStart.getDate() + dayIdx);
+                            const dateStr = checkDate.toISOString().split('T')[0];
+                            
+                            const hasAppointment = appointments.some(
+                              apt => apt.doctorId === doctor.id && 
+                                     apt.fecha === dateStr && 
+                                     apt.horaInicio === time
+                            );
+                            
+                            return {
+                              doctor,
+                              isOccupied: hasAppointment
+                            };
+                          }).filter(Boolean);
+
+                          // Color schemes for doctors
+                          const doctorColorSchemes = [
+                            { bg: 'bg-blue-500', text: 'text-white', hover: 'hover:bg-blue-600', border: 'border-blue-600' },
+                            { bg: 'bg-purple-500', text: 'text-white', hover: 'hover:bg-purple-600', border: 'border-purple-600' },
+                            { bg: 'bg-emerald-500', text: 'text-white', hover: 'hover:bg-emerald-600', border: 'border-emerald-600' },
+                            { bg: 'bg-amber-500', text: 'text-white', hover: 'hover:bg-amber-600', border: 'border-amber-600' },
+                            { bg: 'bg-rose-500', text: 'text-white', hover: 'hover:bg-rose-600', border: 'border-rose-600' },
+                          ];
+
+                          return (
+                            <div 
+                              key={`${time}-${dayOfWeek}`} 
+                              className={`p-2 min-h-[60px] border-r border-gray-200 last:border-r-0 ${isPast ? 'bg-gray-100' : ''}`}
+                            >
+                              {doctorsInSlot.length > 0 && !isPast && (
+                                <div className="space-y-1">
+                                  {doctorsInSlot.slice(0, 2).map((item: any, idx: number) => {
+                                    const doctor = item.doctor;
+                                    const isOccupied = item.isOccupied;
+                                    const doctorIndex = filteredDoctors.findIndex(d => d.id === doctor.id);
+                                    const colors = doctorColorSchemes[doctorIndex % doctorColorSchemes.length];
+                                    
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className={`text-xs px-2 py-1 rounded truncate transition-colors border ${
+                                          isOccupied 
+                                            ? 'bg-gray-300 text-gray-600 border-gray-400 cursor-not-allowed' 
+                                            : `${colors.bg} ${colors.text} cursor-pointer ${colors.hover} border ${colors.border}`
+                                        }`}
+                                        title={`Dr. ${doctor.nombres} ${doctor.apellidos}${isOccupied ? ' - Ocupado' : ''}`}
+                                        onClick={() => !isOccupied && router.push(buildPath(`/secretary/appointments/availability/${doctor.id}`))}
+                                      >
+                                        Dr. {doctor.nombres?.split(' ')[0]} {doctor.apellidos?.split(' ')[0]}
+                                        {isOccupied && <span className="ml-1 text-xs">🔒</span>}
+                                      </div>
+                                    );
+                                  })}
+                                  {doctorsInSlot.length > 2 && (
+                                    <div className="text-xs text-gray-500">+{doctorsInSlot.length - 2} más</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -780,15 +874,26 @@ function SecretaryAppointmentsContent() {
       {/* Scheduled View */}
       {viewMode === 'scheduled' && (
         <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Calendar */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {currentMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + 
-                     currentMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).slice(1)}
-                  </h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">Turnos Programados</h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">Doctor:</label>
+                    <select
+                      value={scheduledCalendarDoctorFilter}
+                      onChange={(e) => setScheduledCalendarDoctorFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Todos</option>
+                      {doctors.map(doctor => (
+                        <option key={doctor.id} value={doctor.id}>
+                          Dr. {doctor.nombres} {doctor.apellidos}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={goToPreviousMonth}
@@ -796,6 +901,10 @@ function SecretaryAppointmentsContent() {
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
+                    <span className="text-sm font-medium text-gray-700">
+                      {currentMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).charAt(0).toUpperCase() + 
+                       currentMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }).slice(1)}
+                    </span>
                     <button
                       onClick={goToNextMonth}
                       className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -804,114 +913,267 @@ function SecretaryAppointmentsContent() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Calendar Grid */}
-                <div className="mb-4">
-                  <div className="grid grid-cols-7 gap-2 mb-2">
-                    {['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'].map(day => (
-                      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {generateSmallCalendarDays().map((day, idx) => {
-                      const dayAppointments = appointments.filter(apt => 
-                        apt.fecha === day.date.toISOString().split('T')[0]
-                      );
-                      
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {appointments
+                    .filter(apt => {
+                      const aptDate = new Date(apt.fecha);
+                      return aptDate.getMonth() === currentMonth.getMonth() && 
+                             aptDate.getFullYear() === currentMonth.getFullYear() &&
+                             apt.estado !== 'cancelada' &&
+                             (!scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter);
+                    })
+                    .sort((a, b) => {
+                      const dateA = new Date(`${a.fecha}T${a.horaInicio}`);
+                      const dateB = new Date(`${b.fecha}T${b.horaInicio}`);
+                      return dateA.getTime() - dateB.getTime();
+                    })
+                    .map((appointment) => {
+                      const getStatusColor = (estado: string) => {
+                        switch (estado) {
+                          case 'programada':
+                            return 'bg-blue-100 text-blue-800 border-blue-200';
+                          case 'confirmada':
+                            return 'bg-orange-100 text-orange-800 border-orange-200';
+                          case 'en_curso':
+                            return 'bg-green-100 text-green-800 border-green-200';
+                          case 'completada':
+                            return 'bg-gray-100 text-gray-800 border-gray-200';
+                          case 'no_asistio':
+                            return 'bg-red-100 text-red-800 border-red-200';
+                          default:
+                            return 'bg-gray-100 text-gray-800 border-gray-200';
+                        }
+                      };
+
+                      const getStatusText = (estado: string) => {
+                        switch (estado) {
+                          case 'programada':
+                            return 'Programada';
+                          case 'confirmada':
+                            return 'Confirmada';
+                          case 'en_curso':
+                            return 'En curso';
+                          case 'completada':
+                            return 'Completada';
+                          case 'no_asistio':
+                            return 'No asistió';
+                          default:
+                            return estado;
+                        }
+                      };
+
                       return (
-                        <div
-                          key={idx}
-                          className={`
-                            min-h-24 p-2 rounded-lg border cursor-pointer transition-all
-                            ${!day.isCurrentMonth ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-200'}
-                            ${day.isToday ? 'ring-2 ring-blue-600' : ''}
-                            hover:shadow-md
-                          `}
-                        >
-                          <div className={`text-sm font-medium mb-1 ${day.isToday ? 'text-blue-600' : 'text-gray-900'}`}>
-                            {day.day}
-                          </div>
-                          {dayAppointments.slice(0, 2).map((apt, i) => (
-                            <div
-                              key={i}
-                              className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded mb-1 truncate"
-                            >
-                              {apt.horaInicio} {getPatientName(apt.patientId).split(' ')[0]}
+                        <tr key={appointment.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {getPatientName(appointment.patientId)}
                             </div>
-                          ))}
-                          {dayAppointments.length > 2 && (
-                            <div className="text-xs text-gray-500">+{dayAppointments.length - 2}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatDate(appointment.fecha)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {appointment.horaInicio} - {appointment.horaFin}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {getDoctorName(appointment.doctorId)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.estado)}`}>
+                              {getStatusText(appointment.estado)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <Link
+                              href={buildPath(`/secretary/appointments/${appointment.id}/edit`)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              Editar
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {appointments.filter(apt => {
+              const aptDate = new Date(apt.fecha);
+              return aptDate.getMonth() === currentMonth.getMonth() && 
+                     aptDate.getFullYear() === currentMonth.getFullYear() &&
+                     apt.estado !== 'cancelada' &&
+                     (!scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter);
+            }).length === 0 && (
+              <div className="p-12 text-center">
+                <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No hay turnos programados
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  No se encontraron turnos para este mes
+                </p>
+                <Link
+                  href={buildPath('/secretary/appointments/new')}
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Nuevo Turno
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Calendar View for Scheduled Appointments */}
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Calendario de Turnos</h3>
+                  <p className="text-sm text-gray-600 mt-1">Vista semanal de turnos programados</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCalendarWeekStart(prev => {
+                      const newDate = new Date(prev);
+                      newDate.setDate(newDate.getDate() - 7);
+                      return newDate;
+                    })}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-medium text-gray-700">
+                    {getWeekRange()}
+                  </span>
+                  <button
+                    onClick={() => setCalendarWeekStart(prev => {
+                      const newDate = new Date(prev);
+                      newDate.setDate(newDate.getDate() + 7);
+                      return newDate;
+                    })}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <div className="min-w-[800px]">
+                {/* Calendar Header - Days */}
+                <div className="grid grid-cols-8 border-b border-gray-200">
+                  <div className="p-3 bg-gray-50 font-medium text-sm text-gray-600 text-center border-r border-gray-200">
+                    Horario
+                  </div>
+                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, idx) => {
+                    const date = new Date(calendarWeekStart);
+                    date.setDate(date.getDate() + idx);
+                    const dayDate = date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                    return (
+                      <div key={day} className="p-3 bg-gray-50 font-medium text-sm text-gray-600 text-center">
+                        <div>{day}</div>
+                        <div className="text-xs text-gray-400">{dayDate}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Calendar Body - Time Slots */}
+                {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'].map((time) => (
+                  <div key={time} className="grid grid-cols-8 border-b border-gray-200 last:border-0">
+                    <div className="p-3 text-sm text-gray-600 text-center border-r border-gray-200 font-medium">
+                      {time}
+                    </div>
+                    {[1, 2, 3, 4, 5, 6, 0].map((dayOfWeek, dayIdx) => {
+                      // Calculate the actual date for this cell
+                      const cellDate = new Date(calendarWeekStart);
+                      cellDate.setDate(calendarWeekStart.getDate() + dayIdx);
+                      const [timeHour, timeMin] = time.split(':').map(Number);
+                      cellDate.setHours(timeHour, timeMin, 0, 0);
+                      const dateStr = cellDate.toISOString().split('T')[0];
+
+                      // Get appointments for this time slot and day
+                      const slotAppointments = appointments.filter(apt => {
+                        const aptDate = new Date(apt.fecha);
+                        return apt.fecha === dateStr && 
+                               apt.horaInicio === time &&
+                               apt.estado !== 'cancelada' &&
+                               (!scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter);
+                      });
+
+                      // Color schemes for doctors
+                      const doctorColorSchemes = [
+                        { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-600' },
+                        { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-600' },
+                        { bg: 'bg-emerald-500', text: 'text-white', border: 'border-emerald-600' },
+                        { bg: 'bg-amber-500', text: 'text-white', border: 'border-amber-600' },
+                        { bg: 'bg-rose-500', text: 'text-white', border: 'border-rose-600' },
+                      ];
+
+                      const getStatusColor = (estado: string) => {
+                        switch (estado) {
+                          case 'programada':
+                            return 'bg-blue-500';
+                          case 'confirmada':
+                            return 'bg-orange-500';
+                          case 'en_curso':
+                            return 'bg-green-500';
+                          case 'completada':
+                            return 'bg-gray-500';
+                          case 'no_asistio':
+                            return 'bg-red-500';
+                          default:
+                            return 'bg-gray-500';
+                        }
+                      };
+
+                      return (
+                        <div key={`${time}-${dayOfWeek}`} className="p-2 min-h-[60px] border-r border-gray-200 last:border-r-0">
+                          {slotAppointments.length > 0 && (
+                            <div className="space-y-1">
+                              {slotAppointments.slice(0, 2).map((apt, idx) => {
+                                const doctor = doctors.find(d => d.id === apt.doctorId);
+                                const doctorIndex = doctors.findIndex(d => d.id === apt.doctorId);
+                                const colors = doctorColorSchemes[doctorIndex % doctorColorSchemes.length];
+                                
+                                return (
+                                  <div
+                                    key={idx}
+                                    className={`text-xs px-2 py-1 ${getStatusColor(apt.estado)} text-white rounded truncate cursor-pointer hover:opacity-80 transition-colors border ${colors.border}`}
+                                    title={`${getPatientName(apt.patientId)} - ${getDoctorName(apt.doctorId)}`}
+                                    onClick={() => router.push(buildPath(`/secretary/appointments/${apt.id}/edit`))}
+                                  >
+                                    {getPatientName(apt.patientId).split(' ')[0]} - {doctor?.nombres?.split(' ')[0]}
+                                  </div>
+                                );
+                              })}
+                              {slotAppointments.length > 2 && (
+                                <div className="text-xs text-gray-500">+{slotAppointments.length - 2} más</div>
+                              )}
+                            </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                </div>
-
-                {/* Filters */}
-                <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                  <button className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200">
-                    Todos
-                  </button>
-                  {specialties.slice(0, 3).map(specialty => (
-                    <button
-                      key={specialty}
-                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200"
-                    >
-                      {specialty}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Appointment Details Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-                {selectedAppointment ? (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4">Detalle del Turno</h3>
-                    {/* Appointment details would go here */}
-                  </div>
-                ) : (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4">Próximos Turnos</h3>
-                    {getUpcomingAppointments().slice(0, 3).map((apt, idx) => (
-                      <div key={idx} className="mb-4 pb-4 border-b border-gray-200 last:border-0">
-                        <div className="flex items-start gap-3">
-                          <div className="text-center">
-                            <div className="text-blue-600 font-bold text-lg">
-                              {new Date(apt.fecha + 'T12:00:00').getDate()}
-                            </div>
-                            <div className="text-xs text-gray-500 uppercase">
-                              {new Date(apt.fecha + 'T12:00:00').toLocaleDateString('es-AR', { month: 'short' })}
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 text-sm">
-                              {getPatientName(apt.patientId)}
-                            </div>
-                            <div className="text-xs text-gray-600 mt-1">
-                              {apt.horaInicio} - {apt.horaFin}
-                            </div>
-                            <div className="text-xs text-blue-600 mt-1">
-                              {getDoctorName(apt.doctorId)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {getUpcomingAppointments().length === 0 && (
-                      <div className="text-center py-8">
-                        <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-600">No hay turnos próximos</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                ))}
               </div>
             </div>
           </div>

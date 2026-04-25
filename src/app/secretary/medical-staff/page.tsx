@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { LoadingSpinner, Spinner } from '@/components/ui/Spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 import { getSpecialtyName } from '@/utils';
 import { 
   Stethoscope,
@@ -33,6 +34,8 @@ import { usersService } from '@/services/api/users.service';
 import { avisosService, Aviso as AvisoType } from '@/services/api/avisos.service';
 import { ausenciasService, Ausencia as AusenciaType } from '@/services/api/ausencias.service';
 import { clinicSettingsService, ConsultingRoom, MedicalSpecialty } from '@/services/api/clinic-settings.service';
+import { attendanceService, AttendanceStatus } from '@/services/api/attendance.service';
+import { appointmentsService } from '@/services/api/appointments.service';
 import { User } from '@/types/roles';
 
 type TabType = 'profesionales' | 'avisos' | 'ausencias';
@@ -72,12 +75,15 @@ interface Ausencia {
 
 export default function MedicalStaffPage() {
   const { currentUser } = useAuth();
+  const { showSuccess, showError, showWarning } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('profesionales');
   const [doctors, setDoctors] = useState<DoctorWithStatus[]>([]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [ausencias, setAusencias] = useState<Ausencia[]>([]);
   const [consultingRooms, setConsultingRooms] = useState<ConsultingRoom[]>([]);
   const [specialties, setSpecialties] = useState<MedicalSpecialty[]>([]);
+  const [attendanceStatus, setAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -89,13 +95,24 @@ export default function MedicalStaffPage() {
     }
   }, [clinicId]);
 
+  // Recargar doctores cuando cambia el estado de attendance
+  useEffect(() => {
+    if (clinicId && Object.keys(attendanceStatus).length > 0) {
+      loadMedicalStaff();
+    }
+  }, [attendanceStatus]);
+
   const loadData = async () => {
     // Cargar consultorios y especialidades primero, luego el resto
     await Promise.all([
       loadConsultingRooms(),
       loadSpecialties()
     ]);
-    await loadMedicalStaff();
+    await Promise.all([
+      loadMedicalStaff(),
+      loadAttendanceStatus(),
+      loadAppointments()
+    ]);
     loadAvisos();
     loadAusencias();
   };
@@ -145,21 +162,36 @@ export default function MedicalStaffPage() {
       const adminDoctors = adminsRes.data.filter((user: User) => user.isDoctor === true);
       
       const allDoctors: DoctorWithStatus[] = [...doctorsRes.data, ...adminDoctors].map(doctor => {
-        const isOnline = Math.random() > 0.3;
-        const isAttending = isOnline && Math.random() > 0.5;
+        // Obtener estado de attendance del backend
+        const status = attendanceStatus[doctor.id];
+        const isOnline = status?.isOnline || false;
         
-        // Debug log para verificar datos del doctor
+        // Formatear loginTime si existe
+        let formattedLoginTime;
+        if (status?.loginTime) {
+          const loginDate = new Date(status.loginTime);
+          formattedLoginTime = loginDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Obtener horarios programados del doctor (si existen)
+        const scheduledStart = doctor.horariosAtencion?.[0]?.horaInicio || '08:00';
+        const scheduledEnd = doctor.horariosAtencion?.[0]?.horaFin || '16:00';
+        
+        // Buscar turno actual del doctor (en progreso)
+        const currentAppointment = appointments.find((apt: any) => 
+          apt.doctorId === doctor.id && apt.estado === 'en_progreso'
+        );
         
         return {
           ...doctor,
           isOnline,
-          loginTime: isOnline ? new Date(Date.now() - Math.random() * 14400000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined,
-          logoutTime: !isOnline && Math.random() > 0.5 ? new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined,
-          scheduledStart: '08:00',
-          scheduledEnd: '16:00',
-          isAttending,
-          currentPatient: isAttending ? ['Juan Pérez', 'María González', 'Carlos López', 'Ana Martínez'][Math.floor(Math.random() * 4)] : undefined,
-          currentPatientId: isAttending ? 'PAT-' + Math.floor(Math.random() * 1000) : undefined
+          loginTime: formattedLoginTime,
+          logoutTime: undefined, // Se puede implementar más adelante con historial
+          scheduledStart,
+          scheduledEnd,
+          isAttending: !!currentAppointment,
+          currentPatient: currentAppointment?.pacienteNombre,
+          currentPatientId: currentAppointment?.pacienteId
         };
       });
 
@@ -198,6 +230,98 @@ export default function MedicalStaffPage() {
       console.error('Error cargando ausencias:', error);
       // Fallback a datos vacíos en caso de error
       setAusencias([]);
+    }
+  };
+
+  const loadAttendanceStatus = async () => {
+    if (!clinicId) return;
+    
+    try {
+      const response = await attendanceService.getAllDoctorsStatus(clinicId);
+      if (response.success && response.data) {
+        setAttendanceStatus(response.data);
+      }
+    } catch (error) {
+      console.error('Error cargando estado de asistencia:', error);
+      setAttendanceStatus({});
+    }
+  };
+
+  const loadAppointments = async () => {
+    if (!clinicId) return;
+    
+    try {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const response = await appointmentsService.getAppointments(clinicId, { limit: 1000 });
+      if (response.success && response.data) {
+        // Filtrar solo turnos de hoy que estén en estado 'en_progreso' o 'completada'
+        const todayAppointments = response.data.filter((apt: any) => {
+          const aptDate = new Date(apt.fecha);
+          const aptDateStr = aptDate.toISOString().split('T')[0];
+          return aptDateStr === todayStr && 
+                 (apt.estado === 'en_progreso' || apt.estado === 'completada');
+        });
+        setAppointments(todayAppointments);
+      }
+    } catch (error) {
+      console.error('Error cargando turnos:', error);
+      setAppointments([]);
+    }
+  };
+
+  const handleDoctorLogin = async (doctorId: string) => {
+    if (!clinicId) return;
+    
+    try {
+      const response = await attendanceService.recordLogin(
+        doctorId,
+        clinicId,
+        (currentUser as any)?.id || 'system'
+      );
+      
+      if (response.success) {
+        showSuccess('Login registrado exitosamente');
+        // Recargar estado de attendance
+        await loadAttendanceStatus();
+      } else {
+        showError(response.error || 'Error al registrar login');
+      }
+    } catch (error) {
+      console.error('Error registrando login:', error);
+      showError('Error al registrar login');
+    }
+  };
+
+  const handleDoctorLogout = async (doctorId: string) => {
+    if (!clinicId) return;
+    
+    // Verificar si el doctor tiene sesión activa antes de intentar logout
+    const doctorStatus = attendanceStatus[doctorId];
+    if (!doctorStatus || !doctorStatus.isOnline) {
+      showWarning('Este doctor no tiene una sesión activa. No se puede registrar salida.');
+      return;
+    }
+    
+    try {
+      const response = await attendanceService.recordLogout(
+        doctorId,
+        clinicId,
+        (currentUser as any)?.id || 'system'
+      );
+      
+      if (response.success) {
+        showSuccess('Logout registrado exitosamente');
+        // Recargar estado de attendance
+        await loadAttendanceStatus();
+      } else {
+        // Mostrar mensaje de error específico
+        showError(response.error || 'Error al registrar logout');
+      }
+    } catch (error: any) {
+      console.error('Error registrando logout:', error);
+      showError(error.message || 'Error al registrar logout');
     }
   };
 
@@ -409,6 +533,7 @@ export default function MedicalStaffPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -432,6 +557,7 @@ export default function MedicalStaffPage() {
                           <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Estado</th>
                           <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Horario Programado</th>
                           <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Entrada/Salida</th>
+                          <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Acciones</th>
                           <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Atendiendo</th>
                         </tr>
                       </thead>
@@ -507,6 +633,25 @@ export default function MedicalStaffPage() {
                                 </div>
                               ) : (
                                 <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="py-4 px-4 text-center">
+                              {doctor.isOnline ? (
+                                <button
+                                  onClick={() => handleDoctorLogout(doctor.id)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-xs font-medium"
+                                >
+                                  <LogOut className="w-3 h-3" />
+                                  Salida
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleDoctorLogin(doctor.id)}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-xs font-medium"
+                                >
+                                  <LogIn className="w-3 h-3" />
+                                  Entrada
+                                </button>
                               )}
                             </td>
                             <td className="py-4 px-4">

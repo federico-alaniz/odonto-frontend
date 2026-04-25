@@ -248,16 +248,7 @@ export default function ReportsPage() {
 
       const monthlyProceduresList: any[] = [];
       
-      // 1. Agregar la consulta principal del registro
-      monthlyProceduresList.push({
-        id: `consult-${targetRecord.id}`,
-        date: targetRecord.fecha,
-        procedure: targetRecord.motivoConsulta || 'Consulta Odontológica',
-        code: '01.01',
-        sector: 'center'
-      });
-
-      // 2. Extraer TODAS las prestaciones grabadas en el odontograma de ese registro
+      // 1. Extraer TODAS las prestaciones grabadas en el odontograma de ese registro
       const currentOdontogramConditions = targetRecord.odontogramas?.actual || [];
       currentOdontogramConditions.forEach((tooth: any) => {
         if (tooth.procedures && Array.isArray(tooth.procedures)) {

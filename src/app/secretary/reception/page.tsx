@@ -90,30 +90,12 @@ export default function ReceptionPage() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(dateHelper.now());
-  const [showColon, setShowColon] = useState(true);
   const [hasActions, setHasActions] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedAppointmentForPayment, setSelectedAppointmentForPayment] = useState<ReceptionAppointment | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
-
-  // Actualizar hora actual cada minuto
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Parpadeo de los dos puntos cada segundo
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowColon(prev => !prev);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (clinicId) {
@@ -554,7 +536,7 @@ export default function ReceptionPage() {
 
     try {
       const updatedAt = new Date(appointment.updatedAt);
-      const now = currentTime;
+      const now = new Date();
       const diffMs = now.getTime() - updatedAt.getTime();
       const diffMinutes = Math.floor(diffMs / 60000);
 
@@ -624,41 +606,13 @@ export default function ReceptionPage() {
                   <option value="programada">Programadas</option>
                   <option value="confirmada">Confirmadas</option>
                   <option value="esperando">En espera</option>
-                  <option value="en-curso">En consulta</option>
+                  <option value="en-curso">En curso</option>
                   <option value="completada">Completadas</option>
                   <option value="no-show">No asistió</option>
+                  <option value="cancelada">Canceladas</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="atendida">Atendidas</option>
                 </select>
-              </div>
-
-              {/* Botón actualizar */}
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                title="Actualizar"
-              >
-                Actualizar
-              </button>
-
-              {/* Hora actual */}
-              <div className="text-right pl-3 border-l border-gray-300">
-                <div className="text-xs text-gray-500">Hora actual (Buenos Aires)</div>
-                <div className="text-lg font-bold text-green-600 font-mono">
-                  {currentTime.toLocaleTimeString('es-AR', { 
-                    timeZone: 'America/Argentina/Buenos_Aires',
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    hour12: false
-                  }).split(':').map((part, index) => (
-                    <span key={index}>
-                      {part}
-                      {index === 0 && (
-                        <span className={`transition-opacity duration-200 ${showColon ? 'opacity-100' : 'opacity-0'}`}>
-                          :
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
