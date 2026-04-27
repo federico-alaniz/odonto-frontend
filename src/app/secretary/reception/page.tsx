@@ -507,7 +507,9 @@ export default function ReceptionPage() {
       });
       monthlyProcedures.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const patientObj = patients.find(p => p.id === appointment.patientId);
+      // Cargar datos completos del paciente (incluye seguroMedico y direccion)
+      const fullPatientResponse = await patientsService.getPatientById(appointment.patientId, clinicId);
+      const patientObj = fullPatientResponse.success ? fullPatientResponse.data : patients.find(p => p.id === appointment.patientId);
       await printOdontogram({
         patient: patientObj,
         patientName: appointment.patientName,
@@ -756,12 +758,10 @@ export default function ReceptionPage() {
                                   No Asistió
                                 </button>
                               )}
-                              {appointment.status !== 'programada' && (
-                                <button onClick={() => handlePrintOdontogram(appointment)} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center gap-1" title="Imprimir Odontograma">
-                                  <Printer className="w-3 h-3" />
-                                  Odontograma
-                                </button>
-                              )}
+                              <button onClick={() => handlePrintOdontogram(appointment)} className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center gap-1" title="Imprimir Odontograma">
+                                <Printer className="w-3 h-3" />
+                                Odontograma
+                              </button>
                             </div>
                           </td>
                         )}

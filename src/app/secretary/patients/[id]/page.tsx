@@ -636,6 +636,12 @@ export default function SecretaryPatientDetailPage() {
                       <label className="text-sm font-medium text-gray-500">Número de póliza</label>
                       <p className="text-gray-900">{patient.seguroMedico.numeroPoliza}</p>
                     </div>
+                    {patient.seguroMedico.plan && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Plan</label>
+                        <p className="text-gray-900">{patient.seguroMedico.plan}</p>
+                      </div>
+                    )}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Vigencia</label>
                       <p className="text-gray-900">{formatDate(patient.seguroMedico.vigencia)}</p>

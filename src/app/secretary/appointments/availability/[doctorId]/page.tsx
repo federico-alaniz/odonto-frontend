@@ -37,6 +37,8 @@ export default function DoctorAvailabilityPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(getWeekStart(dateHelper.now()));
   const [weekSlots, setWeekSlots] = useState<Map<string, TimeSlot[]>>(new Map());
   const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState(30);
+  const [maxDuration, setMaxDuration] = useState(30);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [specialtiesMap, setSpecialtiesMap] = useState<Map<string, string>>(new Map());
 
@@ -213,13 +215,33 @@ export default function DoctorAvailabilityPage() {
 
   const handleSlotSelect = (date: string, time: string) => {
     setSelectedSlot({ date, time });
+
+    // Calcular duración máxima disponible desde este slot
+    const daySlots = weekSlots.get(date) || [];
+    const startIndex = daySlots.findIndex(s => s.time === time);
+    let duration = 30;
+
+    // Buscar cuántos slots seguidos de 30 min están disponibles
+    for (let i = startIndex + 1; i < daySlots.length; i++) {
+      if (daySlots[i].available) {
+        duration += 30;
+      } else {
+        break;
+      }
+
+      // Limitar a una duración razonable, máximo 3 horas (180 min)
+      if (duration >= 180) break;
+    }
+
+    setMaxDuration(Math.min(duration, 180));
+    setSelectedDuration(30); // Default 30 min
   };
 
   const handleConfirm = () => {
     if (!selectedSlot) return;
     
-    // Redirigir a la página de selección de paciente
-    router.push(buildPath(`/secretary/appointments/new?doctorId=${doctorId}&date=${selectedSlot.date}&time=${selectedSlot.time}`));
+    // Redirigir a la página de selección de paciente con duración
+    router.push(buildPath(`/secretary/appointments/new?doctorId=${doctorId}&date=${selectedSlot.date}&time=${selectedSlot.time}&duration=${selectedDuration}`));
   };
 
   const formatWeekRange = () => {
@@ -551,13 +573,13 @@ export default function DoctorAvailabilityPage() {
 
       {/* Floating Confirmation Bar */}
       {selectedSlot && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-6">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] p-6 z-50 animate-in slide-in-from-bottom duration-300">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <CalendarIcon className="w-6 h-6 text-blue-600" />
+              <CalendarIcon className="w-8 h-8 text-blue-600" />
               <div>
-                <div className="text-sm text-gray-600">Seleccionado:</div>
-                <div className="font-semibold text-gray-900">
+                <div className="text-sm text-gray-500 font-medium">Horario Seleccionado:</div>
+                <div className="text-base font-bold text-gray-900">
                   {new Date(selectedSlot.date + 'T12:00:00').toLocaleDateString('es-AR', { 
                     weekday: 'long',
                     day: 'numeric',
@@ -566,18 +588,44 @@ export default function DoctorAvailabilityPage() {
                 </div>
               </div>
             </div>
+
+            {/* Selector de Duración */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                <Clock className="w-4 h-4 text-blue-600" />
+                Duración de la Consulta
+              </div>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="30"
+                  max={maxDuration}
+                  step="30"
+                  value={selectedDuration}
+                  onChange={(e) => setSelectedDuration(parseInt(e.target.value))}
+                  className="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100 min-w-[80px] justify-center">
+                  {selectedDuration} <span className="text-xs font-medium">min</span>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                Máximo permitido: {maxDuration} min
+              </p>
+            </div>
+
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setSelectedSlot(null)}
-                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-gray-700"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-bold shadow-md hover:shadow-lg flex items-center gap-2"
               >
-                Confirmar Turno
+                Reservar {selectedSlot.time} hs
               </button>
             </div>
           </div>

@@ -97,6 +97,7 @@ export default function SecretaryPatientsPage() {
                 <input
                   type="text"
                   value={searchTerm}
+                  suppressHydrationWarning
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                     setFilters(prev => ({ ...prev, search: e.target.value }));

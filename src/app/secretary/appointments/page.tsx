@@ -17,7 +17,9 @@ import {
   Stethoscope,
   Filter as FilterIcon,
   Plus,
-  Clock
+  Clock,
+  X,
+  HelpCircle
 } from 'lucide-react';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
@@ -40,7 +42,7 @@ function SecretaryAppointmentsContent() {
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
-  const [viewMode, setViewMode] = useState<ViewMode>('search');
+  const [viewMode, setViewMode] = useState<ViewMode>('scheduled');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<DoctorWithRating[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -56,6 +58,7 @@ function SecretaryAppointmentsContent() {
   const [favoritesDoctors, setFavoritesDoctors] = useState<Set<string>>(new Set());
   const [expandedDoctors, setExpandedDoctors] = useState<Set<string>>(new Set());
   const [doctorSlots, setDoctorSlots] = useState<Map<string, string[]>>(new Map());
+  const [showHelpModal, setShowHelpModal] = useState(false);
   
   // Calendar for scheduled view
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(dateHelper.now());
@@ -71,8 +74,10 @@ function SecretaryAppointmentsContent() {
     return monday;
   });
 
-  // Filter for scheduled calendar
+  // Filter for scheduled view
   const [scheduledCalendarDoctorFilter, setScheduledCalendarDoctorFilter] = useState<string>('');
+  const [scheduledPatientFilter, setScheduledPatientFilter] = useState<string>('');
+  const [scheduledDateFilter, setScheduledDateFilter] = useState<string>('');
 
   // Memoize clinicId to prevent unnecessary re-renders
   const clinicId = useMemo(() => {
@@ -495,6 +500,13 @@ function SecretaryAppointmentsContent() {
             </div>
             
             <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowHelpModal(true)}
+                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                title="¿Cómo agendar un turno?"
+              >
+                <HelpCircle className="w-6 h-6" />
+              </button>
               <div className="flex items-center bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('search')}
@@ -517,13 +529,13 @@ function SecretaryAppointmentsContent() {
                   Programados
                 </button>
               </div>
-              <Link
-                href={buildPath('/secretary/appointments/new')}
+              <button
+                onClick={() => setViewMode('search')}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Nuevo Turno
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -877,8 +889,18 @@ function SecretaryAppointmentsContent() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Turnos Programados</h2>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <h2 className="text-xl font-semibold text-gray-900">Turnos Programados</h2>
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Filtrar por paciente..."
+                      value={scheduledPatientFilter}
+                      onChange={(e) => setScheduledPatientFilter(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-gray-700">Doctor:</label>
                     <select
@@ -886,7 +908,7 @@ function SecretaryAppointmentsContent() {
                       onChange={(e) => setScheduledCalendarDoctorFilter(e.target.value)}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Todos</option>
+                      <option value="">Todos los doctores</option>
                       {doctors.map(doctor => (
                         <option key={doctor.id} value={doctor.id}>
                           Dr. {doctor.nombres} {doctor.apellidos}
@@ -894,6 +916,26 @@ function SecretaryAppointmentsContent() {
                       ))}
                     </select>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-700">Fecha:</label>
+                    <input
+                      type="date"
+                      value={scheduledDateFilter}
+                      onChange={(e) => setScheduledDateFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {scheduledDateFilter && (
+                      <button 
+                        onClick={() => setScheduledDateFilter('')}
+                        className="p-2 text-gray-400 hover:text-gray-600"
+                        title="Limpiar fecha"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={goToPreviousMonth}
@@ -932,10 +974,16 @@ function SecretaryAppointmentsContent() {
                   {appointments
                     .filter(apt => {
                       const aptDate = new Date(apt.fecha);
-                      return aptDate.getMonth() === currentMonth.getMonth() && 
-                             aptDate.getFullYear() === currentMonth.getFullYear() &&
-                             apt.estado !== 'cancelada' &&
-                             (!scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter);
+                      const matchesMonth = aptDate.getMonth() === currentMonth.getMonth() && 
+                                          aptDate.getFullYear() === currentMonth.getFullYear();
+                      const matchesDoctor = !scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter;
+                      
+                      const patientName = getPatientName(apt.patientId).toLowerCase();
+                      const matchesPatient = !scheduledPatientFilter || patientName.includes(scheduledPatientFilter.toLowerCase());
+                      
+                      const matchesDate = !scheduledDateFilter || apt.fecha === scheduledDateFilter;
+
+                      return matchesMonth && apt.estado !== 'cancelada' && matchesDoctor && matchesPatient && matchesDate;
                     })
                     .sort((a, b) => {
                       const dateA = new Date(`${a.fecha}T${a.horaInicio}`);
@@ -999,12 +1047,16 @@ function SecretaryAppointmentsContent() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link
-                              href={buildPath(`/secretary/appointments/${appointment.id}/edit`)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Editar
-                            </Link>
+                            {appointment.estado === 'programada' ? (
+                              <Link
+                                href={buildPath(`/secretary/appointments/${appointment.id}/edit`)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                Editar
+                              </Link>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1111,11 +1163,28 @@ function SecretaryAppointmentsContent() {
 
                       // Get appointments for this time slot and day
                       const slotAppointments = appointments.filter(apt => {
-                        const aptDate = new Date(apt.fecha);
-                        return apt.fecha === dateStr && 
-                               apt.horaInicio === time &&
-                               apt.estado !== 'cancelada' &&
-                               (!scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter);
+                        const matchesDate = apt.fecha === dateStr;
+                        const notCancelled = apt.estado !== 'cancelada';
+                        const matchesDoctor = !scheduledCalendarDoctorFilter || apt.doctorId === scheduledCalendarDoctorFilter;
+                        
+                        // Verificar si el turno se superpone con esta franja horaria (1 hora)
+                        // Ej: Un turno de 11:30 a 13:30 debe aparecer en las celdas de 11:00, 12:00 y 13:00
+                        const [aptStartH, aptStartM] = apt.horaInicio.split(':').map(Number);
+                        const [aptEndH, aptEndM] = apt.horaFin.split(':').map(Number);
+                        const aptStartTotal = aptStartH * 60 + aptStartM;
+                        const aptEndTotal = aptEndH * 60 + aptEndM;
+                        
+                        const slotStartTotal = timeHour * 60;
+                        const slotEndTotal = (timeHour + 1) * 60;
+
+                        const overlaps = (aptStartTotal < slotEndTotal) && (aptEndTotal > slotStartTotal);
+                        
+                        const patientName = getPatientName(apt.patientId).toLowerCase();
+                        const matchesPatient = !scheduledPatientFilter || patientName.includes(scheduledPatientFilter.toLowerCase());
+
+                        const matchesDateFilter = !scheduledDateFilter || apt.fecha === scheduledDateFilter;
+
+                        return matchesDate && overlaps && notCancelled && matchesDoctor && matchesPatient && matchesDateFilter;
                       });
 
                       // Color schemes for doctors
@@ -1153,14 +1222,19 @@ function SecretaryAppointmentsContent() {
                                 const doctorIndex = doctors.findIndex(d => d.id === apt.doctorId);
                                 const colors = doctorColorSchemes[doctorIndex % doctorColorSchemes.length];
                                 
+                                const patientName = getPatientName(apt.patientId);
+                                const patientLastName = patientName.split(' ').slice(-1)[0] || patientName;
+                                const doctorLastName = doctor?.apellidos?.split(' ')[0] || '';
+                                const doctorFirstNameInitial = doctor?.nombres?.[0] || '';
+                                
                                 return (
                                   <div
                                     key={idx}
-                                    className={`text-xs px-2 py-1 ${getStatusColor(apt.estado)} text-white rounded truncate cursor-pointer hover:opacity-80 transition-colors border ${colors.border}`}
+                                    className={`text-xs px-2 py-1 ${getStatusColor(apt.estado)} text-white rounded truncate ${apt.estado === 'programada' ? 'cursor-pointer hover:opacity-80' : 'cursor-default'} transition-colors border ${colors.border}`}
                                     title={`${getPatientName(apt.patientId)} - ${getDoctorName(apt.doctorId)}`}
-                                    onClick={() => router.push(buildPath(`/secretary/appointments/${apt.id}/edit`))}
+                                    onClick={() => apt.estado === 'programada' && router.push(buildPath(`/secretary/appointments/${apt.id}/edit`))}
                                   >
-                                    {getPatientName(apt.patientId).split(' ')[0]} - {doctor?.nombres?.split(' ')[0]}
+                                    {patientLastName} - Dr. {doctorLastName}, {doctorFirstNameInitial}
                                   </div>
                                 );
                               })}
@@ -1175,6 +1249,63 @@ function SecretaryAppointmentsContent() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal de Ayuda - Flujo de Reserva */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-in fade-in zoom-in duration-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white">
+                <HelpCircle className="w-5 h-5" />
+                <h3 className="font-bold text-lg">¿Cómo agendar un turno?</h3>
+              </div>
+              <button 
+                onClick={() => setShowHelpModal(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">1</div>
+                  <div>
+                    <p className="font-bold text-gray-900">Ir a la pestaña "Búsqueda"</p>
+                    <p className="text-sm text-gray-600 mt-1">Haz clic en el botón <span className="font-semibold">Nuevo Turno</span> o selecciona la pestaña <span className="font-semibold">Búsqueda</span>.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">2</div>
+                  <div>
+                    <p className="font-bold text-gray-900">Filtrar por Profesional</p>
+                    <p className="text-sm text-gray-600 mt-1">Busca al médico por nombre o especialidad para ver su disponibilidad.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">3</div>
+                  <div>
+                    <p className="font-bold text-gray-900">Seleccionar Horario</p>
+                    <p className="text-sm text-gray-600 mt-1">En el calendario inferior, haz clic en un casillero <span className="text-blue-600 font-semibold">azul</span> disponible para el médico elegido.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">4</div>
+                  <div>
+                    <p className="font-bold text-gray-900">Elegir Paciente y Motivo</p>
+                    <p className="text-sm text-gray-600 mt-1">Busca al paciente, ingresa el motivo de la consulta y confirma la reserva.</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="w-full mt-8 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         </div>

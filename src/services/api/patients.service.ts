@@ -137,8 +137,8 @@ export const patientsService = {
           // Prefer root-level fields if backend provides them (legacy/UI helpers),
           // fallback to nested `seguroMedico` for backwards compatibility.
           p.obraSocial = p.obraSocial ?? p.seguroMedico?.empresa ?? '';
-          p.numeroAfiliado = p.numeroAfiliado ?? p.seguroMedico?.numeroPoliza ?? '';
-          p.planObraSocial = p.planObraSocial ?? '';
+          p.numeroAfiliado = p.numeroAfiliado ?? p.seguroMedico?.numeroPoliza ?? p.numeroPoliza ?? '';
+          p.planObraSocial = p.planObraSocial ?? p.seguroMedico?.plan ?? '';
         });
       }
       
@@ -174,8 +174,8 @@ export const patientsService = {
         responseData.data.obraSocial =
           (responseData.data as any).obraSocial ?? responseData.data.seguroMedico?.empresa ?? '';
         responseData.data.numeroAfiliado =
-          (responseData.data as any).numeroAfiliado ?? responseData.data.seguroMedico?.numeroPoliza ?? '';
-        (responseData.data as any).planObraSocial = (responseData.data as any).planObraSocial ?? '';
+          (responseData.data as any).numeroAfiliado ?? responseData.data.seguroMedico?.numeroPoliza ?? (responseData.data as any).numeroPoliza ?? '';
+        responseData.data.planObraSocial = (responseData.data as any).planObraSocial ?? responseData.data.seguroMedico?.plan ?? '';
       }
       
       if (!response.ok) {
@@ -227,8 +227,8 @@ export const patientsService = {
       if (result.success && result.data) {
         result.data.obraSocial = (result.data as any).obraSocial ?? result.data.seguroMedico?.empresa ?? '';
         result.data.numeroAfiliado =
-          (result.data as any).numeroAfiliado ?? result.data.seguroMedico?.numeroPoliza ?? '';
-        (result.data as any).planObraSocial = (result.data as any).planObraSocial ?? '';
+          (result.data as any).numeroAfiliado ?? result.data.seguroMedico?.numeroPoliza ?? (result.data as any).numeroPoliza ?? '';
+        result.data.planObraSocial = (result.data as any).planObraSocial ?? result.data.seguroMedico?.plan ?? '';
       }
       return result;
     } catch (error: any) {
@@ -290,8 +290,8 @@ export const patientsService = {
         responseData.data.obraSocial =
           (responseData.data as any).obraSocial ?? responseData.data.seguroMedico?.empresa ?? '';
         responseData.data.numeroAfiliado =
-          (responseData.data as any).numeroAfiliado ?? responseData.data.seguroMedico?.numeroPoliza ?? '';
-        (responseData.data as any).planObraSocial = (responseData.data as any).planObraSocial ?? '';
+          (responseData.data as any).numeroAfiliado ?? responseData.data.seguroMedico?.numeroPoliza ?? (responseData.data as any).numeroPoliza ?? '';
+        responseData.data.planObraSocial = (responseData.data as any).planObraSocial ?? responseData.data.seguroMedico?.plan ?? '';
       }
       
       if (!response.ok) {

@@ -13,14 +13,25 @@ import {
   Stethoscope,
   ArrowLeft,
   Save,
-  X
+  X,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  Edit
 } from 'lucide-react';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
 import type { Appointment, Patient, AppointmentStatus } from '@/types';
 import { usersService } from '@/services/api/users.service';
-import { User } from '@/types/roles';
+import { User, HorarioAtencion } from '@/types/roles';
 import Link from 'next/link';
+import { dateHelper } from '@/utils/date-helper';
+
+interface TimeSlot {
+  time: string;
+  available: boolean;
+}
 
 export default function EditAppointmentPage() {
   const router = useRouter();
@@ -44,6 +55,16 @@ export default function EditAppointmentPage() {
   const [motivo, setMotivo] = useState('');
   const [estado, setEstado] = useState<AppointmentStatus>('programada');
 
+  // Estados para disponibilidad
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [tempFecha, setTempFecha] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState(30);
+  const [maxDuration, setMaxDuration] = useState(30);
+
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
   useEffect(() => {
@@ -65,9 +86,18 @@ export default function EditAppointmentPage() {
 
       if (appointmentRes.success && appointmentRes.data) {
         const apt = appointmentRes.data;
+        
+        // Check if appointment can be edited (only 'programada' status)
+        if (apt.estado !== 'programada') {
+          showError('Error', 'Solo se pueden editar turnos con estado "programada"');
+          router.push(buildPath('/secretary/appointments'));
+          return;
+        }
+        
         setAppointment(apt);
         setSelectedDoctorId(apt.doctorId);
         setFecha(apt.fecha);
+        setTempFecha(apt.fecha);
         setHoraInicio(apt.horaInicio);
         setHoraFin(apt.horaFin);
         setMotivo(apt.motivo || '');
@@ -93,6 +123,137 @@ export default function EditAppointmentPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (showAvailabilityModal && selectedDoctorId && tempFecha) {
+      loadDoctorSchedule();
+    }
+  }, [showAvailabilityModal, selectedDoctorId, tempFecha]);
+
+  const loadDoctorSchedule = async () => {
+    if (!selectedDoctorId || !tempFecha || !clinicId) return;
+    
+    try {
+      setLoadingSchedule(true);
+      const response = await appointmentsService.getDoctorSchedule(
+        clinicId,
+        selectedDoctorId,
+        tempFecha
+      );
+      
+      // Excluir el turno actual de los ocupados si es en la misma fecha
+      const occupied = response.data
+        .filter((apt: any) => apt.id !== appointmentId)
+        .map((apt: any) => apt.horaInicio);
+        
+      setBookedSlots(occupied);
+      
+      // Generate available slots
+      const slots = generateAvailableTimeSlots();
+      setAvailableSlots(slots);
+    } catch (error) {
+      console.error('Error loading doctor schedule:', error);
+      setBookedSlots([]);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
+  const generateAvailableTimeSlots = (): TimeSlot[] => {
+    const doctor = doctors.find(d => d.id === selectedDoctorId);
+    if (!doctor || !tempFecha) return [];
+
+    const date = new Date(tempFecha + 'T12:00:00');
+    const dayOfWeek = date.getDay();
+    const backendDay = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+    const horario = doctor.horariosAtencion?.find(
+      h => h.activo && h.dia === backendDay
+    );
+
+    if (!horario) return [];
+
+    const slots: TimeSlot[] = [];
+    const [startHour, startMin] = horario.horaInicio.split(':').map(Number);
+    const [endHour, endMin] = horario.horaFin.split(':').map(Number);
+
+    let currentHour = startHour;
+    let currentMin = startMin;
+
+    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+      const timeStr = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+      
+      // Verificar si el slot está ocupado por otro turno
+      const isBooked = bookedSlots.includes(timeStr);
+      
+      // Verificar si el horario ya pasó (solo si es el día de hoy)
+      let isPast = false;
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      if (tempFecha === todayStr) {
+        const currentH = today.getHours();
+        const currentM = today.getMinutes();
+        if (currentHour < currentH || (currentHour === currentH && currentMin <= currentM)) {
+          isPast = true;
+        }
+      }
+      
+      slots.push({ time: timeStr, available: !isBooked && !isPast });
+
+      currentMin += 30;
+      if (currentMin >= 60) {
+        currentMin = 0;
+        currentHour++;
+      }
+    }
+
+    return slots;
+  };
+
+  const handleSlotSelect = (time: string) => {
+    setSelectedSlot(time);
+    
+    // Calcular duración máxima disponible desde este slot
+    const slots = availableSlots;
+    const startIndex = slots.findIndex(s => s.time === time);
+    let duration = 30;
+    
+    // Buscar cuántos slots seguidos de 30 min están disponibles
+    for (let i = startIndex + 1; i < slots.length; i++) {
+      if (slots[i].available) {
+        duration += 30;
+      } else {
+        break;
+      }
+      
+      // Limitar a una duración razonable, máximo 3 horas (180 min)
+      if (duration >= 180) break;
+    }
+    
+    setMaxDuration(Math.min(duration, 180));
+    setSelectedDuration(30); // Default 30 min
+  };
+
+  const handleConfirmSlot = () => {
+    if (!selectedSlot) return;
+    
+    setFecha(tempFecha);
+    setHoraInicio(selectedSlot);
+    
+    // Calcular hora fin basada en duración seleccionada
+    const [h, m] = selectedSlot.split(':').map(Number);
+    let endTotalMinutes = h * 60 + m + selectedDuration;
+    
+    const endH = Math.floor(endTotalMinutes / 60);
+    const endM = endTotalMinutes % 60;
+    
+    const endTimeStr = `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+    setHoraFin(endTimeStr);
+    
+    setShowAvailabilityModal(false);
+    setSelectedSlot(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -242,68 +403,66 @@ export default function EditAppointmentPage() {
                 </select>
               </div>
 
-              {/* Fecha */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Fecha *
-                </label>
-                <input
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              {/* Horarios */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Hora Inicio *
-                  </label>
-                  <input
-                    type="time"
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+              {/* Fecha y Hora (Selector de Disponibilidad) */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    Programación
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedDoctorId) {
+                        showError('Doctor requerido', 'Selecciona un doctor primero');
+                        return;
+                      }
+                      setTempFecha(fecha);
+                      setShowAvailabilityModal(true);
+                    }}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors flex items-center gap-2"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    Cambiar Fecha/Hora
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Hora Fin *
-                  </label>
-                  <input
-                    type="time"
-                    value={horaFin}
-                    onChange={(e) => setHoraFin(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
 
-              {/* Estado */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado
-                </label>
-                <select
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value as any)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="programada">Programada</option>
-                  <option value="confirmada">Confirmada</option>
-                  <option value="en_curso">En curso</option>
-                  <option value="completada">Completada</option>
-                  <option value="cancelada">Cancelada</option>
-                  <option value="no_asistio">No asistió</option>
-                </select>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fecha
+                    </label>
+                    <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      {fecha ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      }) : 'No seleccionada'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Hora Inicio
+                    </label>
+                    <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      {horaInicio || 'No seleccionada'}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Hora Fin
+                    </label>
+                    <div className="text-sm font-semibold text-gray-400 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-200" />
+                      {horaFin || 'No seleccionada'}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Motivo */}
@@ -351,6 +510,165 @@ export default function EditAppointmentPage() {
           </div>
         </form>
       </div>
+
+      {/* Modal de Disponibilidad */}
+      {showAvailabilityModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Disponibilidad del Doctor
+              </h3>
+              <button
+                onClick={() => setShowAvailabilityModal(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-0 flex flex-col h-[600px]">
+              {/* Selector de Fecha Superior */}
+              <div className="p-4 border-b border-gray-100 bg-white sticky top-0 z-10">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={tempFecha}
+                      onChange={(e) => setTempFecha(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  <div className="text-sm font-medium text-gray-600 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+                    {tempFecha ? new Date(tempFecha + 'T12:00:00').toLocaleDateString('es-AR', { 
+                      weekday: 'long', 
+                      day: 'numeric', 
+                      month: 'short' 
+                    }) : ''}
+                  </div>
+                </div>
+              </div>
+
+              {/* Cuerpo del Calendario Diario */}
+              <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+                {loadingSchedule ? (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <Spinner size="lg" color="primary" />
+                    <p className="text-gray-500 mt-4 font-medium">Consultando agenda...</p>
+                  </div>
+                ) : availableSlots.length > 0 ? (
+                  <div className="space-y-2 max-w-md mx-auto">
+                    <div className="flex items-center gap-2 mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider px-2">
+                      <Clock className="w-3.5 h-3.5" />
+                      Franjas Horarias
+                    </div>
+                    {availableSlots.map((slot) => (
+                      <div key={slot.time} className="flex items-center gap-4 group">
+                        <div className="w-16 text-right text-xs font-bold text-gray-400 group-hover:text-blue-500 transition-colors">
+                          {slot.time}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!slot.available}
+                          onClick={() => handleSlotSelect(slot.time)}
+                          className={`
+                            flex-1 py-3 px-4 rounded-xl text-sm font-semibold text-left transition-all border-2
+                            ${slot.available 
+                              ? selectedSlot === slot.time
+                                ? 'bg-blue-600 border-blue-600 text-white shadow-md translate-x-1'
+                                : 'bg-white border-white text-gray-700 shadow-sm hover:border-blue-500 hover:shadow-md hover:translate-x-1' 
+                              : 'bg-gray-100 border-gray-100 text-gray-400 cursor-not-allowed opacity-60'
+                            }
+                          `}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span>{slot.available ? (selectedSlot === slot.time ? 'Seleccionado' : 'Disponible') : 'Ocupado'}</span>
+                            {slot.available && (
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${selectedSlot === slot.time ? 'bg-blue-500 text-white' : 'bg-blue-50 group-hover:bg-blue-500 group-hover:text-white'}`}>
+                                <ChevronRight className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
+                      <AlertTriangle className="w-10 h-10 text-yellow-500" />
+                    </div>
+                    <h4 className="text-lg font-bold text-gray-900 mb-2">Sin disponibilidad</h4>
+                    <p className="text-gray-500 max-w-xs mx-auto">
+                      El doctor no atiende en este día o la agenda está completa. Por favor, selecciona otra fecha.
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Selector de Duración Inferior (Aparece al elegir un slot) */}
+              {selectedSlot && (
+                <div className="p-6 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] animate-in slide-in-from-bottom duration-300">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        Configurar Duración
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min="30"
+                          max={maxDuration}
+                          step="30"
+                          value={selectedDuration}
+                          onChange={(e) => setSelectedDuration(parseInt(e.target.value))}
+                          className="w-48 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100">
+                          {selectedDuration} <span className="text-xs font-medium">min</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Máximo disponible: <span className="font-semibold">{maxDuration} min</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSlot(null)}
+                        className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmSlot}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 shadow-md transition-all flex items-center gap-2"
+                      >
+                        Confirmar {selectedSlot} ({selectedDuration} min)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setShowAvailabilityModal(false)}
+                className="px-4 py-2 text-gray-700 font-medium hover:text-gray-900"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
