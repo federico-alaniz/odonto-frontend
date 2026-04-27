@@ -260,6 +260,7 @@ export default function NewAppointmentFlow() {
       patientId: selectedPatientForModal.id,
       date: selectedDate,
       time: selectedTime,
+      duration: searchParams?.get('duration') || '30',
       motivo: motivo.trim()
     });
 

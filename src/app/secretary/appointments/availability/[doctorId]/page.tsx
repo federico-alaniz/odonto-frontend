@@ -237,6 +237,20 @@ export default function DoctorAvailabilityPage() {
     setSelectedDuration(30); // Default 30 min
   };
 
+  // Función para verificar si un slot está dentro del rango seleccionado
+  const isSlotInRange = (date: string, time: string) => {
+    if (!selectedSlot || selectedSlot.date !== date) return false;
+    
+    const daySlots = weekSlots.get(date) || [];
+    const startIndex = daySlots.findIndex(s => s.time === selectedSlot.time);
+    const currentIndex = daySlots.findIndex(s => s.time === time);
+    
+    if (startIndex === -1 || currentIndex === -1) return false;
+    
+    const numSlots = selectedDuration / 30;
+    return currentIndex >= startIndex && currentIndex < startIndex + numSlots;
+  };
+
   const handleConfirm = () => {
     if (!selectedSlot) return;
     
@@ -489,6 +503,7 @@ export default function DoctorAvailabilityPage() {
                                 }
 
                                 const isSelected = selectedSlot?.date === dateStr && selectedSlot?.time === time;
+                                const isInRange = isSlotInRange(dateStr, time);
 
                                 return (
                                   <button
@@ -499,13 +514,22 @@ export default function DoctorAvailabilityPage() {
                                       h-12 rounded-lg text-sm font-medium transition-all
                                       ${slot.available 
                                         ? isSelected
-                                          ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2'
-                                          : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                                          ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 z-10'
+                                          : isInRange
+                                            ? 'bg-blue-100 text-blue-700 border-x-2 border-blue-400 z-0'
+                                            : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                       }
                                     `}
                                   >
-                                    {slot.available ? 'Disponible' : '-'}
+                                    {slot.available 
+                                      ? isSelected 
+                                        ? 'Inicio' 
+                                        : isInRange 
+                                          ? '...' 
+                                          : 'Disponible' 
+                                      : '-'
+                                    }
                                   </button>
                                 );
                               })}
@@ -539,6 +563,7 @@ export default function DoctorAvailabilityPage() {
                                 }
 
                                 const isSelected = selectedSlot?.date === dateStr && selectedSlot?.time === time;
+                                const isInRange = isSlotInRange(dateStr, time);
 
                                 return (
                                   <button
@@ -549,13 +574,22 @@ export default function DoctorAvailabilityPage() {
                                       h-12 rounded-lg text-sm font-medium transition-all
                                       ${slot.available 
                                         ? isSelected
-                                          ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2'
-                                          : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+                                          ? 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 z-10'
+                                          : isInRange
+                                            ? 'bg-blue-100 text-blue-700 border-x-2 border-blue-400 z-0'
+                                            : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                       }
                                     `}
                                   >
-                                    {slot.available ? 'Disponible' : '-'}
+                                    {slot.available 
+                                      ? isSelected 
+                                        ? 'Inicio' 
+                                        : isInRange 
+                                          ? '...' 
+                                          : 'Disponible' 
+                                      : '-'
+                                    }
                                   </button>
                                 );
                               })}

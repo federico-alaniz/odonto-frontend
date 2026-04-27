@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
@@ -43,6 +44,7 @@ export default function EditAppointmentPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [doctors, setDoctors] = useState<User[]>([]);
@@ -299,6 +301,35 @@ export default function EditAppointmentPage() {
     }
   };
 
+  const handleCancelAppointment = async () => {
+    if (!window.confirm('¿Estás seguro de que deseas cancelar este turno? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      const userId = (currentUser as any)?.id;
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        appointmentId,
+        { estado: 'cancelada' }
+      );
+
+      if (response.success) {
+        showSuccess('Turno cancelado', 'El turno ha sido cancelado exitosamente');
+        router.push(buildPath('/secretary/appointments'));
+      } else {
+        showError('Error', 'No se pudo cancelar el turno');
+      }
+    } catch (error) {
+      console.error('Error cancelando turno:', error);
+      showError('Error', 'Ocurrió un error al intentar cancelar el turno');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 bg-gray-50 min-h-screen">
@@ -482,39 +513,55 @@ export default function EditAppointmentPage() {
           </div>
 
           {/* Botones de acción */}
-          <div className="flex justify-end gap-3">
-            <Link
-              href={buildPath('/secretary/appointments')}
-              className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              Cancelar
-            </Link>
+          <div className="flex justify-between items-center pt-4">
             <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              onClick={handleCancelAppointment}
+              disabled={saving || cancelling}
+              className="px-6 py-3 text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
             >
-              {saving ? (
-                <>
-                  <Spinner size="sm" color="white" />
-                  Guardando...
-                </>
+              {cancelling ? (
+                <Spinner size="sm" color="primary" />
               ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Guardar Cambios
-                </>
+                <Trash2 className="w-4 h-4" />
               )}
+              Cancelar Turno
             </button>
+
+            <div className="flex gap-3">
+              <Link
+                href={buildPath('/secretary/appointments')}
+                className="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors inline-flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Volver
+              </Link>
+              <button
+                type="submit"
+                disabled={saving || cancelling}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <>
+                    <Spinner size="sm" color="white" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Guardar Cambios
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>
 
       {/* Modal de Disponibilidad */}
       {showAvailabilityModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />

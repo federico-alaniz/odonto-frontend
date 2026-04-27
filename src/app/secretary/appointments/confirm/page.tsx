@@ -35,6 +35,8 @@ function ConfirmAppointmentContent() {
   const patientId = searchParams?.get('patientId');
   const date = searchParams?.get('date');
   const time = searchParams?.get('time');
+  const durationParam = searchParams?.get('duration');
+  const duration = durationParam ? parseInt(durationParam) : 30;
   const motivo = searchParams?.get('motivo') || '';
 
   const [doctor, setDoctor] = useState<User | null>(null);
@@ -135,14 +137,13 @@ function ConfirmAppointmentContent() {
     try {
       setCreating(true);
 
-      // Calcular horaFin (30 minutos después de horaInicio)
+      // Calcular horaFin basada en la duración seleccionada (default 30 min)
       const [hours, minutes] = time.split(':').map(Number);
-      let endMinutes = minutes + 30;
-      let endHours = hours;
-      if (endMinutes >= 60) {
-        endMinutes -= 60;
-        endHours += 1;
-      }
+      let totalMinutes = hours * 60 + minutes + duration;
+      
+      const endHours = Math.floor(totalMinutes / 60);
+      const endMinutes = totalMinutes % 60;
+      
       const horaFin = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 
       const appointmentData = {
