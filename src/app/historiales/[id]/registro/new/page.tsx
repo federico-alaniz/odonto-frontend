@@ -110,6 +110,40 @@ export default function NewMedicalRecordPage() {
     setPlanRowPendingEditId(null);
   }, []);
 
+  // Helper para obtener dientes extraídos del historial
+  const getExtractedTeethFromHistory = async (patientId: string, clinicId: string): Promise<number[]> => {
+    try {
+      const response = await medicalRecordsApiService.getPatientRecords(patientId, clinicId, 1, 1000);
+      if (response.success && response.data) {
+        const toothMap = new Map<number, ToothCondition>();
+        
+        response.data
+          .filter((record: any) => !record.estadoRegistro || record.estadoRegistro === 'guardado')
+          .forEach((record: any) => {
+            if (record.odontogramas?.actual) {
+              record.odontogramas.actual.forEach((condition: any) => {
+                const existing = toothMap.get(condition.number);
+                if (!existing) {
+                  toothMap.set(condition.number, { ...condition });
+                } else if (condition.status === 'extraction' || condition.status === 'missing') {
+                  toothMap.set(condition.number, { ...condition });
+                }
+              });
+            }
+          });
+        
+        const historicalConditions = Array.from(toothMap.values());
+        const extracted = historicalConditions
+          .filter(condition => condition.status === 'extraction' || condition.status === 'missing')
+          .map(condition => condition.number);
+        return extracted;
+      }
+    } catch (error) {
+      console.error('Error getting extracted teeth from history:', error);
+    }
+    return [];
+  };
+
   // Helper para obtener inicial de sector (usa número de diente para distinguir Palatina/Lingual e Incisal/Oclusal)
   const getSectorInitial = (toothNumber: number | string | undefined, sector: string | undefined) => {
     if (!toothNumber || !sector) return '';
@@ -316,7 +350,32 @@ export default function NewMedicalRecordPage() {
             // Solo cargar el odontograma actual del borrador
             // El odontograma histórico se cargará desde el otro useEffect con todos los registros guardados
             if (draftRecord.odontogramas?.actual) {
-              setCurrentOdontogram(draftRecord.odontogramas.actual);
+              // Merge extracted teeth from history with draft odontogram
+              const extracted = await getExtractedTeethFromHistory(patientId, clinicId);
+              const draftOdontogram = draftRecord.odontogramas.actual;
+              const mergedOdontogram = [...draftOdontogram];
+              
+              // Add extracted teeth that are not already in the draft
+              extracted.forEach((toothNumber: number) => {
+                if (!mergedOdontogram.find(t => t.number === toothNumber)) {
+                  mergedOdontogram.push({
+                    number: toothNumber,
+                    status: 'missing' as const
+                  });
+                }
+              });
+              
+              setCurrentOdontogram(mergedOdontogram);
+            } else {
+              // Si no hay odontograma en el borrador, inicializar con dientes extraídos del historial
+              const extracted = await getExtractedTeethFromHistory(patientId, clinicId);
+              if (extracted.length > 0) {
+                const missingTeeth: ToothCondition[] = extracted.map((number: number) => ({
+                  number,
+                  status: 'missing' as const
+                }));
+                setCurrentOdontogram(missingTeeth);
+              }
             }
             // Cargar plan odontológico si existe en el borrador
             if (draftRecord.odontogramas?.plan) {

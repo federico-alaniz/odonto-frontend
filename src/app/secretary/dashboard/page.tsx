@@ -236,14 +236,15 @@ export default function SecretaryDashboardPage() {
       const userId = currentUser.id;
 
       // Actualizar el estado de la cita a 'confirmada'
+      const updateData = { 
+        estado: 'confirmada' as const,
+        notas: `Pago registrado - Seña: $${paymentData.sena.toFixed(2)}, Complemento: $${paymentData.complemento.toFixed(2)}, Total: $${paymentData.total.toFixed(2)}, Pagado: ${paymentData.pagado ? 'Sí' : 'No'}`
+      };
       await appointmentsService.updateAppointment(
         clinicId,
         userId,
         selectedAppointment.id,
-        { 
-          estado: 'confirmada',
-          notas: `Pago registrado - Seña: $${paymentData.sena.toFixed(2)}, Complemento: $${paymentData.complemento.toFixed(2)}, Total: $${paymentData.total.toFixed(2)}, Pagado: ${paymentData.pagado ? 'Sí' : 'No'}`
-        }
+        updateData
       );
 
       // Actualizar el estado local

@@ -93,7 +93,12 @@ export default function ReceptionPage() {
   const [hasActions, setHasActions] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedAppointmentForPayment, setSelectedAppointmentForPayment] = useState<ReceptionAppointment | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentData, setPaymentData] = useState({
+    sena: 0,
+    complemento: 0,
+    total: 0,
+    pagado: false
+  });
 
   const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
 
@@ -415,35 +420,45 @@ export default function ReceptionPage() {
 
   const handleConfirmAppointment = (appointment: ReceptionAppointment) => {
     setSelectedAppointmentForPayment(appointment);
-    setPaymentAmount('2500'); // Default amount
+    setPaymentData({
+      sena: 0,
+      complemento: 0,
+      total: 2500,
+      pagado: true
+    });
     setShowPaymentModal(true);
   };
 
   const handlePaymentConfirmed = async () => {
-    if (!selectedAppointmentForPayment || !paymentAmount) return;
+    if (!selectedAppointmentForPayment || !paymentData.total) return;
 
     try {
-      // Aquí se integraría con el módulo de facturación
-      // Por ejemplo: await billingService.createInvoice(clinicId, {
-      //   appointmentId: selectedAppointmentForPayment.id,
-      //   patientId: selectedAppointmentForPayment.patientId,
-      //   amount: parseFloat(paymentAmount),
-      //   description: 'Consulta odontológica'
-      // });
+      const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
+      const userId = currentUser.id;
 
-      console.log('💰 Procesando pago:', {
-        appointmentId: selectedAppointmentForPayment.id,
-        patientId: selectedAppointmentForPayment.patientId,
-        amount: paymentAmount,
-        description: 'Consulta odontológica'
-      });
+      // Actualizar el estado de la cita a 'confirmada' con notas de pago
+      const updateData = { 
+        estado: 'confirmada' as const,
+        notas: `Pago registrado - Seña: $${paymentData.sena.toFixed(2)}, Complemento: $${paymentData.complemento.toFixed(2)}, Total: $${paymentData.total.toFixed(2)}, Pagado: ${paymentData.pagado ? 'Sí' : 'No'}`
+      };
+      await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        selectedAppointmentForPayment.id,
+        updateData
+      );
 
-      // Cambiar estado de la cita
+      // Cambiar estado local
       await handleStatusChange(selectedAppointmentForPayment.id, 'esperando');
       
       setShowPaymentModal(false);
       setSelectedAppointmentForPayment(null);
-      setPaymentAmount('');
+      setPaymentData({
+        sena: 0,
+        complemento: 0,
+        total: 0,
+        pagado: false
+      });
     } catch (error) {
       console.error('❌ Error al procesar el pago:', error);
       alert('Error al procesar el pago. Intente nuevamente.');
@@ -821,14 +836,47 @@ export default function ReceptionPage() {
               <p className="font-medium">{selectedAppointmentForPayment.time}</p>
             </div>
             
-            <div className="mb-6">
-              <label className="block text-sm text-gray-600 mb-2">Monto a pagar:</label>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-2">Seña:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={paymentData.sena}
+                    onChange={(e) => setPaymentData({...paymentData, sena: parseFloat(e.target.value) || 0})}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-2">Complemento:</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={paymentData.complemento}
+                    onChange={(e) => setPaymentData({...paymentData, complemento: parseFloat(e.target.value) || 0})}
+                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm text-gray-600 mb-2">Total:</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
                 <input
                   type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  value={paymentData.total}
+                  onChange={(e) => setPaymentData({...paymentData, total: parseFloat(e.target.value) || 0})}
                   className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   placeholder="0.00"
                   min="0"
@@ -836,7 +884,18 @@ export default function ReceptionPage() {
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Consulta odontológica general</p>
+            </div>
+            
+            <div className="mb-6">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={paymentData.pagado}
+                  onChange={(e) => setPaymentData({...paymentData, pagado: e.target.checked})}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                />
+                <span className="text-sm text-gray-700">Pagado en su totalidad</span>
+              </label>
             </div>
             
             <div className="flex gap-3">
@@ -844,7 +903,12 @@ export default function ReceptionPage() {
                 onClick={() => {
                   setShowPaymentModal(false);
                   setSelectedAppointmentForPayment(null);
-                  setPaymentAmount('');
+                  setPaymentData({
+                    sena: 0,
+                    complemento: 0,
+                    total: 0,
+                    pagado: false
+                  });
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -852,7 +916,7 @@ export default function ReceptionPage() {
               </button>
               <button
                 onClick={handlePaymentConfirmed}
-                disabled={!paymentAmount || parseFloat(paymentAmount) <= 0}
+                disabled={!paymentData.total || paymentData.total <= 0}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 Confirmar Pago
