@@ -1181,6 +1181,7 @@ export default function NewMedicalRecordPage() {
                           registerEditHandler={registerEditHandler}
                           onPlanRowEditCommitted={handlePlanRowEditCommitted}
                           planEditCancelNonce={planEditCancelNonce}
+                          lockedTeeth={extractedTeeth}
                         />
                       </div>
                     </div>

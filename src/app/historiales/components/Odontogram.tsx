@@ -215,6 +215,8 @@ interface OdontogramProps {
   onPlanRowEditCommitted?: () => void;
   /** Incrementar desde el padre para cancelar edición del plan y limpiar `editingProcId` en el odontograma. */
   planEditCancelNonce?: number;
+  /** Números de dientes bloqueados (extraídos en el historial): no editables en la práctica actual. */
+  lockedTeeth?: number[];
 }
 
 export default function Odontogram({ 
@@ -231,7 +233,8 @@ export default function Odontogram({
   initialPlan,
   registerEditHandler,
   onPlanRowEditCommitted,
-  planEditCancelNonce
+  planEditCancelNonce,
+  lockedTeeth = []
 }: OdontogramProps) {
 
   const [toothConditions, setToothConditions] = useState<ToothCondition[]>(() => {
@@ -702,6 +705,8 @@ export default function Odontogram({
 
   const handleToothClick = (toothId: number, event?: React.MouseEvent) => {
     if (readOnly) return;
+    // Bloquear dientes extraídos en el historial (no editables en práctica actual)
+    if (lockedTeeth.includes(toothId)) return;
     
     if (event) {
       event.preventDefault();
@@ -1135,10 +1140,11 @@ export default function Odontogram({
   const Tooth = ({ number, position, labelPosition }: { number: number, position: { x: number, y: number }, labelPosition: 'top' | 'bottom' }) => {
     const isSelected = selectedTooth === number;
     const isDisabled = readOnly;
+    const isLocked = !readOnly && lockedTeeth.includes(number);
     
     return (
       <g 
-        className={`transition-all ${isDisabled ? 'cursor-default' : 'cursor-pointer'}`}
+        className={`transition-all ${isDisabled || isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         onClick={(e) => handleToothClick(number, e)}
       >
         {/* Etiqueta con el número del diente */}
@@ -1151,6 +1157,18 @@ export default function Odontogram({
           {number}
         </text>
 
+        {/* Fondo gris para dientes bloqueados (extraídos en historial) */}
+        {isLocked && (
+          <rect
+            x={position.x}
+            y={position.y}
+            width="44"
+            height="44"
+            fill="#d1d5db"
+            className="pointer-events-none"
+          />
+        )}
+
         {/* Rectángulo exterior (borde del diente) */}
         <rect
           x={position.x}
@@ -1158,7 +1176,7 @@ export default function Odontogram({
           width="44"
           height="44"
           fill="none"
-          stroke={isSelected ? '#2563eb' : '#1f2937'}
+          stroke={isSelected ? '#2563eb' : '#6b7280'}
           strokeWidth={isSelected ? '2' : '1'}
           className="transition-all"
         />
