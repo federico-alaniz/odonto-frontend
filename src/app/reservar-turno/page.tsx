@@ -27,7 +27,17 @@ function ReservarTurnoContent() {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<number>(30);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Función helper para calcular hora fin
+  const calculateHoraFin = (horaInicio: string, duracionMinutos: number) => {
+    const [hours, minutes] = horaInicio.split(':').map(Number);
+    let totalMinutes = hours * 60 + minutes + duracionMinutos;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
 
   const handleDniBlur = async () => {
     if (patientData.numeroDocumento.length < 6) return;
@@ -60,7 +70,8 @@ function ReservarTurnoContent() {
       }
     } catch (error) {
       console.error('❌ Error checking patient:', error);
-      toast.error('Error al verificar paciente. Verifique la consola.');
+      setExistingPatient(false);
+      toast.error('No se pudo verificar el paciente. Por favor, complete sus datos manualmente.');
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +100,15 @@ function ReservarTurnoContent() {
       return;
     }
 
+    const params = new URLSearchParams({
+      doctorId: selectedDoctor.id,
+      patientId: patientData.numeroDocumento,
+      date: selectedDate,
+      time: selectedSlot.horaInicio,
+      duration: selectedDuration.toString(),
+      motivo: 'Reserva pública'
+    });
+
     setIsLoading(true);
     try {
       const result = await publicAppointmentsService.createAppointment(
@@ -98,8 +118,8 @@ function ReservarTurnoContent() {
           doctorId: selectedDoctor.id,
           fecha: selectedDate,
           horaInicio: selectedSlot.horaInicio,
-          horaFin: selectedSlot.horaFin,
-          motivo: 'Consulta general',
+          horaFin: calculateHoraFin(selectedSlot.horaInicio, selectedDuration),
+          motivo: 'Reserva pública'
         }
       );
 
@@ -311,6 +331,7 @@ function Step1PatientData({
             disabled={isLoading}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="12345678"
+            suppressHydrationWarning
           />
           {existingPatient && (
             <p className="text-xs text-green-600 mt-1">✓ Paciente existente</p>
@@ -327,6 +348,7 @@ function Step1PatientData({
             onChange={(e) => setPatientData({ ...patientData, nombres: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Juan"
+            suppressHydrationWarning
           />
         </div>
 
@@ -340,6 +362,7 @@ function Step1PatientData({
             onChange={(e) => setPatientData({ ...patientData, apellidos: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="Pérez"
+            suppressHydrationWarning
           />
         </div>
 
@@ -353,6 +376,7 @@ function Step1PatientData({
             onChange={(e) => setPatientData({ ...patientData, email: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="juan@example.com"
+            suppressHydrationWarning
           />
         </div>
 
@@ -366,6 +390,7 @@ function Step1PatientData({
             onChange={(e) => setPatientData({ ...patientData, telefono: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="1234567890"
+            suppressHydrationWarning
           />
         </div>
 
@@ -378,6 +403,7 @@ function Step1PatientData({
             value={patientData.fechaNacimiento}
             onChange={(e) => setPatientData({ ...patientData, fechaNacimiento: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            suppressHydrationWarning
           />
         </div>
 

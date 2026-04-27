@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
+import MedicalModal from '@/components/ui/MedicalModal';
+import { Spinner } from '@/components/ui/Spinner';
 import { 
   Calendar as CalendarIcon, 
   Search,
@@ -19,7 +22,10 @@ import {
   Plus,
   Clock,
   X,
-  HelpCircle
+  HelpCircle,
+  Edit,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { usersService } from '@/services/api/users.service';
@@ -42,6 +48,7 @@ function SecretaryAppointmentsContent() {
   const searchParams = useSearchParams();
   const { currentUser } = useAuth();
   const { buildPath } = useTenant();
+  const { showSuccess, showError } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>('scheduled');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<DoctorWithRating[]>([]);
@@ -78,6 +85,9 @@ function SecretaryAppointmentsContent() {
   const [scheduledCalendarDoctorFilter, setScheduledCalendarDoctorFilter] = useState<string>('');
   const [scheduledPatientFilter, setScheduledPatientFilter] = useState<string>('');
   const [scheduledDateFilter, setScheduledDateFilter] = useState<string>('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   // Memoize clinicId to prevent unnecessary re-renders
   const clinicId = useMemo(() => {
@@ -274,6 +284,41 @@ function SecretaryAppointmentsContent() {
     }
     
     setDoctorSlots(slotsMap);
+  };
+
+  const handleCancelClick = (id: string) => {
+    setAppointmentToCancel(id);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!appointmentToCancel || !clinicId) return;
+    
+    try {
+      setCancelling(true);
+      const userId = (currentUser as any)?.id;
+      const response = await appointmentsService.updateAppointment(
+        clinicId,
+        userId,
+        appointmentToCancel,
+        { estado: 'cancelada' }
+      );
+
+      if (response.success) {
+        showSuccess('Turno cancelado', 'El turno ha sido cancelado exitosamente');
+        // Recargar datos
+        loadData();
+      } else {
+        showError('Error', 'No se pudo cancelar el turno');
+      }
+    } catch (error) {
+      console.error('Error cancelando turno:', error);
+      showError('Error', 'Ocurrió un error al intentar cancelar el turno');
+    } finally {
+      setCancelling(false);
+      setShowCancelModal(false);
+      setAppointmentToCancel(null);
+    }
   };
 
   const [specialtiesMap, setSpecialtiesMap] = useState<Map<string, string>>(new Map());
@@ -1000,7 +1045,7 @@ function SecretaryAppointmentsContent() {
                           case 'en_curso':
                             return 'bg-green-100 text-green-800 border-green-200';
                           case 'completada':
-                            return 'bg-gray-100 text-gray-800 border-gray-200';
+                            return 'bg-green-100 text-green-800 border-green-200';
                           case 'no_asistio':
                             return 'bg-red-100 text-red-800 border-red-200';
                           default:
@@ -1047,16 +1092,45 @@ function SecretaryAppointmentsContent() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            {appointment.estado === 'programada' ? (
-                              <Link
-                                href={buildPath(`/secretary/appointments/${appointment.id}/edit`)}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                Editar
-                              </Link>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
+                            <div className="flex justify-end gap-3">
+                              {['programada', 'confirmada'].includes(appointment.estado) ? (
+                                <>
+                                  <Link
+                                    href={buildPath(`/secretary/appointments/${appointment.id}/edit`)}
+                                    className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                    title="Editar turno"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    <span>Editar</span>
+                                  </Link>
+                                  <button
+                                    onClick={() => handleCancelClick(appointment.id)}
+                                    className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                                    title="Cancelar turno"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Cancelar</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <span 
+                                    className="text-gray-400 flex items-center gap-1 cursor-not-allowed" 
+                                    title={`No se puede editar un turno en estado ${getStatusText(appointment.estado).toLowerCase()}`}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    <span>Editar</span>
+                                  </span>
+                                  <span 
+                                    className="text-gray-400 flex items-center gap-1 cursor-not-allowed" 
+                                    title={`No se puede cancelar un turno en estado ${getStatusText(appointment.estado).toLowerCase()}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Cancelar</span>
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1203,9 +1277,9 @@ function SecretaryAppointmentsContent() {
                           case 'confirmada':
                             return 'bg-orange-500';
                           case 'en_curso':
-                            return 'bg-green-500';
+                            return 'bg-emerald-500';
                           case 'completada':
-                            return 'bg-gray-500';
+                            return 'bg-green-600';
                           case 'no_asistio':
                             return 'bg-red-500';
                           default:
@@ -1253,6 +1327,55 @@ function SecretaryAppointmentsContent() {
           </div>
         </div>
       )}
+      {/* Modal de Confirmación de Cancelación */}
+      <MedicalModal
+        isOpen={showCancelModal}
+        onClose={() => !cancelling && setShowCancelModal(false)}
+        title="Confirmar Cancelación"
+        size="sm"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 p-4 bg-red-50 rounded-xl border border-red-100">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h4 className="text-red-900 font-bold">¿Estás seguro?</h4>
+              <p className="text-red-700 text-sm">
+                Esta acción no se puede deshacer y el turno quedará liberado.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleConfirmCancel}
+              disabled={cancelling}
+              className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {cancelling ? (
+                <>
+                  <Spinner size="sm" color="white" />
+                  Cancelando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-5 h-5" />
+                  Sí, cancelar turno
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowCancelModal(false)}
+              disabled={cancelling}
+              className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all disabled:opacity-50"
+            >
+              No, mantener turno
+            </button>
+          </div>
+        </div>
+      </MedicalModal>
+
       {/* Modal de Ayuda - Flujo de Reserva */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">

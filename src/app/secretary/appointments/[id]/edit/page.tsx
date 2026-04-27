@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTenant } from '@/hooks/useTenant';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useAuth } from '@/hooks/useAuth';
+import MedicalModal from '@/components/ui/MedicalModal';
 import { 
   Calendar, 
   Clock, 
@@ -19,7 +20,8 @@ import {
   ChevronRight,
   AlertTriangle,
   Edit,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { appointmentsService } from '@/services/api/appointments.service';
 import { patientsService } from '@/services/api/patients.service';
@@ -48,6 +50,7 @@ export default function EditAppointmentPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [patient, setPatient] = useState<Patient | null>(null);
   const [doctors, setDoctors] = useState<User[]>([]);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   
   // Datos del formulario
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
@@ -89,9 +92,9 @@ export default function EditAppointmentPage() {
       if (appointmentRes.success && appointmentRes.data) {
         const apt = appointmentRes.data;
         
-        // Check if appointment can be edited (only 'programada' status)
-        if (apt.estado !== 'programada') {
-          showError('Error', 'Solo se pueden editar turnos con estado "programada"');
+        // Check if appointment can be edited (only 'programada' or 'confirmada' status)
+        if (!['programada', 'confirmada'].includes(apt.estado)) {
+          showError('Error', 'Solo se pueden editar turnos con estado "programada" o "confirmada"');
           router.push(buildPath('/secretary/appointments'));
           return;
         }
@@ -302,10 +305,6 @@ export default function EditAppointmentPage() {
   };
 
   const handleCancelAppointment = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas cancelar este turno? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
     try {
       setCancelling(true);
       const userId = (currentUser as any)?.id;
@@ -327,6 +326,7 @@ export default function EditAppointmentPage() {
       showError('Error', 'Ocurrió un error al intentar cancelar el turno');
     } finally {
       setCancelling(false);
+      setShowCancelModal(false);
     }
   };
 
@@ -516,15 +516,11 @@ export default function EditAppointmentPage() {
           <div className="flex justify-between items-center pt-4">
             <button
               type="button"
-              onClick={handleCancelAppointment}
+              onClick={() => setShowCancelModal(true)}
               disabled={saving || cancelling}
               className="px-6 py-3 text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors inline-flex items-center gap-2 disabled:opacity-50"
             >
-              {cancelling ? (
-                <Spinner size="sm" color="primary" />
-              ) : (
-                <Trash2 className="w-4 h-4" />
-              )}
+              <Trash2 className="w-4 h-4" />
               Cancelar Turno
             </button>
 
@@ -557,6 +553,55 @@ export default function EditAppointmentPage() {
           </div>
         </form>
       </div>
+
+      {/* Modal de Confirmación de Cancelación */}
+      <MedicalModal
+        isOpen={showCancelModal}
+        onClose={() => !cancelling && setShowCancelModal(false)}
+        title="Confirmar Cancelación"
+        size="sm"
+      >
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 p-4 bg-red-50 rounded-xl border border-red-100">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <h4 className="text-red-900 font-bold">¿Estás seguro?</h4>
+              <p className="text-red-700 text-sm">
+                Esta acción no se puede deshacer y el turno quedará liberado.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleCancelAppointment}
+              disabled={cancelling}
+              className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {cancelling ? (
+                <>
+                  <Spinner size="sm" color="white" />
+                  Cancelando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-5 h-5" />
+                  Sí, cancelar turno
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => setShowCancelModal(false)}
+              disabled={cancelling}
+              className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all disabled:opacity-50"
+            >
+              No, mantener turno
+            </button>
+          </div>
+        </div>
+      </MedicalModal>
 
       {/* Modal de Disponibilidad */}
       {showAvailabilityModal && (
