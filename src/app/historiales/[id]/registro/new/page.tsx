@@ -315,7 +315,7 @@ export default function NewMedicalRecordPage() {
           
           // Si el registro se crea desde una cita, intentar determinar la especialidad
           // Si el doctor tiene especialidades seteadas, usar la primera
-          if (currentUser?.especialidades?.length > 0) {
+          if (currentUser && currentUser.especialidades && currentUser.especialidades.length > 0) {
             setConsultationType(currentUser.especialidades[0]);
           } else if (localStorage.getItem('userSpecialty')) {
             setConsultationType(localStorage.getItem('userSpecialty')!);
