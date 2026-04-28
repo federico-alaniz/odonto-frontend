@@ -131,7 +131,7 @@ export default function NewAppointmentFlow() {
       const doctorsData: Doctor[] = allDoctors.map((user: User) => ({
         id: user.id,
         name: `${user.nombres} ${user.apellidos}`,
-        specialty: user.especialidades?.[0] ? (specMap.get(user.especialidades[0]) || user.especialidades[0]) : 'General',
+        specialty: user.especialidades?.[0] ? (specMap.get(user.especialidades[0]) || user.especialidades[0]) : 'Odontología',
         consultorio: user.consultorio || 'Sin asignar',
         especialidades: user.especialidades || [],
         horariosAtencion: user.horariosAtencion || []

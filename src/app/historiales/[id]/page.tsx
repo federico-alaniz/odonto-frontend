@@ -192,18 +192,17 @@ export default function HistoryDetailPage() {
 
   const getConsultaTypeLabel = (type: string) => {
     const types: { [key: string]: string } = {
-      'general': 'Consulta General',
-      'odontologia': 'Odontología'
+      'odontologia': 'Odontología',
+      'general': 'General'
     };
-    return types[type] || type;
+    return types[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
   };
 
   const getConsultaTypeColor = (type: string) => {
     const colors: { [key: string]: string } = {
-      'general': 'bg-blue-100 text-blue-800',
       'odontologia': 'bg-cyan-100 text-cyan-800'
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+    return colors[type.toLowerCase()] || 'bg-blue-100 text-blue-800';
   };
 
   return (

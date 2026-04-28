@@ -255,7 +255,7 @@ export default function DoctorDashboard() {
           doctorId: userId,
           appointmentId: appointmentId,
           fecha: today,
-          tipoConsulta: 'general' as 'general' | 'odontologia',
+          tipoConsulta: (currentUser as any)?.especialidades?.[0] || doctorSpecialty || 'Odontología',
           estadoRegistro: 'borrador' as 'borrador' | 'guardado',
           motivoConsulta: '',
           diagnostico: '',

@@ -187,8 +187,14 @@ export default function NewMedicalRecordPage() {
     return <span className={`${base} bg-gray-100 text-gray-800`}>{label}</span>;
   };
   
-  // Tipo de consulta - Por defecto odontología ya que es la única especialidad del sistema
-  const [consultationType, setConsultationType] = useState<'general' | 'odontologia'>('odontologia');
+  // Tipo de consulta - Inicializado con la especialidad del médico actual
+  const [consultationType, setConsultationType] = useState<string>('Odontología');
+
+  // Determinar si es una consulta odontológica para mostrar secciones específicas
+  const isOdontologia = useMemo(() => {
+    const type = consultationType.toLowerCase();
+    return type.includes('odonto') || type.includes('diente') || type.includes('bucal');
+  }, [consultationType]);
   
   // Estado para paciente y cita
   const [patient, setPatient] = useState<any>(null);
@@ -307,10 +313,16 @@ export default function NewMedicalRecordPage() {
         if (appointmentData) {
           setAppointment(appointmentData);
           
-          // Mantener tipo de consulta como odontología (sistema exclusivo de odontología)
-          setConsultationType('odontologia');
-          setShowDatosOdonto(true);
-          setShowOdontogramas(true);
+          // Si el registro se crea desde una cita, intentar determinar la especialidad
+          // Si el doctor tiene especialidades seteadas, usar la primera
+          if (currentUser?.especialidades?.length > 0) {
+            setConsultationType(currentUser.especialidades[0]);
+          } else if (localStorage.getItem('userSpecialty')) {
+            setConsultationType(localStorage.getItem('userSpecialty')!);
+          }
+          
+          setShowDatosOdonto(isOdontologia);
+          setShowOdontogramas(isOdontologia);
         }
 
         // Intentar cargar registro borrador existente para esta cita
@@ -709,7 +721,7 @@ export default function NewMedicalRecordPage() {
         doctorId: userId,
         appointmentId: appointmentId || undefined,
         fecha: formData.fecha,
-        tipoConsulta: consultationType as 'general' | 'odontologia',
+        tipoConsulta: consultationType,
         estadoRegistro: 'borrador' as 'borrador' | 'guardado',
         motivoConsulta: formData.motivoConsulta,
         anamnesis: formData.anamnesis,
@@ -1094,7 +1106,7 @@ export default function NewMedicalRecordPage() {
           </div>
 
           {/* Secciones Odontológicas (Solo para consultas odontológicas) */}
-          {consultationType === 'odontologia' && (
+          {isOdontologia && (
             <>
           {/* Odontogramas */}
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">

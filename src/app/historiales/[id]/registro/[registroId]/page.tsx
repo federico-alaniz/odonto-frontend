@@ -294,18 +294,10 @@ export default function RegistroDetailPage() {
 
   const getConsultaTypeLabel = (type: string) => {
     const types: { [key: string]: string } = {
-      'general': 'Consulta General',
       'odontologia': 'Odontología',
-      'pediatria': 'Pediatría',
-      'cardiologia': 'Cardiología',
-      'traumatologia': 'Traumatología',
-      'ginecologia': 'Ginecología',
-      'dermatologia': 'Dermatología',
-      'neurologia': 'Neurología',
-      'psiquiatria': 'Psiquiatría',
-      'oftalmologia': 'Oftalmología'
+      'general': 'General'
     };
-    return types[type] || type;
+    return types[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
   };
 
   // Memoize consultation procedures for the current record
@@ -667,7 +659,9 @@ export default function RegistroDetailPage() {
         )}
 
         {/* Odontogramas con Tabs - Solo para especialidad odontología */}
-        {registro.tipoConsulta === 'odontologia' && registro.odontogramas && (
+        {registro.tipoConsulta && (registro.tipoConsulta.toLowerCase().includes('odonto') || 
+         registro.tipoConsulta.toLowerCase().includes('diente') || 
+         registro.tipoConsulta.toLowerCase().includes('bucal')) && registro.odontogramas && (
           <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200">
               <div className="flex items-center gap-3">

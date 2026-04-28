@@ -260,7 +260,7 @@ export default function ReceptionPage() {
   }, [todayAppointments, selectedFilter, searchTerm]);
 
   const getSpecialtyName = (specialtyId: string): string => {
-    if (!specialtyId) return 'General';
+    if (!specialtyId || specialtyId.toLowerCase() === 'general') return 'Odontología';
     
     // Buscar por ID en las especialidades cargadas
     const specialty = specialties.find(s => s.id === specialtyId);
@@ -270,12 +270,10 @@ export default function ReceptionPage() {
     
     // Fallback: mapeo estático
     const names: Record<string, string> = {
-      'odontologia': 'Odontología',
-      'clinica-medica': 'Clínica Médica',
-      'pediatria': 'Pediatría'
+      'odontologia': 'Odontología'
     };
     
-    return names[specialtyId] || specialtyId;
+    return names[specialtyId.toLowerCase()] || specialtyId;
   };
 
   const getConsultingRoomName = (consultorioId: string): string => {

@@ -28,7 +28,7 @@ import { usersService } from '@/services/api/users.service';
 import { dateHelper } from '@/utils/date-helper';
 import { RoleGuard } from '@/components/guards/RoleGuards';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { medicalRecordsService } from '@/services/api/medical-records.service';
 import { printOdontogram } from '@/components/pdf/printOdontogram';
 import { formatDocumentNumber } from '@/utils/document-formatters';

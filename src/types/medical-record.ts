@@ -107,7 +107,7 @@ export interface MedicalRecord {
   
   // Información General
   fecha: string;
-  tipoConsulta: 'general' | 'odontologia';
+  tipoConsulta: string; // 'general', 'odontologia', o cualquier especialidad médico-odontológica
   
   // Motivo y Antecedentes
   motivoConsulta?: string;
@@ -157,7 +157,7 @@ export interface CreateMedicalRecordData {
   pacienteId: string;
   doctorId?: string;
   fecha: string;
-  tipoConsulta: 'general' | 'odontologia';
+  tipoConsulta: string;
   motivoConsulta?: string;
   anamnesis?: string;
   signosVitales?: SignosVitales;
@@ -193,7 +193,7 @@ export interface UpdateMedicalRecordData {
 
 export interface MedicalRecordFilters {
   pacienteId?: string;
-  tipoConsulta?: 'general' | 'odontologia';
+  tipoConsulta?: string;
   doctorId?: string;
   fechaDesde?: string;
   fechaHasta?: string;

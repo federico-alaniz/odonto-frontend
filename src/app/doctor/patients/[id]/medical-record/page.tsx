@@ -124,7 +124,7 @@ export default function MedicalRecordPage() {
               id: record.id,
               fecha: record.fecha,
               doctor: doctorsMap.get(record.doctorId) || record.doctorId || 'Doctor no especificado',
-              especialidad: record.tipoConsulta === 'odontologia' ? 'Odontología' : 'General',
+              especialidad: record.tipoConsulta && record.tipoConsulta.toLowerCase() === 'general' ? 'General' : (record.tipoConsulta || 'Odontología'),
               motivo: record.motivoConsulta || 'No especificado',
               diagnostico: record.diagnostico || '',
               tratamiento: record.tratamiento || '',

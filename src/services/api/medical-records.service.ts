@@ -25,7 +25,7 @@ export interface MedicalRecord {
   doctorId?: string;
   appointmentId?: string;
   fecha: string;
-  tipoConsulta: 'general' | 'odontologia';
+  tipoConsulta: string;
   motivoConsulta?: string;
   anamnesis?: string;
   signosVitales?: any;
