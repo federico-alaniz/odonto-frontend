@@ -58,6 +58,12 @@ export default function HistoryDetailPage() {
         if (recordsResponse.success) {
           setMedicalRecords(recordsResponse.data || []);
         }
+
+        // Load historia clínica
+        const historiaResponse = await historiaClinicaService.getByPatientId(patientId, clinicId);
+        if (historiaResponse.success) {
+          setHistoriaClinica(historiaResponse.data || null);
+        }
       } catch (error) {
         console.error('Error loading patient data:', error);
       } finally {
@@ -303,7 +309,7 @@ export default function HistoryDetailPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide">Historia Clínica</label>
-                    <p className="text-sm font-medium text-gray-900">{historiaClinica?.numeroHistoriaClinica || 'N/A'}</p>
+                    <p className="text-sm font-medium text-gray-900">{historiaClinica?.numeroHistoriaClinica || patient?.numeroHistoriaClinica || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 font-medium uppercase tracking-wide">Última Consulta</label>
@@ -427,7 +433,7 @@ export default function HistoryDetailPage() {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{formatDate(record.fecha)}</div>
-                          <div className="text-xs text-gray-500">{formatTime(record.fecha)}</div>
+                          <div className="text-xs text-gray-500">{formatTime(record.createdAt || record.fecha)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getConsultaTypeColor(record.tipoConsulta)}`}>

@@ -942,25 +942,8 @@ export default function NewMedicalRecordPage() {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={handleSaveDraft}
-                disabled={savingDraft || saving || authLoading || !currentUser}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {savingDraft ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Guardar Borrador
-                  </>
-                )}
-              </button>
-              <button
                 onClick={handleSave}
-                disabled={saving || savingDraft || authLoading || !currentUser}
+                disabled={saving || authLoading || !currentUser}
                 className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
@@ -1685,27 +1668,62 @@ export default function NewMedicalRecordPage() {
 
       {/* Diálogo de confirmación para navegación */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              ¿Estás seguro de que quieres salir?
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Tienes cambios sin guardar en el registro médico. Si sales ahora, perderás toda la información que has ingresado.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={cancelNavigation}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Continuar editando
-              </button>
-              <button
-                onClick={confirmNavigation}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Salir sin guardar
-              </button>
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+              onClick={cancelNavigation}
+            />
+
+            {/* Modal */}
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 rounded-t-xl border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-red-600 rounded-lg">
+                      <X className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">¿Salir sin guardar?</h3>
+                      <p className="text-sm text-gray-600">Hay cambios sin guardar</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={cancelNavigation}
+                    className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-6">
+                <div className="bg-red-50 rounded-lg p-4 border border-red-100">
+                  <p className="text-sm text-gray-700">
+                    Tienes cambios sin guardar en el registro médico. Si salís ahora, <span className="font-semibold text-red-700">perderás toda la información ingresada</span>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 rounded-b-xl border-t border-gray-200 flex items-center justify-end gap-3">
+                <button
+                  onClick={cancelNavigation}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Continuar editando
+                </button>
+                <button
+                  onClick={confirmNavigation}
+                  className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Salir sin guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>

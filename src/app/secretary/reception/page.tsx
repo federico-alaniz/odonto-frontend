@@ -26,7 +26,8 @@ import {
   XCircle,
   Search,
   Filter,
-  Printer
+  Printer,
+  DollarSign
 } from 'lucide-react';
 import Link from 'next/link';
 import { useTenant } from '@/hooks/useTenant';
@@ -431,6 +432,7 @@ export default function ReceptionPage() {
 
   const handlePaymentConfirmed = async () => {
     if (!selectedAppointmentForPayment || !paymentData.total) return;
+    if (!currentUser) return;
 
     try {
       const clinicId = (currentUser as any)?.clinicId || (currentUser as any)?.tenantId;
@@ -812,115 +814,190 @@ export default function ReceptionPage() {
 
       {/* Modal de Pago */}
       {showPaymentModal && selectedAppointmentForPayment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirmar Pago de Consulta</h3>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Paciente:</p>
-              <p className="font-medium">{selectedAppointmentForPayment.patientName}</p>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Doctor:</p>
-              <p className="font-medium">{selectedAppointmentForPayment.doctorName}</p>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Especialidad:</p>
-              <p className="font-medium">{getSpecialtyName(selectedAppointmentForPayment.specialty)}</p>
-            </div>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">Horario:</p>
-              <p className="font-medium">{selectedAppointmentForPayment.time}</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">Seña:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={paymentData.sena}
-                    onChange={(e) => setPaymentData({...paymentData, sena: parseFloat(e.target.value) || 0})}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+              onClick={() => {
+                setShowPaymentModal(false);
+                setSelectedAppointmentForPayment(null);
+                setPaymentData({ sena: 0, complemento: 0, total: 0, pagado: false });
+              }}
+            />
+
+            {/* Modal */}
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-100 px-6 py-4 rounded-t-xl border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-600 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Confirmar Pago de Consulta</h3>
+                      <p className="text-sm text-gray-600">Registrar cobro de la visita</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setSelectedAppointmentForPayment(null);
+                      setPaymentData({ sena: 0, complemento: 0, total: 0, pagado: false });
+                    }}
+                    className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-2">Complemento:</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                  <input
-                    type="number"
-                    value={paymentData.complemento}
-                    onChange={(e) => setPaymentData({...paymentData, complemento: parseFloat(e.target.value) || 0})}
-                    className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
+
+              {/* Body */}
+              <div className="p-6 space-y-5">
+                {/* Patient Info */}
+                <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Paciente</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedAppointmentForPayment.patientName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Doctor</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedAppointmentForPayment.doctorName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Especialidad</p>
+                      <p className="text-sm font-semibold text-gray-900">{getSpecialtyName(selectedAppointmentForPayment.specialty)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-0.5">Horario</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedAppointmentForPayment.time}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Seña</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <DollarSign className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="number"
+                        value={paymentData.sena}
+                        onChange={(e) => {
+                          const newSena = parseFloat(e.target.value) || 0;
+                          setPaymentData(prev => ({
+                            ...prev,
+                            sena: newSena,
+                            complemento: Math.max(0, prev.total - newSena)
+                          }));
+                        }}
+                        className="block w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Complemento</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <DollarSign className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="number"
+                        value={paymentData.complemento}
+                        readOnly
+                        className="block w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-500 cursor-default"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total */}
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Importe Total</span>
+                    <div className="relative w-36">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <DollarSign className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <input
+                        type="number"
+                        value={paymentData.total}
+                        onChange={(e) => {
+                          const newTotal = parseFloat(e.target.value) || 0;
+                          setPaymentData(prev => ({
+                            ...prev,
+                            total: newTotal,
+                            complemento: Math.max(0, newTotal - prev.sena)
+                          }));
+                        }}
+                        className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-right font-bold text-gray-900"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paid checkbox */}
+                <div className="border-t border-gray-200 pt-4">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={paymentData.pagado}
+                        onChange={(e) => setPaymentData({...paymentData, pagado: e.target.checked})}
+                        className="sr-only"
+                      />
+                      <div className={`w-6 h-6 border-2 rounded-md transition-all ${
+                        paymentData.pagado
+                          ? 'bg-green-600 border-green-600'
+                          : 'bg-white border-gray-300 group-hover:border-gray-400'
+                      }`}>
+                        {paymentData.pagado && (
+                          <CheckCircle className="w-5 h-5 text-white absolute -top-0.5 -left-0.5" />
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">Pagado en su totalidad</span>
+                      <p className="text-xs text-gray-500">Marcar cuando el paciente haya completado el pago</p>
+                    </div>
+                  </label>
                 </div>
               </div>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm text-gray-600 mb-2">Total:</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                <input
-                  type="number"
-                  value={paymentData.total}
-                  onChange={(e) => setPaymentData({...paymentData, total: parseFloat(e.target.value) || 0})}
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  required
-                />
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 rounded-b-xl border-t border-gray-200 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedAppointmentForPayment(null);
+                    setPaymentData({ sena: 0, complemento: 0, total: 0, pagado: false });
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handlePaymentConfirmed}
+                  disabled={!paymentData.total || paymentData.total <= 0}
+                  className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Confirmar Pago
+                </button>
               </div>
-            </div>
-            
-            <div className="mb-6">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={paymentData.pagado}
-                  onChange={(e) => setPaymentData({...paymentData, pagado: e.target.checked})}
-                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                />
-                <span className="text-sm text-gray-700">Pagado en su totalidad</span>
-              </label>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setSelectedAppointmentForPayment(null);
-                  setPaymentData({
-                    sena: 0,
-                    complemento: 0,
-                    total: 0,
-                    pagado: false
-                  });
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handlePaymentConfirmed}
-                disabled={!paymentData.total || paymentData.total <= 0}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                Confirmar Pago
-              </button>
             </div>
           </div>
         </div>
